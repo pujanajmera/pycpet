@@ -1,6 +1,5 @@
 import numpy as np
 import time
-from numba import jit
 from CPET.utils.calculator import calculate_electric_field, curv, compute_curv_and_dist, Inside_Box
 from CPET.utils.parser import parse_pqr
 
