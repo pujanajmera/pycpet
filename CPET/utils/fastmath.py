@@ -2,7 +2,7 @@ import numpy as np
 from numba import jit
 
 """
-Making basis math faster!!
+Making basic math faster!!
 """
 
 
