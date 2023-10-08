@@ -1,6 +1,11 @@
 import numpy as np
 from numba import jit
 
+"""
+Making basis math faster!!
+"""
+
+
 def power(a,b):
     """
     Computes binary exponentiation
