@@ -19,6 +19,36 @@ def calculate_electric_field(x_0, x, Q):
     E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q)*14.3996451
     return E
 
+def calculate_field_on_grid(grid_coords, x, Q):
+    """
+    Computes electric field at each point in a meshgrid given positions of charges.
+    
+    Takes:
+        grid_coords(array): Meshgrid of points with shape (M, M, M, 3) where M is the number of points along each dimension.
+        x(array): Positions of charges of shape (N, 3).
+        Q(array): Magnitude and sign of charges of shape (N, 1).
+    Returns:
+        E(array): Electric field at each point in the meshgrid of shape (M, M, M, 3).
+    """
+    # Reshape meshgrid to a 2D array of shape (M*M*M, 3)
+    reshaped_meshgrid = grid_coords.reshape(-1, 3)
+    
+    # Initialize an array to hold the electric field values
+    E = np.zeros_like(reshaped_meshgrid, dtype=float)
+    
+    # Calculate the electric field at each point in the meshgrid
+    for i, x_0 in enumerate(reshaped_meshgrid):
+        # Create matrix R
+        R = nb_subtract(x_0,x)
+        R_sq = R ** 2
+        r_mag_sq = np.einsum('ij->i', R_sq).reshape(-1,1)
+        r_mag_cube = np.power(r_mag_sq, 3/2)
+        E[i] = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
+    
+    # Reshape E back to the shape of the original meshgrid
+    E = E.reshape(*grid_coords.shape)
+    return E
+
 def curv(v_prime, v_prime_prime):
     """
     Computes curvature of the streamline at a given point
