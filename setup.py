@@ -8,6 +8,6 @@ setup(
     packages=find_packages(),
     scripts=[
         "./CPET/compute_topology.py",
-        "./CPET/compute_field.py",
+        "./CPET/compute_field_volume.py",
     ],
 )
