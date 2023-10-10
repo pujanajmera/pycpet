@@ -14,7 +14,7 @@ def calculate_electric_field(x_0, x, Q):
     # Create matrix R
     R = nb_subtract(x_0,x)
     R_sq=R**2
-    r_mag_sq = np.einsum('ij,ij->i', R_sq, R_sq)[:, np.newaxis]
+    r_mag_sq = np.einsum('ij->i', R_sq).reshape(-1,1)
     r_mag_cube = np.power(r_mag_sq,3/2)
     E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q)*14.3996451
     return E
