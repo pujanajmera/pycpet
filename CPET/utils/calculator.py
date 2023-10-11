@@ -178,7 +178,7 @@ def compute_curv_and_dist_dev(
     )
     curv_final = curv_dev(x_0_plus - x_0, x_0_plus_plus - 2 * x_0_plus + x_0)
     curv_mean = (curv_init + curv_final) / 2
-    dist = nb_norm(x_init[0] - x_0[0])
+    dist = nb_norm(x_init - x_0)
     return [dist, curv_mean]
 
 
