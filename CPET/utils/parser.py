@@ -14,22 +14,52 @@ def parse_pqr(path_to_pqr):
     Q = []
     with open(path_to_pqr) as pqr_file:
         lines = pqr_file.readlines()
+
     for line in lines:
         if line.startswith("ATOM") or line.startswith("HETATM"):
-            coords = [line[31:39].strip(), line[40:48].strip(), line[49:57].strip()]
+            shift = 0
+            res_ind = 5  # index of residue value
+
+            if len(line.split()[0]) >= 6:
+                res_ind = 4
+
+            res_val = int(line.split()[res_ind])
+
+            if res_val > 999:
+                shift += int(np.log10(res_val) - 2)
+
             coords = [
-                line[29:39].strip(),
-                line[39:46].strip(),
-                line[49:55].strip(),
-            ]  # these are the bounds i used, which works correctly?
-            charge = line[58:63].strip()
+                line[30 + shift : 38 + shift],
+                line[38 + shift : 46 + shift],
+                line[46 + shift : 54 + shift],
+            ]
+
+            if shift == -1:
+                print("----------------------")
+                print("coords: ", coords)
+
+            coords = [_.strip() for _ in coords]
+            charge = line[54 + shift : 61 + shift]
+
+            if shift == -1:
+                print("charge: ", [charge])
+
+            charge = charge.strip()
+
             try:
                 tempq = float(charge)
                 temp = [float(_) for _ in coords]
+
             except:
                 print(
                     f"Charge or coordinates is not a useable number. Check pqr file formatting for the following line: {line}"
                 )
+
+            assert temp != [], "charge incorrectly parsed"
+            assert tempq != [], "coord incorrectly parsed"
             x.append(temp)
             Q.append(tempq)
+            # clear temp variables
+            temp = []
+            tempq = []
     return np.array(x), np.array(Q).reshape(-1, 1)
