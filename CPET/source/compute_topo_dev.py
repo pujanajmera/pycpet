@@ -137,7 +137,7 @@ def main():
     end_time = time.time()
     np.savetxt("hist_cpet.txt", hist)
     print(
-        f"Time taken for {options['n_samples']} calculations with N~4000: {end_time - start_time:.2f} seconds"
+        f"Time taken for {options['n_samples']} calculations with N~{len(Q)}: {end_time - start_time:.2f} seconds"
     )
     print(count, len(random_start_points))
 

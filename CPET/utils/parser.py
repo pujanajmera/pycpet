@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def parse_pqr(path_to_pqr):
     """
     Parses pqr file to obtain charges and positions of charges (beta, removes charges that are 0)
@@ -15,14 +16,20 @@ def parse_pqr(path_to_pqr):
         lines = pqr_file.readlines()
     for line in lines:
         if line.startswith("ATOM") or line.startswith("HETATM"):
-            coords = [line[31:39].strip(),line[40:48].strip(),line[49:57].strip()]
-
+            coords = [line[31:39].strip(), line[40:48].strip(), line[49:57].strip()]
+            coords = [
+                line[29:39].strip(),
+                line[39:46].strip(),
+                line[49:55].strip(),
+            ]  # these are the bounds i used, which works correctly?
             charge = line[58:63].strip()
             try:
                 tempq = float(charge)
                 temp = [float(_) for _ in coords]
             except:
-                print(f"Charge or coordinates is not a useable number. Check pqr file formatting for the following line: {line}")
+                print(
+                    f"Charge or coordinates is not a useable number. Check pqr file formatting for the following line: {line}"
+                )
             x.append(temp)
             Q.append(tempq)
-    return np.array(x), np.array(Q).reshape(-1,1)
+    return np.array(x), np.array(Q).reshape(-1, 1)
