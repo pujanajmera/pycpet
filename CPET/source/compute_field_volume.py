@@ -1,3 +1,10 @@
+import numpy as np
+import argparse
+import json
+from CPET.utils.parser import parse_pqr
+from CPET.utils.calculator import compute_field_on_grid
+from CPET.utils.writeoutput import write_field_to_file
+
 def initialize_grid(center, x, y, density, dimensions, offset):
     # Convert lists to numpy arrays
     x = x - center  # Translate to origin
@@ -27,15 +34,22 @@ def initialize_grid(center, x, y, density, dimensions, offset):
     local_coords = np.stack([x_mesh, y_mesh, z_mesh], axis=-1)
     return local_coords, transformation_matrix
 
+parser = argparse.ArgumentParser(description='This script computes a field in a box volume with given density')
+parser.add_argument('-i', help='Input file name')
+parser.add_argument('-o', help='Output file name')
+args = parser.parse_args()
+with open(args.i, 'r') as file:
+    input_data = json.load(file)
+center = np.array(input_data["center"])
+x = np.array(input_data["x"])
+y = np.array(input_data["y"])
+dimensions = np.array(input_data["dimensions"])
+density = np.array(input_data["density"])
+offset = input_data["offset"]
+path_to_pqr = input_data["pqr_file"]
 
-center = np.array([55.965,46.219,22.123])
-x = np.array([56.191,48.344,22.221])
-y = np.array([57.118,46.793,20.46])
-dimensions = np.array([1.5,1.5,1.5])
-density = np.array([10,10,10])
-
-grid_points, transformation_matrix = initialize_grid(center, x, y, density, dimensions, "center")
-x, Q = parse_pqr("1_wt_run1_0.pqr")
+grid_points, transformation_matrix = initialize_grid(center, x, y, density, dimensions, offset)
+x, Q = parse_pqr(path_to_pqr)
 x = (x-center)@np.linalg.inv(transformation_matrix)
 field_points = compute_field_on_grid(grid_points, x, Q)
-write_field_to_file(grid_points, field_points, "1_wt_run1_0_efield.dat")
+write_field_to_file(grid_points, field_points, args.o)
