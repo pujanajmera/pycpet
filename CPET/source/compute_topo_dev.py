@@ -90,7 +90,7 @@ def initialize_box_points(center, x, y, dimensions, n_samples, step_size):
 
 def main():
     options = {
-        "path_to_pqr": "./1_wt_run1_0.pqr",
+        "path_to_pqr": "../../tests/test_files/test.pqr",
         "center": [55.965, 46.219, 22.123],
         "x": [56.191, 48.344, 22.221],
         "y": [57.118, 46.793, 20.46],
