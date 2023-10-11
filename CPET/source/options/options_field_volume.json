@@ -1,0 +1,9 @@
+{
+    "center": [1.0, 2.0, 3.0],
+    "x": [1.0, 0.0, 0.0],
+    "y": [0.0, 1.0, 0.0],
+    "dimensions": [2.5, 2.5, 2.5],
+    "density": [10, 10, 10],
+    "offset": "None",
+    "pqr_file": "path/to/your/file.pqr"
+}
