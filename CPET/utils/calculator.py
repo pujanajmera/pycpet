@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
+from CPET.utils.c_ops import Math_ops
 
 
 def calculate_electric_field(x_0, x, Q):
@@ -22,7 +23,7 @@ def calculate_electric_field(x_0, x, Q):
     return E
 
 
-def calculate_electric_field_dev(x_0, x, Q):
+def calculate_electric_field_dev_python(x_0, x, Q):
     """
     Computes electric field at a point given positions of charges
     Takes
@@ -36,8 +37,39 @@ def calculate_electric_field_dev(x_0, x, Q):
     R = nb_subtract(x_0, x)
     R_sq = R**2
     r_mag_sq = np.einsum("ij->i", R_sq).reshape(-1, 1)
+    # print(R_sq.shape, r_mag_sq.shape)
     r_mag_cube = np.power(r_mag_sq, 3 / 2)
+    recip_dim = 1 / r_mag_cube
+    print(R.shape, recip_dim.shape, Q.shape)
     E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
+    return E
+
+
+def calculate_electric_field_dev_c_shared(x_0, x, Q, math=None):
+    """
+    Computes electric field at a point given positions of charges
+    Takes
+        x_0(array) - position to compute field at of shape (1,3)
+        x(array) - positions of charges of shape (N,3)
+        Q(array) - magnitude and sign of charges of shape (N,1)
+    Returns
+        E(array) - electric field at the point of shape (1,3)
+    """
+    if math is None:
+        Math = Math_ops(shared_loc="../utils/math_module.so")
+    # Create matrix R
+    R = nb_subtract(x_0, x)
+    R_sq = R**2
+    # r_mag_sq = np.einsum("ij->i", R_sq).reshape(-1, 1)
+    # print(R_sq.shape)
+    # print(R_sq.dtype)
+    r_mag_sq = Math.einsum_ij_i(R_sq).reshape(-1, 1)
+    r_mag_cube = np.power(r_mag_sq, 3 / 2)
+
+    E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
+    # print(E.shape)
+    print("-")
+
     return E
 
 
@@ -68,6 +100,7 @@ def calculate_electric_field_gpu_torch(x_0, x, Q, device="cuda", filter=True):
     r_mag_sq = torch.einsum("ij->i", R_sq).reshape(-1, 1)
     r_mag_cube = power(r_mag_sq, 3 / 2)
     E = torch.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
+    # now combine all of the above operations into one
     return E.cpu().numpy()
 
 

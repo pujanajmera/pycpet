@@ -2,11 +2,14 @@ import numpy as np
 import time
 from CPET.utils.calculator import (
     calculate_electric_field,
+    calculate_electric_field_dev_python,
+    # calculate_electric_field_dev_c_shared,
     curv,
     compute_curv_and_dist,
     Inside_Box,
 )
 from CPET.utils.parser import parse_pqr
+from CPET.utils.c_ops import Math_ops
 
 
 def propagate_topo(x_0, x, Q, step_size):
@@ -26,7 +29,7 @@ def propagate_topo(x_0, x, Q, step_size):
     return x_0
 
 
-def propagate_topo_dev(x_0, x, Q, step_size):
+def propagate_topo_dev(x_0, x, Q, step_size, math=None):
     """
     Propagates position based on normalized electric field at a given point
     Takes
@@ -37,7 +40,7 @@ def propagate_topo_dev(x_0, x, Q, step_size):
     Returns
         x_0 - new position on streamline after propagation via electric field
     """
-    E = calculate_electric_field(x_0, x, Q)  # Compute field
+    E = calculate_electric_field_dev_python(x_0, x, Q)  # , math=math)  # Compute field
     E = E / np.linalg.norm(E)
     x_0 = x_0 + step_size * E
     return x_0
@@ -115,20 +118,21 @@ def main():
     hist = []
     start_time = time.time()
     count = 0
+    # Math = Math_ops("../utils/math_module.so")
     x = (x - center) @ np.linalg.inv(transformation_matrix)
     for idx, i in enumerate(random_start_points):
         x_0 = i
         x_init = x_0
         n_iter = random_max_samples[idx]
         for j in range(n_iter):
-            x_0 = propagate_topo(x_0, x, Q, step_size)
+            x_0 = propagate_topo_dev(x_0, x, Q, step_size)
             if not Inside_Box(x_0, dimensions):
                 count += 1
                 break
-        x_init_plus = propagate_topo(x_init, x, Q, step_size)
-        x_init_plus_plus = propagate_topo(x_init_plus, x, Q, step_size)
-        x_0_plus = propagate_topo(x_0, x, Q, step_size)
-        x_0_plus_plus = propagate_topo(x_0_plus, x, Q, step_size)
+        x_init_plus = propagate_topo_dev(x_init, x, Q, step_size)
+        x_init_plus_plus = propagate_topo_dev(x_init_plus, x, Q, step_size)
+        x_0_plus = propagate_topo_dev(x_0, x, Q, step_size)
+        x_0_plus_plus = propagate_topo_dev(x_0_plus, x, Q, step_size)
         hist.append(
             compute_curv_and_dist(
                 x_init, x_init_plus, x_init_plus_plus, x_0, x_0_plus, x_0_plus_plus
