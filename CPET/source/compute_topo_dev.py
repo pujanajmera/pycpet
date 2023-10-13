@@ -3,7 +3,7 @@ import time
 from CPET.utils.calculator import (
     calculate_electric_field,
     calculate_electric_field_dev_python,
-    # calculate_electric_field_dev_c_shared,
+    calculate_electric_field_dev_c_shared,
     curv,
     compute_curv_and_dist,
     Inside_Box,
@@ -40,7 +40,9 @@ def propagate_topo_dev(x_0, x, Q, step_size, math=None):
     Returns
         x_0 - new position on streamline after propagation via electric field
     """
-    E = calculate_electric_field_dev_python(x_0, x, Q)  # , math=math)  # Compute field
+    math = Math_ops(shared_loc="../utils/math_module.so")
+    # E = calculate_electric_field_dev_python(x_0, x, Q)  # , math=math)  # Compute field
+    E = calculate_electric_field_dev_c_shared(x_0, x, Q, Math=math)
     E = E / np.linalg.norm(E)
     x_0 = x_0 + step_size * E
     return x_0

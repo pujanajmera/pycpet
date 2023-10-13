@@ -45,7 +45,7 @@ def calculate_electric_field_dev_python(x_0, x, Q):
     return E
 
 
-def calculate_electric_field_dev_c_shared(x_0, x, Q, math=None):
+def calculate_electric_field_dev_c_shared(x_0, x, Q, Math=None):
     """
     Computes electric field at a point given positions of charges
     Takes
@@ -55,7 +55,7 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q, math=None):
     Returns
         E(array) - electric field at the point of shape (1,3)
     """
-    if math is None:
+    if Math is None:
         Math = Math_ops(shared_loc="../utils/math_module.so")
     # Create matrix R
     R = nb_subtract(x_0, x)
@@ -65,10 +65,10 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q, math=None):
     # print(R_sq.dtype)
     r_mag_sq = Math.einsum_ij_i(R_sq).reshape(-1, 1)
     r_mag_cube = np.power(r_mag_sq, 3 / 2)
-
-    E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
+    ##E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
+    E = Math.einsum_operation(R, 1 / r_mag_cube, Q)
     # print(E.shape)
-    print("-")
+    # print("-")
 
     return E
 

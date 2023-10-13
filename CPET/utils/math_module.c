@@ -41,6 +41,7 @@ void sparse_dot(double* ret, int* indptr, int indptrlen, int* indA, int lenindA,
     // MPI_Finalize();
 }
 
+
 void dot(double* ret, double* A, double* B, int rows, int cols){
     int i; 
     int j;
@@ -82,38 +83,6 @@ void einsum_ij_i(double *ret, double *A, int rows, int cols){
 }
 
 
-void einsum_ij_ij_to_ij_i(double *ret, double **R, double *r_mag, double *Q, int rows){
-    
-        //for (int j = 0; j < 3; ++j) {
-        // make array of 3 zeros
-        double sum[3] = {0.0, 0.0, 0.0};
-        #pragma omp parallel for schedule(static) //reduction(+:sum)
-        for (int i = 0; i < rows; ++i) {
-            double pow_val = pow(r_mag[i], 3);
-            if (pow_val == 0){
-                pow_val = 0.000001;
-            }
-            double compute_singular = (1.0 / pow_val) * Q[i]  * 14.3996451;
-            //double compute_singular = 14.3996451;
-            // print R dimensions
-            sum[0] += R[0][i] * compute_singular;
-            sum[1] += R[1][i] * compute_singular;
-            sum[2] += R[2][i] * compute_singular;
-            //sum[0] += 1.0 * compute_singular;
-            //sum[1] += 1.0 * compute_singular;
-            //sum[2] += 1.0 * compute_singular;
-            double ele_1 = 0; 
-            double ele_2 = 0;
-            double ele_3 = 0;
-            sum[0] += ele_1;
-            sum[1] += ele_2;
-            sum[2] += ele_3;
-            
-        }
-        ret = sum;
-        
-}
-
 
 void einsum_operation(double* R, double *r_mag, double* Q, int n, double* result) {
     double sum[3] = {0.0, 0.0, 0.0};
@@ -141,12 +110,12 @@ void einsum_operation(double* R, double *r_mag, double* Q, int n, double* result
         ele_2 = r_1 * compute_singular;
         ele_3 = r_2 * compute_singular;
 
-        if (i < 3){
+        //if (i < 3){
             // print Rvals
             //printf("Rvals: %f, %f, %f\n", r_0, r_1, r_2);
             //printf("Qvals: %f\n", compute_singular);
             //printf("ele_1: %f, ele_2: %f, ele_3: %f\n", ele_1 * factor, ele_2 * factor, ele_3 * factor);
-        }
+        //}
 
         sum[0] += ele_1 * factor;
         sum[1] += ele_2 * factor;
@@ -164,7 +133,6 @@ void einsum_operation(double* R, double *r_mag, double* Q, int n, double* result
 
 void vecaddn(double* ret, double* A, double* B, int lenA){
     int i; 
-
     #pragma omp parallel shared(A, B, ret) private(i)
     {
     for (i = 0; i < lenA; i++) {

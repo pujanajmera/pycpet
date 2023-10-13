@@ -124,13 +124,6 @@ class Math_ops:
         self.math.einsum_ij_i(res, A, int(A.shape[0]), int(A.shape[1]))
         return res.reshape(-1, 1)
 
-    def einsum_ij_ij_to_ij_i(self, R, r_mag, Q):
-        res = np.zeros(3, dtype="float64")
-        self.math.einsum_ij_ij_to_ij_i.restype = None
-        print(R.shape)
-        self.math.einsum_ij_ij_to_ij_i(res, R, r_mag, Q, int(R.shape[0]))
-        return res
-
     def einsum_operation(self, R, r_mag, Q):
         # res = np.ascontiguousarray(np.zeros(3, dtype="float64"))
         res = np.zeros(3, dtype="float64")
