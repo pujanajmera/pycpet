@@ -1,7 +1,19 @@
 import numpy as np
 
 
-def parse_pqr(path_to_pqr):
+def filter_pqr(x, Q, center, radius=2.0):
+    # Filter out points that are inside the box
+    x = x - center
+    r = np.linalg.norm(x, axis=1)
+    mask = r > radius
+    # remove masked points
+    x_filtered = x[mask]
+    Q_filtered = Q[mask]
+
+    return x_filtered, Q_filtered
+
+
+def parse_pqr(path_to_pqr, ret_atom_names=False):
     """
     Parses pqr file to obtain charges and positions of charges (beta, removes charges that are 0)
     Takes
@@ -12,6 +24,7 @@ def parse_pqr(path_to_pqr):
     """
     x = []
     Q = []
+    ret_atom_num = []
     with open(path_to_pqr) as pqr_file:
         lines = pqr_file.readlines()
 
@@ -19,11 +32,21 @@ def parse_pqr(path_to_pqr):
         if line.startswith("ATOM") or line.startswith("HETATM"):
             shift = 0
             res_ind = 5  # index of residue value
-
-            if len(line.split()[0]) >= 6:
+            split_tf = False
+            if len(line.split()[0]) > 6:
                 res_ind = 4
+                split_tf = True
+            if ret_atom_names:
+                if split_tf:
+                    # remove HETATM from split 0
+                    ret_atom_num.append(int(line.split()[0][6:]))
+                else:
+                    ret_atom_num.append(int(line.split()[1]))
 
-            res_val = int(line.split()[res_ind])
+            if len(line.split()[res_ind]) > 4:
+                res_val = int(line.split()[res_ind - 1][1:])
+            else:
+                res_val = int(line.split()[res_ind])
 
             if res_val > 999:
                 shift += int(np.log10(res_val) - 2)
@@ -62,4 +85,6 @@ def parse_pqr(path_to_pqr):
             # clear temp variables
             temp = []
             tempq = []
+    if ret_atom_names:
+        return np.array(x), np.array(Q).reshape(-1, 1), ret_atom_num
     return np.array(x), np.array(Q).reshape(-1, 1)

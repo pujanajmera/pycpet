@@ -135,6 +135,29 @@ def calculate_field_on_grid(grid_coords, x, Q):
     return E
 
 
+def calculate_field_at_point(x, Q, x_0=np.array([0, 0, 0])):
+    """
+    Computes electric field at each point in a meshgrid given positions of charges.
+
+    Takes:
+        x(array): Positions of charges of shape (N, 3).
+        Q(array): Magnitude and sign of charges of shape (N, 1).
+        point(array): Point at which to calculate the field of shape (1, 3).
+    Returns:
+        E(array): Electric field at each point in the meshgrid of shape (M, M, M, 3).
+    """
+
+    # Initialize an array to hold the electric field values
+
+    # Create matrix R
+    R = nb_subtract(x_0, x)
+    R_sq = R**2
+    r_mag_sq = np.einsum("ij->i", R_sq).reshape(-1, 1)
+    r_mag_cube = np.power(r_mag_sq, 3 / 2)
+    E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
+    return E
+
+
 def curv(v_prime, v_prime_prime):
     """
     Computes curvature of the streamline at a given point

@@ -1,3 +1,5 @@
 *txt
 *pyc
 *egg-info
+*.pdb*
+*zip
