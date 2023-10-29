@@ -1,7 +1,7 @@
 import numpy as np
 from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
 from CPET.utils.c_ops import Math_ops
-
+import torch
 
 def calculate_electric_field(x_0, x, Q):
     """
