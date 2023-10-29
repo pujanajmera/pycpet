@@ -3,64 +3,9 @@ import pandas as pd
 from numba import jit
 import time
 import torch
+from CPET.utils.parser import parse_pqr
 
-@jit(nopython=True)
-def nb_subtract(a, b):
-    """
-    Computes subtraction
-    Takes
-        a(array or array-like)
-        b(array or array-like)
-    Returns
-        np.subtract(a,b) - difference between a and b - jitted!
-    """
-    return np.subtract(a, b)
-
-def power(a, b):
-    """
-    Computes binary exponentiation
-    Takes
-        a(float or array) - a number or array of shape (N,) or (N,1)
-        b(float) - a real positive number
-    Returns
-        out_(float or array) - element-wise exponentiation of a by b, a number or array of shape (N,) or (N,1)
-    """
-    if b == 0:
-        return 1
-    out_ = power(a, b // 2)
-    out_ = out_ * out_
-    if b % 2 != 0:
-        out_ = out_ * a
-    return out_
-
-def calculate_electric_field(x_0, x, Q):
-    """
-    Computes electric field at multiple points given positions of charges
-    Takes
-        x_0(array) - positions to compute field at of shape (N,3)
-        x(array) - positions of charges of shape (L,3)
-        Q(array) - magnitude and sign of charges of shape (L,1)
-    Returns
-        E(array) - electric field at the points of shape (N,3)
-    """
-    # Compute the difference between every point in x_0 and every point in x
-    # R will be of shape (N, L, 3)
-    R = np.expand_dims(x_0, axis=1)-np.expand_dims(x,axis=0)
-    R_sq = R**2
-    r_mag_sq = np.einsum("ijk->ij", R_sq).reshape(*R.shape[:-1], 1)
-    r_mag_cube = np.power(r_mag_sq, 3 / 2)
-
-    # Reshape Q for proper broadcasting
-    Q_reshaped = Q[np.newaxis, :, :]
-
-    # Calculate the electric field contribution at every point in x_0 due to every charge in x
-    E_contrib = np.einsum("ijk,ijk,ijk->ijk", R, 1 / r_mag_cube, Q_reshaped) * 14.3996451
-
-    # Sum over the L charges to get the net electric field at each point in x_0
-    E = np.sum(E_contrib, axis=1)
-
-    return E
-@profile
+#@profile
 def calculate_electric_field_torch(x_0, x, Q):
     """
     Computes electric field at multiple points given positions of charges
@@ -84,7 +29,7 @@ def calculate_electric_field_torch(x_0, x, Q):
     E = torch.einsum("ijk,ijk,ijk->ik", R, 1 / r_mag_cube, Q_reshaped) * 14.3996451
     return E
 
-@profile
+#@profile
 def propagate_topo_matrix(path_matrix,i, x, Q, step_size):
     """
     Propagates position based on normalized electric field at a given point
@@ -204,34 +149,6 @@ def initialize_streamline_grid(center, x, y, dimensions, n_samples, step_size):
     print(M,N)
     return path_matrix, transformation_matrix, M, path_filter,random_max_samples
 
-def parse_pqr(path_to_pqr):
-    """
-    Parses pqr file to obtain charges and positions of charges (beta, removes charges that are 0)
-    Takes
-      path_to_pqr(str) - path to pqr file
-    Returns
-      np.array(x)(array) - coordinates of charges from pqr file of shape (N,3)
-      np.array(Q).reshape(-1,1) - corresponding magnitude and sign of charges from pqr file of shape (N,1)
-    """
-    x = []
-    Q = []
-    with open(path_to_pqr) as pqr_file:
-        lines = pqr_file.readlines()
-    for line in lines:
-        if line.startswith("ATOM") or line.startswith("HETATM"):
-            coords = [line[31:39].strip(),line[40:48].strip(),line[49:57].strip()]
-
-            charge = line[58:63].strip()
-            try:
-                tempq = float(charge)
-                temp = [float(_) for _ in coords]
-            except:
-                print(f"Charge or coordinates is not a useable number. Check pqr file formatting for the following line: {line}")
-            if tempq!=0:
-              x.append(temp)
-              Q.append(tempq)
-    return np.array(x), np.array(Q).reshape(-1,1)
-
 def generate_path_filter(arr, M):
     # Initialize the matrix with zeros
     mat = np.zeros((len(arr), M+2), dtype=int)
@@ -294,7 +211,7 @@ def filter_Inside_Box(path_matrix, dimensions,M,path_filter):
 
     return final_mat, filtered_path_matrix
 
-@profile
+#@profile
 def main():
     options = {
         "path_to_pqr": "./1_wt_run1_0.pqr",
