@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
 from CPET.utils.c_ops import Math_ops
 
@@ -104,7 +103,7 @@ def calculate_electric_field_gpu_torch(x_0, x, Q, device="cuda", filter=True):
     return E.cpu().numpy()
 
 
-def calculate_field_on_grid(grid_coords, x, Q):
+def compute_field_on_grid(grid_coords, x, Q):
     """
     Computes electric field at each point in a meshgrid given positions of charges.
 

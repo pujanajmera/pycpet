@@ -1,5 +1,4 @@
 import numpy as np
-from numba import jit
 
 """
 Making basic math faster!!
@@ -24,7 +23,6 @@ def power(a, b):
     return out_
 
 
-@jit(nopython=True)
 def nb_subtract(a, b):
     """
     Computes subtraction
@@ -37,13 +35,11 @@ def nb_subtract(a, b):
     return np.subtract(a, b)
 
 
-@jit(nopython=True)
 def nb_norm(x):
     x_norm = np.linalg.norm(x)
     return x_norm
 
 
-@jit(nopython=True)
 def nb_cross(a, b):
     """
     Computes cross product

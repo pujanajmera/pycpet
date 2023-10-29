@@ -80,11 +80,14 @@ def parse_pqr(path_to_pqr, ret_atom_names=False):
 
             assert temp != [], "charge incorrectly parsed"
             assert tempq != [], "coord incorrectly parsed"
-            x.append(temp)
-            Q.append(tempq)
+            if tempq != 0:
+                x.append(temp)
+                Q.append(tempq)
             # clear temp variables
             temp = []
             tempq = []
     if ret_atom_names:
         return np.array(x), np.array(Q).reshape(-1, 1), ret_atom_num
+    print(np.array(x)[-20:], np.array(Q).reshape(-1,1)[-20:])
+    print(np.sum(np.array(Q)))
     return np.array(x), np.array(Q).reshape(-1, 1)
