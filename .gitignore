@@ -3,3 +3,8 @@
 *egg-info
 *.pdb*
 *zip
+*json
+*ipynb
+*log
+*in
+*sh

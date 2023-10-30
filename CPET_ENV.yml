@@ -10,7 +10,11 @@ dependencies:
   - _openmp_mutex=4.5=2_gnu
   - alsa-lib=1.2.8=h166bdaf_0
   - appdirs=1.4.4=pyh9f0ad1d_0
+  - asttokens=2.4.0=pyhd8ed1ab_0
   - attr=2.5.1=h166bdaf_1
+  - backcall=0.2.0=pyh9f0ad1d_0
+  - backports=1.0=pyhd8ed1ab_3
+  - backports.functools_lru_cache=1.6.5=pyhd8ed1ab_0
   - blas=1.0=openblas
   - boost=1.78.0=py311h92ebd52_5
   - boost-cpp=1.78.0=h5adbc97_2
@@ -24,12 +28,17 @@ dependencies:
   - certifi=2023.7.22=pyhd8ed1ab_0
   - cffi=1.15.1=py311hb3a22ac_5
   - charset-normalizer=2.0.4=pyhd8ed1ab_0
+  - comm=0.1.4=pyhd8ed1ab_0
   - contourpy=1.0.5=py311h4dd048b_1
   - cryptography=39.0.2=py311h9b4c7bb_0
   - cuda-nvcc=12.2.140=0
   - cudatoolkit=11.8.0=h4ba93d1_12
   - cycler=0.11.0=pyhd8ed1ab_0
   - dbus=1.13.6=h5008d03_3
+  - debugpy=1.8.0=py311hb755f60_1
+  - decorator=5.1.1=pyhd8ed1ab_0
+  - exceptiongroup=1.1.3=pyhd8ed1ab_0
+  - executing=1.2.0=pyhd8ed1ab_0
   - expat=2.5.0=hcb278e6_1
   - fftw=3.3.10=nompi_hc118613_107
   - font-ttf-dejavu-sans-mono=2.37=hab24e00_0
@@ -51,9 +60,15 @@ dependencies:
   - icu=70.1=h27087fc_0
   - idna=3.4=pyhd8ed1ab_0
   - importlib-metadata=6.8.0=pyha770c72_0
+  - importlib_metadata=6.8.0=hd8ed1ab_0
+  - ipykernel=6.26.0=pyhf8b6a83_0
+  - ipython=8.16.1=pyh0d859eb_0
   - jack=1.9.22=h11f4161_0
+  - jedi=0.19.1=pyhd8ed1ab_0
   - joblib=1.2.0=pyhd8ed1ab_0
   - jpeg=9e=h0b41bf4_3
+  - jupyter_client=8.5.0=pyhd8ed1ab_0
+  - jupyter_core=5.4.0=py311h38be061_0
   - keyutils=1.6.1=h166bdaf_0
   - kiwisolver=1.4.4=py311h4dd048b_1
   - krb5=1.20.1=h81ceb04_0
@@ -96,6 +111,7 @@ dependencies:
   - libpng=1.6.39=h753d276_0
   - libpq=15.2=hb675445_0
   - libsndfile=1.2.2=hc60ed4a_1
+  - libsodium=1.0.18=h36c2ea0_1
   - libsqlite=3.41.2=h2797004_1
   - libstdcxx-ng=13.2.0=h7e041cc_2
   - libsystemd0=252=h2a991cd_0
@@ -116,30 +132,42 @@ dependencies:
   - markupsafe=2.1.3=py311h459d7ec_1
   - matplotlib=3.7.1=py311h38be061_0
   - matplotlib-base=3.7.1=py311h8597a09_0
+  - matplotlib-inline=0.1.6=pyhd8ed1ab_0
   - mpg123=1.32.3=h59595ed_0
   - munkres=1.1.4=py_0
   - mysql-common=8.0.32=ha901b37_0
   - mysql-libs=8.0.32=hd7da12d_0
   - ncurses=6.4=hcb278e6_0
+  - nest-asyncio=1.5.8=pyhd8ed1ab_0
   - nomkl=1.0=h5ca1d4c_0
   - nspr=4.35=h27087fc_0
   - nss=3.89=he45b914_0
   - numexpr=2.8.4=py311h039bad6_101
+  - numpy-base=1.26.0=py311hbfb1bba_0
   - openblas=0.3.21=pthreads_h320a7e8_3
-  - openssl=3.1.3=hd590300_0
+  - openssl=3.1.4=hd590300_0
   - packaging=23.1=pyhd8ed1ab_0
   - pandas=1.5.3=py311h2872171_1
+  - parso=0.8.3=pyhd8ed1ab_0
   - patsy=0.5.3=pyhd8ed1ab_0
   - pcre2=10.40=hc3806b6_0
+  - pexpect=4.8.0=pyh1a96a4e_2
+  - pickleshare=0.7.5=py_1003
   - pillow=9.4.0=py311h6a678d5_1
   - pip=23.2.1=pyhd8ed1ab_0
   - platformdirs=3.10.0=pyhd8ed1ab_0
   - ply=3.11=py_1
   - pooch=1.7.0=pyhd8ed1ab_4
+  - prompt-toolkit=3.0.39=pyha770c72_0
+  - prompt_toolkit=3.0.39=hd8ed1ab_0
+  - psutil=5.9.5=py311h459d7ec_1
   - pthread-stubs=0.4=h36c2ea0_1001
+  - ptyprocess=0.7.0=pyhd3deb0d_0
   - pulseaudio=16.1=ha8d29e2_1
+  - pure_eval=0.2.2=pyhd8ed1ab_0
   - pycparser=2.21=pyhd8ed1ab_0
   - pycuda=2022.2.2=py311hd67b0db_1
+  - pygments=2.16.1=pyhd8ed1ab_0
   - pyopenssl=23.2.0=pyhd8ed1ab_1
   - pyparsing=3.0.9=pyhd8ed1ab_0
   - pyqt=5.15.7=py311ha74522f_3
@@ -150,6 +178,7 @@ dependencies:
   - python_abi=3.11=2_cp311
   - pytools=2023.1.1=pyhd8ed1ab_0
   - pytz=2023.3.post1=pyhd8ed1ab_0
+  - pyzmq=25.1.1=py311h34ded2d_2
   - qt-main=5.15.6=hf6cd601_5
   - readline=8.2=h8228510_1
   - requests=2.31.0=pyhd8ed1ab_0
@@ -161,16 +190,19 @@ dependencies:
   - sip=6.7.11=py311hb755f60_1
   - six=1.16.0=pyh6c4a22f_0
   - sqlite=3.41.2=h2c6b66d_1
+  - stack_data=0.6.2=pyhd8ed1ab_0
   - statsmodels=0.14.0=py311h1f0f07a_2
   - threadpoolctl=2.2.0=pyh8a188c0_0
   - tk=8.6.12=h27826a3_0
   - toml=0.10.2=pyhd8ed1ab_0
   - tomli=2.0.1=pyhd8ed1ab_0
   - tornado=6.3.2=py311h459d7ec_0
+  - traitlets=5.12.0=pyhd8ed1ab_0
   - typing-extensions=4.8.0=hd8ed1ab_0
   - typing_extensions=4.8.0=pyha770c72_0
   - tzdata=2023c=h71feb2d_0
   - urllib3=1.26.16=pyhd8ed1ab_0
+  - wcwidth=0.2.8=pyhd8ed1ab_0
   - wheel=0.41.2=pyhd8ed1ab_0
   - xcb-util=0.4.0=h166bdaf_0
   - xcb-util-image=0.4.0=h166bdaf_0
@@ -180,6 +212,7 @@ dependencies:
   - xorg-libxau=1.0.11=hd590300_0
   - xorg-libxdmcp=1.1.3=h7f98852_0
   - xz=5.4.2=h5eee18b_0
+  - zeromq=4.3.5=h59595ed_0
   - zipp=3.17.0=pyhd8ed1ab_0
   - zlib=1.2.13=hd590300_5
   - zstd=1.5.5=hfc55251_0
@@ -193,7 +226,7 @@ dependencies:
       - mpmath==1.3.0
       - networkx==3.1
       - numba==0.58.0
-      - numpy==1.24.4
+      - numpy==1.25.0
       - nvidia-cublas-cu12==12.1.3.1
       - nvidia-cuda-cupti-cu12==12.1.105
       - nvidia-cuda-nvrtc-cu12==12.1.105
