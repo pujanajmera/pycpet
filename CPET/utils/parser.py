@@ -13,6 +13,18 @@ def filter_pqr(x, Q, center, radius=2.0):
     return x_filtered, Q_filtered
 
 
+def filter_pqr_atom_num(x, Q, atom_num_list, filter_list):
+    # Filter out points that are inside the box
+    x_filtered = []
+    Q_filtered = []
+    for i in range(len(x)):
+        if atom_num_list[i] not in filter_list:
+            x_filtered.append(x[i])
+            Q_filtered.append(Q[i])
+
+    return x_filtered, Q_filtered
+
+
 def parse_pqr(path_to_pqr, ret_atom_names=False):
     """
     Parses pqr file to obtain charges and positions of charges (beta, removes charges that are 0)
@@ -80,14 +92,11 @@ def parse_pqr(path_to_pqr, ret_atom_names=False):
 
             assert temp != [], "charge incorrectly parsed"
             assert tempq != [], "coord incorrectly parsed"
-            if tempq != 0:
-                x.append(temp)
-                Q.append(tempq)
+            x.append(temp)
+            Q.append(tempq)
             # clear temp variables
             temp = []
             tempq = []
     if ret_atom_names:
         return np.array(x), np.array(Q).reshape(-1, 1), ret_atom_num
-    print(np.array(x)[-20:], np.array(Q).reshape(-1,1)[-20:])
-    print(np.sum(np.array(Q)))
     return np.array(x), np.array(Q).reshape(-1, 1)
