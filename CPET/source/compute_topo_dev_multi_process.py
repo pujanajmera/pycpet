@@ -13,20 +13,12 @@ from CPET.utils.c_ops import Math_ops
 from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
 
 
-class calculator:
+"""class calculator:
     def __init__(self, math_loc="../utils/math_module.so"):
         self.math = Math_ops(shared_loc=math_loc)
 
     def __call__(self, x_0, x, Q):
-        """
-        Computes electric field at a point given positions of charges
-        Takes
-            x_0(array) - position to compute field at of shape (1,3)
-            x(array) - positions of charges of shape (N,3)
-            Q(array) - magnitude and sign of charges of shape (N,1)
-        Returns
-            E(array) - electric field at the point of shape (1,3)
-        """
+
         # Create matrix R
         R = nb_subtract(x_0, x)
         R_sq = R**2
@@ -35,6 +27,7 @@ class calculator:
         E = self.math.einsum_operation(R, 1 / r_mag_cube, Q)
 
         return E
+"""
 
 
 math = Math_ops(shared_loc="../utils/math_module.so")
@@ -70,17 +63,7 @@ class Topo_calc:
         self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
         print("... > Initialized Topo_calc!")
 
-    def propagate_topo_dev(self, x_0):
-        """
-        Propagates position based on normalized electric field at a given point
-        Takes
-            x_0(array) - position to propagate based on field at that point of shape (1,3)
-            x(array) - positions of charges of shape (N,3)
-            Q(array) - magnitude and sign of charges of shape (N,1)
-            step_size(float) - size of streamline step to take when propagating, real and positive
-        Returns
-            x_0 - new position on streamline after propagation via electric field
-        """
+    """def propagate_topo_dev(self, x_0):
         # if math is None:
         # Compute field
         # E = calculate_electric_field_dev_c_shared(x_0, self.x, self.Q, Math=math)
@@ -89,9 +72,9 @@ class Topo_calc:
         # E = calculate_electric_field_cupy(x_0, x, Q)
         E = E / np.linalg.norm(E)
         x_0 = x_0 + self.step_size * E
-        return x_0
+        return x_0"""
 
-    def task(self, x_0, n_iter):
+    """def task(self, x_0, n_iter):
         x_init = x_0
         for j in range(n_iter):
             # x_0 = propagate_topo_dev(x_0, self.x, self.Q, self.step_size)
@@ -111,22 +94,19 @@ class Topo_calc:
         result = compute_curv_and_dist(
             x_init, x_init_plus, x_init_plus_plus, x_0, x_0_plus, x_0_plus_plus
         )
-        return result
+        return result"""
 
     def compute_topo(self):
         print("... > Computing Topo!")
         print(f"Number of samples: {self.n_samples}")
         print(f"Number of charges: {len(self.Q)}")
         print(f"Step size: {self.step_size}")
-        print(type(self.random_start_points))
-        print(type(self.random_max_samples))
         start_time = time.time()
         with Pool(self.concur_slip) as pool:
             args = [
                 (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
                 for i, n_iter in zip(self.random_start_points, self.random_max_samples)
             ]
-
             hist = pool.starmap(task, args)
         end_time = time.time()
         self.hist = hist
@@ -197,7 +177,7 @@ def propagate_topo_dev(x_0, x, Q, step_size):
     # Compute field
     E = calculate_electric_field_dev_c_shared(x_0, x, Q, Math=math)
     # E = calculate_electric_field(x_0, self.x, self.Q)
-    # E = self.efield_calc(x_0, self.x, self.Q)
+    #E = self.efield_calc(x_0, self.x, self.Q)
     # E = calculate_electric_field_cupy(x_0, x, Q)
     E = E / np.linalg.norm(E)
     x_0 = x_0 + step_size * E
