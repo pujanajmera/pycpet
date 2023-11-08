@@ -44,14 +44,13 @@ def propagate_topo_dev(x_0, x, Q, step_size, math=None, efield_func=-1):
     Returns
         x_0 - new position on streamline after propagation via electric field
     """
-    
+
     if efield_func != -1:
         if math is None:
             math = Math_ops(shared_loc="../utils/math_module.so")
         # E = calculate_electric_field_dev_python(x_0, x, Q)  # , math=math)  # Compute field
         E = efield_func(x_0, x, Q, Math=math)
-    else: 
-        
+    else:
         E = calculate_electric_field(x_0, x, Q)
     E = E / np.linalg.norm(E)
     x_0 = x_0 + step_size * E
@@ -127,40 +126,45 @@ def main():
     ) = initialize_box_points(
         center, x_vec_pt, y_vec_pt, dimensions, n_samples, step_size
     )
-    
+
     hist = []
     start_time = time.time()
     count = 0
-    
-    
-    prop_func = propagate_topo
-    math = Math_ops(shared_loc="../utils/math_module.so")
-    efield_func = calculate_electric_field_dev_c_shared
-    efield_func = calculate_electric_field_dev_python
-    efield_func = calculate_electric_field_gpu_torch
-    efield_func = calculate_electric_field_cupy
 
-    
+    math = Math_ops(shared_loc="../utils/math_module.so")
+    prop_func = propagate_topo_dev
+    efield_func = calculate_electric_field_dev_c_shared
+    # efield_func = calculate_electric_field_dev_python
+    # efield_func = calculate_electric_field_gpu_torch
+    # efield_func = calculate_electric_field_cupy
+
     x = (x - center) @ np.linalg.inv(transformation_matrix)
     for idx, i in enumerate(random_start_points):
         x_0 = i
         x_init = x_0
         n_iter = random_max_samples[idx]
         for j in range(n_iter):
-            #x_0 = prop_func(x_0, x, Q, step_size, math=math, efield_func=efield_func)
-            x_0 = prop_func(x_0, x, Q, step_size, efield_func=efield_func)
+            x_0 = prop_func(x_0, x, Q, step_size, math=math, efield_func=efield_func)
+            # x_0 = prop_func(x_0, x, Q, step_size, efield_func=efield_func)
             if not Inside_Box(x_0, dimensions):
                 count += 1
                 break
-        #x_init_plus = prop_func(x_init, x, Q, step_size, math=math, efield_func=efield_func)
-        #x_init_plus_plus = prop_func(x_init_plus, x, Q, step_size, math=math, efield_func=efield_func)
-        #x_0_plus = prop_func(x_0, x, Q, step_size, math=math, efield_func=efield_func)
-        #x_0_plus_plus = prop_func(x_0_plus, x, Q, step_size, math=math, efield_func=efield_func)
-        x_init_plus = prop_func(x_init, x, Q, step_size, efield_func=efield_func)
-        x_init_plus_plus = prop_func(x_init_plus, x, Q, step_size,  efield_func=efield_func)
-        x_0_plus = prop_func(x_0, x, Q, step_size, efield_func=efield_func)
-        x_0_plus_plus = prop_func(x_0_plus, x, Q, step_size, efield_func=efield_func)
-        
+        x_init_plus = prop_func(
+            x_init, x, Q, step_size, math=math, efield_func=efield_func
+        )
+        x_init_plus_plus = prop_func(
+            x_init_plus, x, Q, step_size, math=math, efield_func=efield_func
+        )
+        x_0_plus = prop_func(x_0, x, Q, step_size, math=math, efield_func=efield_func)
+        x_0_plus_plus = prop_func(
+            x_0_plus, x, Q, step_size, math=math, efield_func=efield_func
+        )
+
+        # x_init_plus = prop_func(x_init, x, Q, step_size, efield_func=efield_func)
+        # x_init_plus_plus = prop_func(x_init_plus, x, Q, step_size,  efield_func=efield_func)
+        # x_0_plus = prop_func(x_0, x, Q, step_size, efield_func=efield_func)
+        # x_0_plus_plus = prop_func(x_0_plus, x, Q, step_size, efield_func=efield_func)
+
         hist.append(
             compute_curv_and_dist(
                 x_init, x_init_plus, x_init_plus_plus, x_0, x_0_plus, x_0_plus_plus

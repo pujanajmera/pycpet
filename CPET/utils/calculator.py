@@ -42,7 +42,7 @@ def calculate_electric_field_dev_python(x_0, x, Q):
     # print(R_sq.shape, r_mag_sq.shape)
     r_mag_cube = np.power(r_mag_sq, 3 / 2)
     recip_dim = 1 / r_mag_cube
-    #print(R.shape, recip_dim.shape, Q.shape)
+    # print(R.shape, recip_dim.shape, Q.shape)
     E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
     return E
 
@@ -67,7 +67,6 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q, Math=None):
     # print(R_sq.dtype)
     r_mag_sq = Math.einsum_ij_i(R_sq).reshape(-1, 1)
     r_mag_cube = np.power(r_mag_sq, 3 / 2)
-    ##E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
     E = Math.einsum_operation(R, 1 / r_mag_cube, Q)
     # print(E.shape)
     # print("-")
@@ -75,7 +74,7 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q, Math=None):
     return E
 
 
-def calculate_electric_field_gpu_torch(x_0, x, Q, device="cpu", filter=True):
+def calculate_electric_field_gpu_torch(x_0, x, Q, device="cuda", filter=True):
     """
     Computes electric field at a point given positions of charges
     Takes
@@ -105,6 +104,7 @@ def calculate_electric_field_gpu_torch(x_0, x, Q, device="cpu", filter=True):
     # now combine all of the above operations into one
     return E.cpu().numpy()
 
+
 def calculate_electric_field_cupy(x_0, x, Q):
     """
     Computes electric field at a point given positions of charges
@@ -115,7 +115,6 @@ def calculate_electric_field_cupy(x_0, x, Q):
     Returns
         E(array) - electric field at the point of shape (1,3)
     """
-
 
     x_0 = torch.tensor(x_0)
     x = torch.tensor(x)
@@ -128,6 +127,7 @@ def calculate_electric_field_cupy(x_0, x, Q):
     E = cp.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
     # now combine all of the above operations into one
     return E.cpu().numpy()
+
 
 def calculate_electric_field_cupy(x_0, x, Q):
     """
@@ -145,9 +145,10 @@ def calculate_electric_field_cupy(x_0, x, Q):
     R = x_0 - x
     R_sq = R**2
     r_mag_sq = cp.einsum("ij->i", R_sq).reshape(-1, 1)
-    r_mag_cube = r_mag_sq**(3 / 2)
+    r_mag_cube = r_mag_sq ** (3 / 2)
     E = cp.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
-    return cp.asnumpy(E) 
+    return cp.asnumpy(E)
+
 
 def compute_field_on_grid(grid_coords, x, Q):
     """
@@ -212,8 +213,8 @@ def curv(v_prime, v_prime_prime, eps=10e-6):
     Returns
         curvature(float) - the curvature
     """
-    curvature = (
-        np.linalg.norm(np.cross(v_prime, v_prime_prime)) / (eps + (np.linalg.norm(v_prime) ** 3))
+    curvature = np.linalg.norm(np.cross(v_prime, v_prime_prime)) / (
+        eps + (np.linalg.norm(v_prime) ** 3)
     )
     return curvature
 

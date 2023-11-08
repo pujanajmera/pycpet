@@ -1,9 +1,11 @@
 from c_ops import Math_ops
 import numpy as np
-#from scipy.sparse import csr_matrix
+
+# from scipy.sparse import csr_matrix
 import time
 
 Math = Math_ops()
+
 
 def test_ij_i(n_size=10000):
     random = np.random.rand(n_size, 3)
@@ -23,7 +25,8 @@ def test_ij_i(n_size=10000):
         np.max(einsum_random_np),
         np.max(einsum_random_c),
     )
-    return 
+    return
+
 
 def test_vec_addn(n_size=10000):
     D = np.random.rand(n_size)
@@ -42,7 +45,7 @@ def test_vec_addn(n_size=10000):
         np.max(np.abs(D + E - tmp3)), np.max(D + E), np.max(tmp3)
     )
     print("ratio us vs. np, vecaddn: ", time_c / time_np)
-    return 
+    return
 
 
 def test_einsum_operation(n_size=10000):
@@ -69,12 +72,11 @@ def test_einsum_operation(n_size=10000):
 
     return
 
+
 if __name__ == "__main__":
-    #ones = np.ones((1000000, 1), dtype="float64")
+    # ones = np.ones((1000000, 1), dtype="float64")
     # copy A_np along the dim 1 for 3 times
     n_size = 100000
     test_ij_i(n_size)
     test_vec_addn(n_size)
     test_einsum_operation(n_size)
-    
-    
