@@ -4,6 +4,8 @@ from CPET.utils.calculator import (
     calculate_electric_field,
     calculate_electric_field_dev_python,
     calculate_electric_field_dev_c_shared,
+    calculate_electric_field_gpu_torch,
+    calculate_electric_field_cupy,
     curv,
     compute_curv_and_dist,
     Inside_Box,
@@ -12,7 +14,7 @@ from CPET.utils.parser import parse_pqr
 from CPET.utils.c_ops import Math_ops
 
 
-def propagate_topo(x_0, x, Q, step_size):
+def propagate_topo(x_0, x, Q, step_size, efield_func=None):
     """
     Propagates position based on normalized electric field at a given point
     Takes
@@ -23,13 +25,15 @@ def propagate_topo(x_0, x, Q, step_size):
     Returns
         x_0 - new position on streamline after propagation via electric field
     """
-    E = calculate_electric_field(x_0, x, Q)  # Compute field
+    if efield_func is None:
+        efield_func = calculate_electric_field
+    E = efield_func(x_0, x, Q)  # Compute field
     E = E / np.linalg.norm(E)
     x_0 = x_0 + step_size * E
     return x_0
 
 
-def propagate_topo_dev(x_0, x, Q, step_size, math=None):
+def propagate_topo_dev(x_0, x, Q, step_size, math=None, efield_func=-1):
     """
     Propagates position based on normalized electric field at a given point
     Takes
@@ -40,9 +44,15 @@ def propagate_topo_dev(x_0, x, Q, step_size, math=None):
     Returns
         x_0 - new position on streamline after propagation via electric field
     """
-    math = Math_ops(shared_loc="../utils/math_module.so")
-    # E = calculate_electric_field_dev_python(x_0, x, Q)  # , math=math)  # Compute field
-    E = calculate_electric_field_dev_c_shared(x_0, x, Q, Math=math)
+    
+    if efield_func != -1:
+        if math is None:
+            math = Math_ops(shared_loc="../utils/math_module.so")
+        # E = calculate_electric_field_dev_python(x_0, x, Q)  # , math=math)  # Compute field
+        E = efield_func(x_0, x, Q, Math=math)
+    else: 
+        
+        E = calculate_electric_field(x_0, x, Q)
     E = E / np.linalg.norm(E)
     x_0 = x_0 + step_size * E
     return x_0
@@ -117,24 +127,40 @@ def main():
     ) = initialize_box_points(
         center, x_vec_pt, y_vec_pt, dimensions, n_samples, step_size
     )
+    
     hist = []
     start_time = time.time()
     count = 0
-    # Math = Math_ops("../utils/math_module.so")
+    
+    
+    prop_func = propagate_topo
+    math = Math_ops(shared_loc="../utils/math_module.so")
+    efield_func = calculate_electric_field_dev_c_shared
+    efield_func = calculate_electric_field_dev_python
+    efield_func = calculate_electric_field_gpu_torch
+    efield_func = calculate_electric_field_cupy
+
+    
     x = (x - center) @ np.linalg.inv(transformation_matrix)
     for idx, i in enumerate(random_start_points):
         x_0 = i
         x_init = x_0
         n_iter = random_max_samples[idx]
         for j in range(n_iter):
-            x_0 = propagate_topo_dev(x_0, x, Q, step_size)
+            #x_0 = prop_func(x_0, x, Q, step_size, math=math, efield_func=efield_func)
+            x_0 = prop_func(x_0, x, Q, step_size, efield_func=efield_func)
             if not Inside_Box(x_0, dimensions):
                 count += 1
                 break
-        x_init_plus = propagate_topo_dev(x_init, x, Q, step_size)
-        x_init_plus_plus = propagate_topo_dev(x_init_plus, x, Q, step_size)
-        x_0_plus = propagate_topo_dev(x_0, x, Q, step_size)
-        x_0_plus_plus = propagate_topo_dev(x_0_plus, x, Q, step_size)
+        #x_init_plus = prop_func(x_init, x, Q, step_size, math=math, efield_func=efield_func)
+        #x_init_plus_plus = prop_func(x_init_plus, x, Q, step_size, math=math, efield_func=efield_func)
+        #x_0_plus = prop_func(x_0, x, Q, step_size, math=math, efield_func=efield_func)
+        #x_0_plus_plus = prop_func(x_0_plus, x, Q, step_size, math=math, efield_func=efield_func)
+        x_init_plus = prop_func(x_init, x, Q, step_size, efield_func=efield_func)
+        x_init_plus_plus = prop_func(x_init_plus, x, Q, step_size,  efield_func=efield_func)
+        x_0_plus = prop_func(x_0, x, Q, step_size, efield_func=efield_func)
+        x_0_plus_plus = prop_func(x_0_plus, x, Q, step_size, efield_func=efield_func)
+        
         hist.append(
             compute_curv_and_dist(
                 x_init, x_init_plus, x_init_plus_plus, x_0, x_0_plus, x_0_plus_plus
@@ -143,7 +169,7 @@ def main():
     end_time = time.time()
     np.savetxt("hist_cpet.txt", hist)
     print(
-        f"Time taken for {options['n_samples']} calculations with N~{len(Q)}: {end_time - start_time:.2f} seconds"
+        f"Time taken for {options['n_samples']} calculations with N_charges = {len(Q)}: {end_time - start_time:.2f} seconds"
     )
     print(count, len(random_start_points))
 
