@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def filter_pqr(x, Q, center, radius=2.0):
+def filter_pqr_radius(x, Q, center, radius=2.0):
     # Filter out points that are inside the box
     x = x - center
     r = np.linalg.norm(x, axis=1)
@@ -9,6 +9,20 @@ def filter_pqr(x, Q, center, radius=2.0):
     # remove masked points
     x_filtered = x[mask]
     Q_filtered = Q[mask]
+
+    return x_filtered, Q_filtered
+
+def filter_pqr_residue(x, Q, resids, filter_list):
+    # Filter out points that are inside the box
+    x = x
+    filter_inds = []
+    for resid in resids: 
+        if resid in filter_list:
+            filter_inds.append(False)
+        else: 
+            filter_inds.append(True)
+    x_filtered = x[filter_inds]
+    Q_filtered = Q[filter_inds]
 
     return x_filtered, Q_filtered
 
@@ -25,11 +39,13 @@ def filter_pqr_atom_num(x, Q, atom_num_list, filter_list):
     return x_filtered, Q_filtered
 
 
-def parse_pqr(path_to_pqr, ret_atom_names=False):
+def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
     """
     Parses pqr file to obtain charges and positions of charges (beta, removes charges that are 0)
     Takes
         path_to_pqr(str) - path to pqr file
+        ret_atom_names(bool) - whether to return atom names 
+        ret_residue_names(bool) - whether to return residue names 
     Returns
         np.array(x)(array) - coordinates of charges of shape (N,3)
         np.array(Q).reshape(-1,1) - magnitude and sign of charges of shape (N,1)
@@ -37,6 +53,8 @@ def parse_pqr(path_to_pqr, ret_atom_names=False):
     x = []
     Q = []
     ret_atom_num = []
+    res_name = []
+
     with open(path_to_pqr) as pqr_file:
         lines = pqr_file.readlines()
 
@@ -48,12 +66,19 @@ def parse_pqr(path_to_pqr, ret_atom_names=False):
             if len(line.split()[0]) > 6:
                 res_ind = 4
                 split_tf = True
+
             if ret_atom_names:
                 if split_tf:
                     # remove HETATM from split 0
                     ret_atom_num.append(int(line.split()[0][6:]))
                 else:
                     ret_atom_num.append(int(line.split()[1]))
+
+            if ret_residue_names:
+                if split_tf: 
+                    res_name.append(line.split()[2])
+                else:
+                    res_name.append(line.split()[3])
 
             if len(line.split()[res_ind]) > 4:
                 res_val = int(line.split()[res_ind - 1][1:])
@@ -99,4 +124,8 @@ def parse_pqr(path_to_pqr, ret_atom_names=False):
             tempq = []
     if ret_atom_names:
         return np.array(x), np.array(Q).reshape(-1, 1), ret_atom_num
+
+    if ret_residue_names: 
+        return np.array(x), np.array(Q).reshape(-1, 1), res_name
+
     return np.array(x), np.array(Q).reshape(-1, 1)
