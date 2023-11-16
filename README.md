@@ -18,3 +18,7 @@ For pycuda you might need:
 export CPATH=$CPATH:/usr/local/cuda/include
 
 export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/cuda/lib64
+
+For c-shared libraries manually setting the number of OMP threads is needed: 
+
+export OMP_NUM_THREADS=1
