@@ -76,4 +76,3 @@ def test_pqr_parser_resid():
     assert resid[-10] == "HEM", "resid parse is wrong"
     assert resid[10] == "ARG", "resid parse is wrong"
     assert resid[16492] == "THR", "resid parse is wrong"
-test_pqr_parser_resid()

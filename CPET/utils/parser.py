@@ -3,8 +3,9 @@ import numpy as np
 
 def filter_pqr_radius(x, Q, center, radius=2.0):
     # Filter out points that are inside the box
-    x = x - center
-    r = np.linalg.norm(x, axis=1)
+    x_recentered = x - center
+    r = np.linalg.norm(x_recentered, axis=1)
+    
     mask = r > radius
     # remove masked points
     x_filtered = x[mask]

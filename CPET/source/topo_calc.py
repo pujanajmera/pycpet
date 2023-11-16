@@ -9,6 +9,7 @@ from CPET.utils.parallel import task
 from CPET.utils.calculator import initialize_box_points
 from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
 from CPET.source.calculator import calculator
+from CPET.utils.parser import filter_pqr_radius, filter_pqr_residue
 
 class Topo_calc:
     def __init__(self, options, math_loc="../utils/math_module.so"):
@@ -23,8 +24,27 @@ class Topo_calc:
         self.step_size = options["step_size"]
         self.n_samples = options["n_samples"]
         self.concur_slip = options["concur_slip"]
-        self.x, self.Q = parse_pqr(self.path_to_pqr)
+        
+            
+        
+        if "filter_resids" in options.keys(): 
+            print("filtering residues: {}".format(options["filter_resids"]))
+            self.x, self.Q, self.resids = parse_pqr(self.path_to_pqr, ret_residue_names=True)
+            self.x, self.Q = filter_pqr_residue(self.x, self.Q, self.resids, filter_list=options["filter_resids"])
+            
+        else: 
+            self.x, self.Q = parse_pqr(self.path_to_pqr)
 
+
+        if "filter_radius" in options.keys():
+            print("filtering by radius: {} Ang".format(options["filter_radius"]))
+            
+            self.x, self.Q = filter_pqr_radius(
+                x=self.x, 
+                Q=self.Q, 
+                center=self.center, 
+                radius=options["filter_radius"])
+            
         (
             self.random_start_points,
             self.random_max_samples,
