@@ -1,10 +1,14 @@
 import numpy as np
 import torch
-import cupy as cp
+import pkg_resources
+
+package_name = "CPET-python"
+package = pkg_resources.get_distribution(package_name)
+package_path = package.location
+# import cupy as cp
 
 from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
 from CPET.utils.c_ops import Math_ops
-
 
 
 def propagate_topo_dev(x_0, x, Q, step_size):
@@ -22,7 +26,7 @@ def propagate_topo_dev(x_0, x, Q, step_size):
     # Compute field
     E = calculate_electric_field_dev_c_shared(x_0, x, Q)
     # E = calculate_electric_field(x_0, self.x, self.Q)
-    #E = self.efield_calc(x_0, self.x, self.Q)
+    # E = self.efield_calc(x_0, self.x, self.Q)
     # E = calculate_electric_field_cupy(x_0, x, Q)
     E = E / np.linalg.norm(E)
     x_0 = x_0 + step_size * E
@@ -114,7 +118,10 @@ def calculate_electric_field_dev_python(x_0, x, Q):
     E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
     return E
 
-Math = Math_ops(shared_loc="../utils/math_module.so")
+
+Math = Math_ops(shared_loc=package_path + "/CPET/utils/math_module.so")
+
+
 def calculate_electric_field_dev_c_shared(x_0, x, Q):
     """
     Computes electric field at a point given positions of charges
@@ -125,7 +132,7 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q):
     Returns
         E(array) - electric field at the point of shape (1,3)
     """
-    #if Math is None:
+    # if Math is None:
     #    Math = Math_ops(shared_loc="../utils/math_module.so")
     # Create matrix R
     R = nb_subtract(x_0, x)
@@ -173,17 +180,16 @@ def calculate_electric_field_gpu_torch(x_0, x, Q, device="cuda", filter=True):
     return E.cpu().numpy()
 
 
+"""
 def calculate_electric_field_cupy(x_0, x, Q):
-    """
-    Computes electric field at a point given positions of charges
-    Takes
-        x_0(array) - position to compute field at of shape (N,3)
-        x(array) - positions of charges of shape (N,3)
-        Q(array) - magnitude and sign of charges of shape (N,1)
-    Returns
-        E(array) - electric field at the point of shape (1,3)
-    """
-
+    #Computes electric field at a point given positions of charges
+    #Takes
+    #    x_0(array) - position to compute field at of shape (N,3)
+    #    x(array) - positions of charges of shape (N,3)
+    #    Q(array) - magnitude and sign of charges of shape (N,1)
+    #Returns
+    #    E(array) - electric field at the point of shape (1,3)
+    
     x_0 = torch.tensor(x_0)
     x = torch.tensor(x)
     Q = torch.tensor(Q)
@@ -195,6 +201,7 @@ def calculate_electric_field_cupy(x_0, x, Q):
     E = cp.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
     # now combine all of the above operations into one
     return E.cpu().numpy()
+"""
 
 
 def calculate_electric_field_cupy(x_0, x, Q):
