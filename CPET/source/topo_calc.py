@@ -12,7 +12,7 @@ from CPET.source.calculator import calculator
 from CPET.utils.parser import filter_pqr_radius, filter_pqr_residue
 
 class Topo_calc:
-    def __init__(self, options, math_loc="../utils/math_module.so"):
+    def __init__(self, options):
         #self.efield_calc = calculator(math_loc=math_loc)
         self.options = options
 
