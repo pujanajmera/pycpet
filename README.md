@@ -4,6 +4,10 @@ Classical Protein Electric Field Topology (https://github.com/matthew-hennefarth
 
 Original code in C++ is by Matthew Hennerfarth
 
+Installing:
+
+pip install -e .
+
 To do items:
 
 - Finish field calculation
