@@ -1,8 +1,13 @@
 import numpy as np
+import json
 
+def options_parsing(path_to_options):
+    with open(path_to_options, 'r') as file:
+        options = json.load(file)
+    return options
 
 def filter_pqr_radius(x, Q, center, radius=2.0):
-    # Filter out points that are inside the box
+    # Filter out point charges that are within a certain radius of the center
     x_recentered = x - center
     r = np.linalg.norm(x_recentered, axis=1)
     
@@ -13,12 +18,38 @@ def filter_pqr_radius(x, Q, center, radius=2.0):
 
     return x_filtered, Q_filtered
 
-def filter_pqr_residue(x, Q, resids, filter_list):
-    # Filter out points that are inside the box
+def filter_pqr_radius_resid(x, Q, center, resids, radius=2.0):
+    #Filter out entire residues that are outside a certain radius of the center (keeps border res)
+    x_recentered = x - center
+    r = np.linalg.norm(x_recentered, axis=1)
+    resids = np.array(resids)
+
+    #Define list of unique residues to keep
+    resid_to_keep_index = []
+    for i in range(len(x_recentered)):
+        r = np.linalg.norm(x_recentered[i])
+        if r < radius:
+            resid_to_keep_index.append(i)
+    mask = []
+
+    #Create mask with those residues
+    for i in range(len(resids)):
+        if resids[i] in resid_to_keep_index:
+            mask.append(True)
+        else:
+            mask.append(False)
+    mask = np.array(mask)
+    x_filtered = x_recentered[mask]
+    Q_filtered = Q[mask]
+
+    return x_filtered, Q_filtered
+
+def filter_pqr_residue(x, Q, resnames, filter_list):
+    # Filter out defined residues
     x = x
     filter_inds = []
-    for resid in resids: 
-        if resid in filter_list:
+    for resname in resnames: 
+        if resname in filter_list:
             filter_inds.append(False)
         else: 
             filter_inds.append(True)
@@ -40,7 +71,7 @@ def filter_pqr_atom_num(x, Q, atom_num_list, filter_list):
     return x_filtered, Q_filtered
 
 
-def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
+def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False, ret_resid=False):
     """
     Parses pqr file to obtain charges and positions of charges (beta, removes charges that are 0)
     Takes
@@ -55,6 +86,7 @@ def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
     Q = []
     ret_atom_num = []
     res_name = []
+    resid = []
 
     with open(path_to_pqr) as pqr_file:
         lines = pqr_file.readlines()
@@ -80,6 +112,12 @@ def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
                     res_name.append(line.split()[2])
                 else:
                     res_name.append(line.split()[3])
+            
+            if ret_resid:
+                if split_tf:
+                    resid.append(line.split()[3])
+                else:
+                    resid.append(line.split()[4])
 
             if len(line.split()[res_ind]) > 4:
                 res_val = int(line.split()[res_ind - 1][1:])
@@ -128,5 +166,8 @@ def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
 
     if ret_residue_names: 
         return np.array(x), np.array(Q).reshape(-1, 1), res_name
+    
+    if ret_resid:
+        return np.array(x), np.array(Q).reshape(-1,1), res_id
 
     return np.array(x), np.array(Q).reshape(-1, 1)

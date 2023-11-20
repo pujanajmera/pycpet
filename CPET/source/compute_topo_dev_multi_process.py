@@ -1,22 +1,14 @@
 import numpy as np
 from CPET.source.topo_calc import Topo_calc
-
-
+from CPET.utils.parser import options_parsing
+import argparse
 
 def main():
-    options = {
-        "path_to_pqr": "../../tests/test_files/test_large.pqr",
-        "center": [104.785, 113.388, 117.966],
-        "x": [105.785, 113.388, 117.966],
-        "y": [104.785, 114.388, 117.966],
-        "n_samples": 100,
-        "dimensions": [1.5, 1.5, 1.5],
-        "step_size": 0.01,
-        "concur_slip": 16,
-        "filter_radius": 1.0,
-        "filter_resids": ["HEM"]
-    }
+    parser = argparse.ArgumentParser(description="Calculate topologies - multiprocessed")
+    parser.add_argument('-o', '--options', type=str, help='Path to options file, otherwise reads ./options.json', default='./options.json')
+    args = parser.parse_args()
 
+    options = options_parsing(args.options)
 
     topo = Topo_calc(options)
     hist = topo.compute_topo()

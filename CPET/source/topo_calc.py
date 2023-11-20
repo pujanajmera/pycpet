@@ -9,7 +9,7 @@ from CPET.utils.parallel import task
 from CPET.utils.calculator import initialize_box_points
 from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
 from CPET.source.calculator import calculator
-from CPET.utils.parser import filter_pqr_radius, filter_pqr_residue
+from CPET.utils.parser import filter_pqr_radius, filter_pqr_residue, filter_pqr_radius_resid
 
 class Topo_calc:
     def __init__(self, options):
@@ -27,10 +27,10 @@ class Topo_calc:
         
             
         
-        if "filter_resids" in options.keys(): 
-            print("filtering residues: {}".format(options["filter_resids"]))
+        if "filter_resname" in options.keys(): 
+            print("filtering residues: {}".format(options["filter_resname"]))
             self.x, self.Q, self.resids = parse_pqr(self.path_to_pqr, ret_residue_names=True)
-            self.x, self.Q = filter_pqr_residue(self.x, self.Q, self.resids, filter_list=options["filter_resids"])
+            self.x, self.Q = filter_pqr_residue(self.x, self.Q, self.resids, filter_list=options["filter_resname"])
             
         else: 
             self.x, self.Q = parse_pqr(self.path_to_pqr)
@@ -45,6 +45,27 @@ class Topo_calc:
                 center=self.center, 
                 radius=options["filter_radius"])
             
+        (
+            self.random_start_points,
+            self.random_max_samples,
+            self.transformation_matrix,
+        ) = initialize_box_points(
+            self.center,
+            self.x_vec_pt,
+            self.y_vec_pt,
+            self.dimensions,
+            self.n_samples,
+            self.step_size,
+        )
+        if "filter_res_radius" in options.keys():
+            print("filtering out residues past radius: {} Ang".format(options["filter_res_radius"]))
+            self.x, self.Q, self.resids = parse_pqr(self.path_to_pqr, ret_resid=True)
+            self.x, self.Q = filter_pqr_radius_resid(
+                    x=self.x,
+                    Q=self.Q,
+                    center=self.center,
+                    resids=self.resids,
+                    radius=options["filter_res_radius"])
         (
             self.random_start_points,
             self.random_max_samples,
