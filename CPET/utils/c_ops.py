@@ -51,13 +51,13 @@ class Math_ops:
             ctypes.c_int,
         ]
 
-        self.math.einsum_ij_ij_to_ij_i.argtypes = [
-            self.array_1d_float,
-            self.array_2d_float,
-            self.array_2d_float,
-            self.array_2d_float,
-            ctypes.c_int,
-        ]
+        #self.math.einsum_ij_ij_to_ij_i.argtypes = [
+        #    self.array_1d_float,
+        #    self.array_2d_float,
+        #    self.array_2d_float,
+        #    self.array_2d_float,
+        #    ctypes.c_int,
+        #]
 
         self.math.einsum_operation.restype = None
         self.math.einsum_operation.argtypes = [
