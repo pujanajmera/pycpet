@@ -149,6 +149,32 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q):
     return E
 
 
+def calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q):
+    """
+    Computes electric field at a point given positions of charges
+    Takes
+        x_0(list of arrays) - position to compute field at of shape [n by (1,3)]
+        x(array) - positions of charges of shape (N,3)
+        Q(array) - magnitude and sign of charges of shape (N,1)
+    Returns
+        E(array) - electric field at the point of shape (1,3)
+    """
+    R_list = [nb_subtract(x_0, x) for x_0 in x_0_list]
+    #R = nb_subtract(x_0, x)
+    R_sq_list = [R**2 for R in R_list]
+    #R_sq = R**2
+
+    r_mag_sq_list = Math.einsum_ij_i_batch(R_sq_list).reshape(-1, 1)
+    r_mag_cube_list = np.power(r_mag_sq_list, 3 / 2)
+    recip_r_mag_list = [1/val for val in r_mag_cube_list]
+    
+    E_list = Math.einsum_operation_batch(R_list, recip_r_mag_list, Q)
+    # print(E.shape)
+    # print("-")
+
+    return E_list
+
+
 def calculate_electric_field_gpu_torch(x_0, x, Q, device="cuda", filter=True):
     """
     Computes electric field at a point given positions of charges

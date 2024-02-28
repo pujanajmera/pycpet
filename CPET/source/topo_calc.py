@@ -5,7 +5,7 @@ from multiprocessing import Pool
 
 from CPET.utils.parser import parse_pqr
 from CPET.utils.c_ops import Math_ops
-from CPET.utils.parallel import task
+from CPET.utils.parallel import task, task_batch
 from CPET.utils.calculator import initialize_box_points
 from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
 from CPET.source.calculator import calculator
@@ -15,7 +15,7 @@ class Topo_calc:
     def __init__(self, options):
         #self.efield_calc = calculator(math_loc=math_loc)
         self.options = options
-
+        
         self.path_to_pqr = options["path_to_pqr"]
         self.center = np.array(options["center"])
         self.x_vec_pt = np.array(options["x"])
@@ -24,7 +24,8 @@ class Topo_calc:
         self.step_size = options["step_size"]
         self.n_samples = options["n_samples"]
         self.concur_slip = options["concur_slip"]
-        
+        if "batch_size" in options.keys(): 
+            self.batch_size = options["batch_size"]
             
         
         if "filter_resids" in options.keys(): 
@@ -57,7 +58,15 @@ class Topo_calc:
             self.n_samples,
             self.step_size,
         )
+
+
+
         self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
+        
+        if "batch_size" in options.keys(): 
+            self.batch_size = options["batch_size"]
+            #self.x_batched = 
+        
         print("... > Initialized Topo_calc!")
 
     def compute_topo(self):
@@ -79,7 +88,10 @@ class Topo_calc:
             f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
         )
         return hist
-        print("... > Computing Topo!")
+
+
+    def compute_topo_batched(self):
+        print("... > Computing Topo in Batches!")
         print(f"Number of samples: {self.n_samples}")
         print(f"Number of charges: {len(self.Q)}")
         print(f"Step size: {self.step_size}")
@@ -97,3 +109,5 @@ class Topo_calc:
             f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
         )
         return hist
+
+

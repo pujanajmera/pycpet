@@ -51,6 +51,13 @@ class Math_ops:
             ctypes.c_int,
         ]
 
+        """self.math.einsum_ij_i_batch.argtypes = [
+            self.array_2d_float, 
+            self.array_2d_float, 
+            ctypes.c_int,
+            ctypes.c_int           
+        ]"""
+
         #self.math.einsum_ij_ij_to_ij_i.argtypes = [
         #    self.array_1d_float,
         #    self.array_2d_float,
@@ -124,6 +131,13 @@ class Math_ops:
         self.math.einsum_ij_i(res, A, int(A.shape[0]), int(A.shape[1]))
         return res.reshape(-1, 1)
 
+    """def einsum_ij_i_batch(self, A_list):
+        # simply two vectors
+        res = np.zeros((A_list.shape[0], A_list[0].shape[1]), dtype="float64")
+        self.math.einsum_ij_i.restype = None
+        self.math.einsum_ij_i(res, A_list, int(A_list.shape[0]), int(A_list.shape[1]))
+        return res#.reshape(-1, 1)"""
+
     def einsum_operation(self, R, r_mag, Q):
         # res = np.ascontiguousarray(np.zeros(3, dtype="float64"))
         res = np.zeros(3, dtype="float64")
@@ -141,3 +155,22 @@ class Math_ops:
         # print(res)
         # print(res.shape)
         return res
+
+
+    """def einsum_operation_batch(self, R_list, r_mag_list, Q):
+        # res = np.ascontiguousarray(np.zeros(3, dtype="float64"))
+        res = np.zeros(3, dtype="float64")
+        # R = np.ascontiguousarray(R, dtype=np.float64)
+        # r_mag = np.ascontiguousarray(r_mag, dtype=np.float64)
+        # flatten R, r_mag, Q
+        # R = np.ascontiguousarray(R.flatten(), dtype=np.float64)
+        # r_mag = np.ascontiguousarray(r_mag.flatten(), dtype=np.float64)
+        #R = R.reshape(-1)
+        #r_mag = r_mag.reshape(-1)
+        Q = Q.reshape(-1)
+        len_Q = len(Q)
+        self.math.einsum_operation.restype = None
+        self.math.einsum_operation_batch(R_list, r_mag_list, Q, len_Q, res)
+        # print(res)
+        # print(res.shape)
+        return res"""

@@ -19,7 +19,7 @@ def main():
 
 
     topo = Topo_calc(options)
-    hist = topo.compute_topo()
+    hist = topo.compute_topo_batched()
     np.savetxt("hist_cpet.txt", hist)
 
 
