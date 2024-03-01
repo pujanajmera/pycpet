@@ -16,14 +16,14 @@ def main():
         "batch_size": 100,
         "dimensions": [1.5, 1.5, 1.5],
         "step_size": 0.01,
-        "concur_slip": 8,
+        "concur_slip": 12,
         "filter_radius": 100.0,
         "filter_in_box": True, 
     }
 
     topo = Topo_calc(options)
     hist = topo.compute_topo_batched()
-    np.savetxt("hist_cpet.txt", hist[0])
+    np.savetxt("hist_cpet.txt", hist)
 
 
 main()

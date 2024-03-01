@@ -5,7 +5,7 @@ from multiprocessing import Pool
 
 from CPET.utils.parser import parse_pqr
 from CPET.utils.c_ops import Math_ops
-from CPET.utils.parallel import task, task_batch
+from CPET.utils.parallel import task, task_batch, task_base
 from CPET.utils.calculator import initialize_box_points
 from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
 from CPET.source.calculator import calculator
@@ -92,6 +92,31 @@ class Topo_calc:
         
         print("... > Initialized Topo_calc!")
 
+
+    def compute_topo_base(self): 
+        
+        print("... > Computing Topo!")
+        print(f"Number of samples: {self.n_samples}")
+        print(f"Number of charges: {len(self.Q)}")
+        print(f"Step size: {self.step_size}")
+        start_time = time.time()
+        #print("starting pooling")
+        with Pool(self.concur_slip) as pool:
+            args = [
+                (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
+                for i, n_iter in zip(self.random_start_points, self.random_max_samples)
+            ]
+            raw = pool.starmap(task_base, args)
+            dist = [i[0] for i in raw]
+            curve = [i[1] for i in raw]
+            hist=[dist, curve]
+        end_time = time.time()
+        self.hist = hist
+
+        print(
+            f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
+        )
+        return hist
     def compute_topo(self):
         print("... > Computing Topo!")
         print(f"Number of samples: {self.n_samples}")
@@ -104,7 +129,10 @@ class Topo_calc:
                 (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
                 for i, n_iter in zip(self.random_start_points, self.random_max_samples)
             ]
-            hist = pool.starmap(task, args)
+            raw = pool.starmap(task, args)
+            dist = [i[0] for i in raw]
+            curve = [i[1] for i in raw]
+            hist=[dist, curve]
         end_time = time.time()
         self.hist = hist
 
@@ -129,7 +157,12 @@ class Topo_calc:
                     for i, n_iter in zip(self.random_start_points_batched, self.random_max_samples_batched)
 
             ]
-            hist = pool.starmap(task_batch, args)
+            raw = pool.starmap(task_batch, args)
+            # reshape 
+            hist = np.array(raw).reshape(self.n_samples, 2)
+            dist = hist[0, :]
+            curv = hist[1, :]
+            hist = [dist, curv]
             
         end_time = time.time()
         #self.hist = hist

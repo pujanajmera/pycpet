@@ -12,6 +12,25 @@ from CPET.utils.c_ops import Math_ops
 Math = Math_ops(shared_loc=package_path + "/CPET/utils/math_module.so")
 
 
+def propagate_topo(x_0, x, Q, step_size, debug=False):
+    """
+    Propagates position based on normalized electric field at a given point
+    Takes
+        x_0(array) - position to propagate based on field at that point of shape (1,3)
+        x(array) - positions of charges of shape (N,3)
+        Q(array) - magnitude and sign of charges of shape (N,1)
+        step_size(float) - size of streamline step to take when propagating, real and positive
+    Returns
+        x_0 - new position on streamline after propagation via electric field
+    """
+    # Compute field
+    epsilon = 10e-7
+    E = calculate_electric_field(x_0, x, Q)
+    #if np.linalg.norm(E) > epsilon: 
+    E = E / (np.linalg.norm(E) + epsilon)
+    x_0 = x_0 + step_size * E
+    return x_0
+
 def propagate_topo_dev(x_0, x, Q, step_size, debug=False):
     """
     Propagates position based on normalized electric field at a given point
