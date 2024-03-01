@@ -9,9 +9,10 @@ package_path = package.location
 
 from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
 from CPET.utils.c_ops import Math_ops
+Math = Math_ops(shared_loc=package_path + "/CPET/utils/math_module.so")
 
 
-def propagate_topo_dev(x_0, x, Q, step_size):
+def propagate_topo_dev(x_0, x, Q, step_size, debug=False):
     """
     Propagates position based on normalized electric field at a given point
     Takes
@@ -22,15 +23,62 @@ def propagate_topo_dev(x_0, x, Q, step_size):
     Returns
         x_0 - new position on streamline after propagation via electric field
     """
-    # if math is None:
     # Compute field
-    E = calculate_electric_field_dev_c_shared(x_0, x, Q)
-    # E = calculate_electric_field(x_0, self.x, self.Q)
-    # E = self.efield_calc(x_0, self.x, self.Q)
-    # E = calculate_electric_field_cupy(x_0, x, Q)
-    E = E / np.linalg.norm(E)
-    x_0 = x_0 + step_size * E
+    epsilon = 10e-5
+    
+    #print("propagate topo dev")
+    E = calculate_electric_field_dev_c_shared(x_0, x, Q, debug)
+    print("efull: {}".format(E))
+    if np.linalg.norm(E) > epsilon: 
+        E = E / (np.linalg.norm(E))
+        x_0 = x_0 + step_size * E
+    
     return x_0
+
+
+def propagate_topo_dev_batch(x_0_list, x, Q, step_size, mask_list=None):
+    """
+    Propagates position based on normalized electric field at a given point
+    Takes
+        x_0_list(array) - position to propagate based on field at that point of shape (1,3)
+        x(array) - positions of charges of shape (N,3)
+        Q(array) - magnitude and sign of charges of shape (N,1)
+        step_size(float) - size of streamline step to take when propagating, real and positive
+        mask_list(list) - list of bools to mask the points that are outside the box
+    Returns
+        x_0 - new position on streamline after propagation via electric field
+    """
+    epsilon = 10e-6
+
+    if mask_list is None:
+        E_full = calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q)
+        #print("passed first iter")
+    else: 
+        # if theres a mask, only calculate the field for the points that are inside the box
+        # filter x_0_list on the mask
+        
+        x_0_list_filtered = [x_0 for x_0, mask in zip(x_0_list, mask_list) if mask]
+        E = calculate_electric_field_dev_c_shared_batch(x_0_list_filtered, x, Q)
+        # expand E to the original size E is 0 for masked points
+        #print("mask list: {}".format(mask_list))
+        print("E: {}".format(E))
+        E_full = []
+        ind_filtered = 0 
+        #print(E)
+        for ind, x in enumerate(x_0_list): 
+            if mask_list[ind] == False: 
+                
+                E_full.append(E[ind_filtered])
+                ind_filtered += 1
+                
+    assert len(E_full) == len(x_0_list), "efull len is funky"
+    
+    print("efull: {}".format(E_full))
+    E_list = [e / (np.linalg.norm(e) + epsilon) for e in E_full]
+    x_0_list = [x_0 + step_size * e for x_0, e in zip(x_0_list, E_list)]
+    #print(x_0_list)
+    return x_0_list
+
 
 
 def initialize_box_points(center, x, y, dimensions, n_samples, step_size):
@@ -119,10 +167,7 @@ def calculate_electric_field_dev_python(x_0, x, Q):
     return E
 
 
-Math = Math_ops(shared_loc=package_path + "/CPET/utils/math_module.so")
-
-
-def calculate_electric_field_dev_c_shared(x_0, x, Q):
+def calculate_electric_field_dev_c_shared(x_0, x, Q, debug=False):
     """
     Computes electric field at a point given positions of charges
     Takes
@@ -135,17 +180,24 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q):
     # if Math is None:
     #    Math = Math_ops(shared_loc="../utils/math_module.so")
     # Create matrix R
+    #print("subtract")
+
     R = nb_subtract(x_0, x)
+
     R_sq = R**2
     # r_mag_sq = np.einsum("ij->i", R_sq).reshape(-1, 1)
-    # print(R_sq.shape)
+    #print("rsq shape: {}".format(R_sq.shape))
     # print(R_sq.dtype)
+    #print("einsum 1")
     r_mag_sq = Math.einsum_ij_i(R_sq).reshape(-1, 1)
+    #print("rmag sq size: {}".format(r_mag_sq.shape))
+    #print("power op")
     r_mag_cube = np.power(r_mag_sq, 3 / 2)
+    #print("einsum 2")
     E = Math.einsum_operation(R, 1 / r_mag_cube, Q)
-    # print(E.shape)
+    #print(E.shape)
     # print("-")
-
+    #print("end efield calc")
     return E
 
 
@@ -160,18 +212,20 @@ def calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q):
         E(array) - electric field at the point of shape (1,3)
     """
     R_list = [nb_subtract(x_0, x) for x_0 in x_0_list]
-    #R = nb_subtract(x_0, x)
-    R_sq_list = [R**2 for R in R_list]
-    #R_sq = R**2
-
-    r_mag_sq_list = Math.einsum_ij_i_batch(R_sq_list).reshape(-1, 1)
+    batch_size = len(R_list)
+    R_sq_list = np.array([R**2 for R in R_list])
+    r_mag_sq_list = Math.einsum_ij_i_batch(R_sq_list)#.reshape(-1, 1)
+    #print("rmag: {}".format(r_mag_sq_list))
+    #print("rmag len: {}".format(len(r_mag_sq_list)))
+    #print("rmag 1 size: {}".format(r_mag_sq_list[0].shape))
     r_mag_cube_list = np.power(r_mag_sq_list, 3 / 2)
     recip_r_mag_list = [1/val for val in r_mag_cube_list]
-    
-    E_list = Math.einsum_operation_batch(R_list, recip_r_mag_list, Q)
+    #print("recip r {}".format(recip_r_mag_list))
+    E_list = Math.einsum_operation_batch(R_list, recip_r_mag_list, Q, batch_size)
+    print("passed einsum op")
     # print(E.shape)
-    # print("-")
-
+    #print("-")
+    #print("Elist: {}".format(E_list))
     return E_list
 
 
@@ -394,6 +448,7 @@ def Inside_Box(local_point, dimensions):
     Returns
         is_inside(bool) - whether the point is inside the box
     """
+    #print("inside box")
     # Convert lists to numpy arrays
     half_length, half_width, half_height = dimensions
     # Check if the point lies within the dimensions of the box

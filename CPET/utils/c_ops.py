@@ -16,6 +16,8 @@ class Math_ops:
         self.array_1d_float = npct.ndpointer(dtype=np.double, ndim=1, flags="C")
         self.array_2d_int = npct.ndpointer(dtype=np.int32, ndim=2, flags="C")
         self.array_2d_float = npct.ndpointer(dtype=np.double, ndim=2, flags="C")
+        self.array_3d_float = npct.ndpointer(dtype=np.double, ndim=3, flags="C")
+        
 
         # initial arguement
         self.math.sparse_dot.argtypes = [
@@ -45,36 +47,42 @@ class Math_ops:
         ]
 
         self.math.einsum_ij_i.argtypes = [
-            self.array_1d_float,
+            ctypes.c_int,
+            ctypes.c_int,
             self.array_2d_float,
+            self.array_1d_float,
+        ]
+        self.math.einsum_ij_i_batch.argtypes = [
             ctypes.c_int,
             ctypes.c_int,
+            ctypes.c_int,
+            self.array_3d_float,
+            self.array_2d_float,
         ]
 
-        """self.math.einsum_ij_i_batch.argtypes = [
-            self.array_2d_float, 
-            self.array_2d_float, 
+        self.math.einsum_operation_batch.restype = None
+        self.math.einsum_operation_batch.argtypes = [
             ctypes.c_int,
-            ctypes.c_int           
-        ]"""
+            ctypes.c_int,
+            self.array_2d_float,
+            self.array_1d_float,
+            self.array_3d_float, 
+            self.array_2d_float,
+        ]
 
-        #self.math.einsum_ij_ij_to_ij_i.argtypes = [
-        #    self.array_1d_float,
-        #    self.array_2d_float,
-        #    self.array_2d_float,
-        #    self.array_2d_float,
-        #    ctypes.c_int,
-        #]
+        #batch_size, len(Q), np.array(r_mag), np.array(Q), np.array(R), res
+
 
         self.math.einsum_operation.restype = None
         self.math.einsum_operation.argtypes = [
-            np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"),
-            np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"),
-            np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"),
             ctypes.c_int,
-            np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"),
+            self.array_1d_float,
+            self.array_1d_float,
+            self.array_2d_float, 
+            self.array_1d_float,
         ]
         # self.math.test_trans.argtypes = None
+
 
     def sparse_dot(self, A, B):
         # b is just a single vector, not a sparse matrix
@@ -95,6 +103,7 @@ class Math_ops:
         )
         return res
 
+
     def dot(self, A, B):
         # b is just a single vector, not a sparse matrix
         # a is a full sparse matrix
@@ -110,6 +119,7 @@ class Math_ops:
         )
         return res
 
+
     def vecaddn(self, A, B):
         # simply two vectors
         res = np.zeros(len(A), dtype="float64")
@@ -120,57 +130,43 @@ class Math_ops:
         self.math.vecaddn(res, A, B, len(A))
         return res
 
+
     def einsum_ij_i(self, A):
-        # simply two vectors
-        res = np.zeros(A.shape[0], dtype="float64")
-        # self.math.einsum_ij_i.restype = npct.ndpointer(
-        #    dtype=self.array_1d_float, shape=int(A.shape[0])
-        # )
-        # print(A.shape[0], A.shape[1])
+        res = np.zeros((A.shape[0]), dtype="float64")
         self.math.einsum_ij_i.restype = None
-        self.math.einsum_ij_i(res, A, int(A.shape[0]), int(A.shape[1]))
-        return res.reshape(-1, 1)
-
-    """def einsum_ij_i_batch(self, A_list):
-        # simply two vectors
-        res = np.zeros((A_list.shape[0], A_list[0].shape[1]), dtype="float64")
-        self.math.einsum_ij_i.restype = None
-        self.math.einsum_ij_i(res, A_list, int(A_list.shape[0]), int(A_list.shape[1]))
-        return res#.reshape(-1, 1)"""
-
-    def einsum_operation(self, R, r_mag, Q):
-        # res = np.ascontiguousarray(np.zeros(3, dtype="float64"))
-        res = np.zeros(3, dtype="float64")
-        # R = np.ascontiguousarray(R, dtype=np.float64)
-        # r_mag = np.ascontiguousarray(r_mag, dtype=np.float64)
-        # flatten R, r_mag, Q
-        # R = np.ascontiguousarray(R.flatten(), dtype=np.float64)
-        # r_mag = np.ascontiguousarray(r_mag.flatten(), dtype=np.float64)
-        R = R.reshape(-1)
-        r_mag = r_mag.reshape(-1)
-        Q = Q.reshape(-1)
-        len_Q = len(Q)
-        self.math.einsum_operation.restype = None
-        self.math.einsum_operation(R, r_mag, Q, len_Q, res)
-        # print(res)
-        # print(res.shape)
+        self.math.einsum_ij_i(A.shape[0], A.shape[1], A, res)
         return res
 
 
-    """def einsum_operation_batch(self, R_list, r_mag_list, Q):
-        # res = np.ascontiguousarray(np.zeros(3, dtype="float64"))
+    def einsum_ij_i_batch(self, A):
+        # simply two vectors
+        res = np.zeros((len(A), A[0].shape[0]), dtype="float64")
+        self.math.einsum_ij_i_batch.restype = None
+        self.math.einsum_ij_i_batch(len(A), A[0].shape[0], A[0].shape[1], A, res)
+        res = res.reshape(res.shape[1], res.shape[0])
+        return res
+
+
+    def einsum_operation(self, R, r_mag, Q):
         res = np.zeros(3, dtype="float64")
-        # R = np.ascontiguousarray(R, dtype=np.float64)
-        # r_mag = np.ascontiguousarray(r_mag, dtype=np.float64)
-        # flatten R, r_mag, Q
-        # R = np.ascontiguousarray(R.flatten(), dtype=np.float64)
-        # r_mag = np.ascontiguousarray(r_mag.flatten(), dtype=np.float64)
-        #R = R.reshape(-1)
-        #r_mag = r_mag.reshape(-1)
+        r_mag = r_mag.reshape(-1)
+        R = R.reshape(r_mag.shape[0], 3)
         Q = Q.reshape(-1)
-        len_Q = len(Q)
+        #len_Q = len(Q)
+        #print(r_mag.shape)
+        #print(Q.shape)
+        #print(R.shape)
+        #print(res.shape)
         self.math.einsum_operation.restype = None
-        self.math.einsum_operation_batch(R_list, r_mag_list, Q, len_Q, res)
-        # print(res)
-        # print(res.shape)
-        return res"""
+        self.math.einsum_operation(len(Q), np.array(r_mag), np.array(Q), np.array(R), res) 
+        return res
+
+
+    def einsum_operation_batch(self, R, r_mag, Q, batch_size):
+        # res = np.ascontiguousarray(np.zeros(3, dtype="float64"))
+        #print("einsum in")
+        res = np.zeros((batch_size, 3), dtype="float64")
+        self.math.einsum_operation_batch.restype = None
+        Q = Q.reshape(-1)
+        self.math.einsum_operation_batch(batch_size, len(Q), np.array(r_mag), np.array(Q), np.array(R), res)       
+        return res
