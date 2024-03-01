@@ -11,19 +11,19 @@ def main():
         "center": [104.785, 113.388, 117.966],
         "x": [105.785, 113.388, 117.966],
         "y": [104.785, 114.388, 117.966],
-        "n_samples": 1000,
+        "n_samples": 10000,
         #"filter_resids": ["HEM"],
-        "batch_size": 10,
+        "batch_size": 100,
         "dimensions": [1.5, 1.5, 1.5],
         "step_size": 0.01,
-        "concur_slip": 1,
-        "filter_radius": 30.0,
+        "concur_slip": 8,
+        "filter_radius": 100.0,
         "filter_in_box": True, 
     }
 
     topo = Topo_calc(options)
     hist = topo.compute_topo_batched()
-    np.savetxt("hist_cpet.txt", hist)
+    np.savetxt("hist_cpet.txt", hist[0])
 
 
 main()

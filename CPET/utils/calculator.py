@@ -24,15 +24,11 @@ def propagate_topo_dev(x_0, x, Q, step_size, debug=False):
         x_0 - new position on streamline after propagation via electric field
     """
     # Compute field
-    epsilon = 10e-5
-    
-    #print("propagate topo dev")
+    epsilon = 10e-7
     E = calculate_electric_field_dev_c_shared(x_0, x, Q, debug)
-    print("efull: {}".format(E))
-    if np.linalg.norm(E) > epsilon: 
-        E = E / (np.linalg.norm(E))
-        x_0 = x_0 + step_size * E
-    
+    #if np.linalg.norm(E) > epsilon: 
+    E = E / (np.linalg.norm(E) + epsilon)
+    x_0 = x_0 + step_size * E
     return x_0
 
 
@@ -60,20 +56,21 @@ def propagate_topo_dev_batch(x_0_list, x, Q, step_size, mask_list=None):
         x_0_list_filtered = [x_0 for x_0, mask in zip(x_0_list, mask_list) if mask]
         E = calculate_electric_field_dev_c_shared_batch(x_0_list_filtered, x, Q)
         # expand E to the original size E is 0 for masked points
-        #print("mask list: {}".format(mask_list))
-        print("E: {}".format(E))
+        print("mask list: {}".format(mask_list))
+        #print("E: {}".format(E))
         E_full = []
+        print("E: {}".format(E))
         ind_filtered = 0 
         #print(E)
         for ind, x in enumerate(x_0_list): 
+            
             if mask_list[ind] == False: 
-                
                 E_full.append(E[ind_filtered])
                 ind_filtered += 1
                 
     assert len(E_full) == len(x_0_list), "efull len is funky"
     
-    print("efull: {}".format(E_full))
+    #print("efull: {}".format(E_full))
     E_list = [e / (np.linalg.norm(e) + epsilon) for e in E_full]
     x_0_list = [x_0 + step_size * e for x_0, e in zip(x_0_list, E_list)]
     #print(x_0_list)
@@ -222,7 +219,7 @@ def calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q):
     recip_r_mag_list = [1/val for val in r_mag_cube_list]
     #print("recip r {}".format(recip_r_mag_list))
     E_list = Math.einsum_operation_batch(R_list, recip_r_mag_list, Q, batch_size)
-    print("passed einsum op")
+    #print("passed einsum op")
     # print(E.shape)
     #print("-")
     #print("Elist: {}".format(E_list))

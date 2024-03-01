@@ -65,8 +65,10 @@ def task_batch(x_0_list, n_iter, x, Q, step_size, dimensions):
         mask_list_contra = [bool(rand_stop_cond[i] and inside_box_list[i]) for i in range(len(n_iter))]
         mask_list = [not temp for temp in mask_list_contra]
         #print("mask list: ", mask_list)
-        if not any(mask_list):
+        if any(mask_list_contra):
+            #print("breaking")
             break
+            
         
     
     x_init_plus = propagate_topo_dev_batch(x_init, x, Q, step_size)
