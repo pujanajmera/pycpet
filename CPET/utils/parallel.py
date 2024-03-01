@@ -80,7 +80,6 @@ def task(x_0, n_iter, x, Q, step_size, dimensions):
 
 
 def task_batch(x_0_list, n_iter, x, Q, step_size, dimensions):
-
     x_init = x_0_list
     mask_list = None
     n_iter_max = np.max(n_iter)
@@ -99,8 +98,10 @@ def task_batch(x_0_list, n_iter, x, Q, step_size, dimensions):
         # create mask list where it's true is inside_box or filter_list
         mask_list_contra = [bool(rand_stop_cond[i] and inside_box_list[i]) for i in range(len(n_iter))]
         mask_list = [not temp for temp in mask_list_contra]
+        
         #print("mask list: ", mask_list)
-        if any(mask_list_contra):
+        #print("mask list contra: ", mask_list_contra)
+        if all(mask_list):
             #print("breaking")
             break
             

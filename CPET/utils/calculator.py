@@ -31,6 +31,7 @@ def propagate_topo(x_0, x, Q, step_size, debug=False):
     x_0 = x_0 + step_size * E
     return x_0
 
+
 def propagate_topo_dev(x_0, x, Q, step_size, debug=False):
     """
     Propagates position based on normalized electric field at a given point
@@ -72,20 +73,21 @@ def propagate_topo_dev_batch(x_0_list, x, Q, step_size, mask_list=None):
         # if theres a mask, only calculate the field for the points that are inside the box
         # filter x_0_list on the mask
         
-        x_0_list_filtered = [x_0 for x_0, mask in zip(x_0_list, mask_list) if mask]
+        x_0_list_filtered = [x_0 for x_0, mask in zip(x_0_list, mask_list) if not mask]
         E = calculate_electric_field_dev_c_shared_batch(x_0_list_filtered, x, Q)
         # expand E to the original size E is 0 for masked points
-        print("mask list: {}".format(mask_list))
+        #print("mask list: {}".format(mask_list))
         #print("E: {}".format(E))
         E_full = []
-        print("E: {}".format(E))
+        #print("E: {}".format(E))
+        #print("type {}".format(type(E[0])))
         ind_filtered = 0 
-        #print(E)
         for ind, x in enumerate(x_0_list): 
-            
             if mask_list[ind] == False: 
                 E_full.append(E[ind_filtered])
                 ind_filtered += 1
+            else: 
+                E_full.append([0.0, 0.0, 0.0])
                 
     assert len(E_full) == len(x_0_list), "efull len is funky"
     

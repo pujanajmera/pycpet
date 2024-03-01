@@ -107,6 +107,7 @@ class Topo_calc:
                 for i, n_iter in zip(self.random_start_points, self.random_max_samples)
             ]
             raw = pool.starmap(task_base, args)
+            #print(raw)
             dist = [i[0] for i in raw]
             curve = [i[1] for i in raw]
             hist=[dist, curve]
@@ -130,6 +131,7 @@ class Topo_calc:
                 for i, n_iter in zip(self.random_start_points, self.random_max_samples)
             ]
             raw = pool.starmap(task, args)
+            
             dist = [i[0] for i in raw]
             curve = [i[1] for i in raw]
             hist=[dist, curve]
@@ -159,6 +161,7 @@ class Topo_calc:
             ]
             raw = pool.starmap(task_batch, args)
             # reshape 
+            #print(raw)
             hist = np.array(raw).reshape(self.n_samples, 2)
             dist = hist[0, :]
             curv = hist[1, :]
