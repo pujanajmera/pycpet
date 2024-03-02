@@ -51,7 +51,7 @@ class Test_topos:
             "center": [104.785, 113.388, 117.966],
             "x": [105.785, 113.388, 117.966],
             "y": [104.785, 114.388, 117.966],
-            "n_samples": 100000,
+            "n_samples": 1000,
             "dimensions": [1.5, 1.5, 1.5],
             "step_size": 0.01,
             "batch_size": 10,
@@ -66,9 +66,9 @@ class Test_topos:
         self.dist_c = ret[0] 
         self.curve_c = ret[1]
 
-        #ret2 = self.topo.compute_topo_batched()
-        #self.dist_batched = ret2[0]
-        #self.curve_batched = ret2[1]
+        ret2 = self.topo.compute_topo_batched()
+        self.dist_batched = ret2[0]
+        self.curve_batched = ret2[1]
 
         ret3 = self.topo.compute_topo_base()
         self.dist_base= ret3[0]
@@ -94,8 +94,8 @@ class Test_topos:
 
 
 test = Test_topos()
-#test.test_topo_batch()
+test.test_topo_batch()
 test.test_topo_cshared()
-#test.test_topo_batch_base()
+test.test_topo_batch_base()
 
 
