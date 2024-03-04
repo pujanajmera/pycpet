@@ -1,3 +1,4 @@
+import numpy as np
 from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
 from CPET.utils.c_ops import Math_ops
 #math = Math_ops(shared_loc="../utils/math_module.so")

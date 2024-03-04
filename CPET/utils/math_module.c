@@ -63,73 +63,6 @@ void dot(double* ret, double* A, double* B, int rows, int cols){
 }
 
 
-void einsum_ij_i(double *ret, double *A, int rows, int cols){
-    int i; 
-    int j;
-    int provided = 0;
-    double sum;
-    int threads;
-    //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize 
-    #pragma omp parallel shared(A, ret) private(i,j)
-        #pragma omp for reduction(+:sum) schedule(static)
-            for(i=0; i < rows; i++){
-                sum = 0;
-                for(j = 0; j < cols; j+=1){
-                        sum += A[i*cols + j];
-                }
-                ret[i] = sum;    
-            }
-    //MPI_Finalize();
-}
-
-
-
-void einsum_operation(double* R, double *r_mag, double* Q, int n, double* result) {
-    double sum[3] = {0.0, 0.0, 0.0};
-    double factor = 14.3996451;
-    double r_0;
-    double r_1;
-    double r_2;
-    double ele_1;
-    double ele_2;
-    double ele_3;
-    double compute_singular;
-    //printf("einsum_operation: %f\n", r_mag[0]);
-    #pragma omp parallel for schedule(static) reduction(+:sum)
-    for (int i = 0; i < n; ++i) {        
-        //pow_val = (r_mag[i] != 0) ? pow(r_mag[i], 3) : small_value;
-        
-        //compute_singular = pow(r_mag[i], 1) 
-        compute_singular = r_mag[i] * Q[i];
-        
-        r_0 = R[i*3];
-        r_1 = R[i*3 + 1];
-        r_2 = R[i*3 + 2];
-
-        ele_1 = r_0 * compute_singular;
-        ele_2 = r_1 * compute_singular;
-        ele_3 = r_2 * compute_singular;
-
-        //if (i < 3){
-            // print Rvals
-            //printf("Rvals: %f, %f, %f\n", r_0, r_1, r_2);
-            //printf("Qvals: %f\n", compute_singular);
-            //printf("ele_1: %f, ele_2: %f, ele_3: %f\n", ele_1 * factor, ele_2 * factor, ele_3 * factor);
-        //}
-
-        sum[0] += ele_1 * factor;
-        sum[1] += ele_2 * factor;
-        sum[2] += ele_3 * factor;
-        
-    }
-    //printf("sum: %f, %f, %f\n", sum[0], sum[1], sum[2]);
-    result[0] = sum[0];
-    result[1] = sum[1];
-    result[2] = sum[2];
-    //printf("result: %f, %f, %f\n", result[0], result[1], result[2]);
-}
-
-
 
 void vecaddn(double* ret, double* A, double* B, int lenA){
     int i; 
@@ -140,4 +73,133 @@ void vecaddn(double* ret, double* A, double* B, int lenA){
             }
     }   
 }
+// create function for batched einsum_ij_i
+// it intakes a 3D array and returns a 2D array
 
+
+
+
+
+void einsum_operation_batch(int batch, int rows, double r_mag[batch][rows], double Q[rows], double R[batch][rows][3], double result[batch][3]){
+    int i; 
+    int j;
+    int k;
+    int provided = 0;
+    double sum[3] = {0.0, 0.0, 0.0};
+    double factor = 14.3996451;
+    double r_0;
+    double r_1;
+    double r_2;
+    double ele_1;
+    double ele_2;
+    double ele_3;
+    double compute_singular;
+    //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize 
+    #pragma omp parallel shared(R, r_mag, Q, result) private(i,j,k)
+    {
+        for(k=0; k < batch; k++){
+            for(i=0; i < rows; i++){
+                r_0 = R[k][i][0];
+                r_1 = R[k][i][1];
+                r_2 = R[k][i][2];
+                ele_1 = r_mag[k][i];
+                ele_2 = Q[i];
+                ele_3 = r_mag[k][i];
+                compute_singular = factor * ele_1 * ele_2 * ele_3;
+                sum[0] += compute_singular * r_0;
+                sum[1] += compute_singular * r_1;
+                sum[2] += compute_singular * r_2;
+
+            }
+            result[k][0] = sum[0];
+            result[k][1] = sum[1];
+            result[k][2] = sum[2];
+        }
+    }
+    //MPI_Finalize();
+}
+
+void einsum_operation(int rows, double r_mag[rows], double Q[rows], double R[rows][3], double result[3]){
+    int i; 
+    int j;
+    int provided = 0;
+    double sum[3] = {0.0, 0.0, 0.0};
+    double factor = 14.3996451;
+    double r_0;
+    double r_1;
+    double r_2;
+    double ele_1;
+    double ele_2;
+    double ele_3;
+    double compute_singular;
+    //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize 
+    #pragma omp parallel shared(R, r_mag, Q, result) private(i,j)
+    {
+        for(i=0; i < rows; i++){
+            r_0 = R[i][0];
+            r_1 = R[i][1];
+            r_2 = R[i][2];
+            ele_1 = r_mag[i];
+            ele_2 = Q[i];
+            ele_3 = r_mag[i];
+            compute_singular = factor * ele_1 * ele_2 * ele_3;
+            sum[0] += compute_singular * r_0;
+            sum[1] += compute_singular * r_1;
+            sum[2] += compute_singular * r_2;
+
+        }
+        result[0] = sum[0];
+        result[1] = sum[1];
+        result[2] = sum[2];
+    }
+    //MPI_Finalize();
+}
+
+
+
+// ret is a 3D array
+// A is a 3D array
+// batch is the number of 2D arrays in the 3D array
+// rows is the number of rows in each 2D array
+// cols is the number of columns in each 2D array
+void einsum_ij_i_batch(int batch, int rows, int cols, double A[batch][rows][cols], double ret[batch][rows]){
+    int i; 
+    int j;
+    int k;
+    int provided = 0;
+    double sum;
+    //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize 
+    #pragma omp parallel shared(A, ret) private(i,j,k)
+    {
+        for(k=0; k < batch; k++){
+            for(i=0; i < rows; i++){
+                sum = 0;
+                for(j = 0; j < cols; j+=1){
+                        sum += A[k][i][j];
+                }
+                ret[k][i] = sum;    
+            }
+        }
+    }
+    //MPI_Finalize();
+}
+
+
+void einsum_ij_i(int rows, int cols, double A[rows][cols], double ret[rows]){
+    int i; 
+    int j;
+    int provided = 0;
+    double sum;
+    //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize
+    #pragma omp parallel shared(A, ret) private(i,j)
+    {
+    
+        for(i=0; i < rows; i++){
+            sum = 0;
+            for(j = 0; j < cols; j+=1){
+                    sum += A[i][j];
+            }
+            ret[i] = sum;    
+        }
+    }
+}

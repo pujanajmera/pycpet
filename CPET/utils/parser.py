@@ -5,12 +5,13 @@ def filter_pqr_radius(x, Q, center, radius=2.0):
     # Filter out points that are inside the box
     x_recentered = x - center
     r = np.linalg.norm(x_recentered, axis=1)
-    
-    mask = r > radius
+    #print("radius filtering {}".format(radius))
+    mask = r < radius
     # remove masked points
     x_filtered = x[mask]
     Q_filtered = Q[mask]
-
+    #print("radius filter leaves: {}".format(len(Q_filtered)))
+    #print(np.linalg.norm(x_filtered, axis=1))
     return x_filtered, Q_filtered
 
 def filter_pqr_residue(x, Q, resids, filter_list):
@@ -27,6 +28,28 @@ def filter_pqr_residue(x, Q, resids, filter_list):
 
     return x_filtered, Q_filtered
 
+def filter_in_box(x, Q, center, dimensions): 
+    x_recentered = x - center
+    print("Filtering Charges in Sampling Box")
+    # Filter out points that are inside the box
+    limits = {
+        "x": [-dimensions[0], dimensions[0]],
+        "y": [-dimensions[1], dimensions[1]],
+        "z": [-dimensions[2], dimensions[2]]
+    }
+    #print("box dimensions: {}".format(limits))
+    #print(x.shape)
+    mask_x = (x_recentered[:, 0] > limits["x"][0]) & (x_recentered[:, 0] < limits["x"][1]) 
+    mask_y = (x_recentered[:, 1] > limits["y"][0]) & (x_recentered[:, 1] < limits["y"][1]) 
+    mask_z = (x_recentered[:, 2] > limits["z"][0]) & (x_recentered[:, 2] < limits["z"][1])
+    
+    mask = mask_x & mask_y & mask_z
+
+    # only keep points that are outside the box
+    x_filtered = x[~mask]
+    Q_filtered = Q[~mask]
+    #print("masked points: {}".format(len(mask)))
+    return x_filtered, Q_filtered
 
 def filter_pqr_atom_num(x, Q, atom_num_list, filter_list):
     # Filter out points that are inside the box
@@ -38,7 +61,6 @@ def filter_pqr_atom_num(x, Q, atom_num_list, filter_list):
             Q_filtered.append(Q[i])
 
     return x_filtered, Q_filtered
-
 
 def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
     """

@@ -25,7 +25,7 @@ def power(a, b):
 
 
 @jit(nopython=True)
-def nb_subtract(a, b):
+def nb_subtract(a, b): # this throws warning in some numpy versions
     """
     Computes subtraction
     Takes
