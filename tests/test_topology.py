@@ -6,6 +6,8 @@ from scipy.stats import chisquare
 from scipy.stats import entropy
 import matplotlib.pyplot as plt 
 import matplotlib
+#from pyinstrument import Profiler
+
 
 def mean_and_curve_to_hist(mean_dist, curve): 
     #Calculate reasonable maximum distances and curvatures
@@ -55,14 +57,19 @@ class Test_topos:
             "dimensions": [1.5, 1.5, 1.5],
             "step_size": 0.01,
             "batch_size": 10,
-            "concur_slip": 16,
-            "filter_radius": 50.0,
+            "concur_slip": 12,
+            "filter_radius": 40.0,
             "filter_in_box": True, 
             #"filter_resids": ["HEM"]
         }
         self.topo = Topo_calc(self.options)
 
+        #profiler = Profiler()
+        #profiler.start()
         ret = self.topo.compute_topo()
+        #profiler.stop()
+        #profiler.print()
+
         self.dist_c = ret[0] 
         self.curve_c = ret[1]
 
@@ -70,9 +77,9 @@ class Test_topos:
         #self.dist_batched = ret2[0]
         #self.curve_batched = ret2[1]
 
-        ret3 = self.topo.compute_topo_base()
-        self.dist_base= ret3[0]
-        self.curve_base = ret3[1]
+        #ret3 = self.topo.compute_topo_base()
+        #self.dist_base= ret3[0]
+        #self.curve_base = ret3[1]
 
     def test_topo_batch(self): 
         hist = mean_and_curve_to_hist(self.dist_c, self.curve_c)
@@ -85,6 +92,7 @@ class Test_topos:
         hist2 = mean_and_curve_to_hist(self.dist_base, self.curve_base)
         print(distance_numpy(hist, hist2))
 
+
     def test_topo_batch_base(self): 
         hist = mean_and_curve_to_hist(self.dist_batched, self.curve_batched)
         hist2 = mean_and_curve_to_hist(self.dist_base, self.curve_base)
@@ -95,7 +103,7 @@ class Test_topos:
 
 test = Test_topos()
 #test.test_topo_batch()
-test.test_topo_cshared()
+#test.test_topo_cshared()
 #test.test_topo_batch_base()
 
 

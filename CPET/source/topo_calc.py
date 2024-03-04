@@ -118,6 +118,7 @@ class Topo_calc:
             f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
         )
         return hist
+    
     def compute_topo(self):
         print("... > Computing Topo!")
         print(f"Number of samples: {self.n_samples}")
@@ -130,7 +131,12 @@ class Topo_calc:
                 (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
                 for i, n_iter in zip(self.random_start_points, self.random_max_samples)
             ]
-            raw = pool.starmap(task, args)
+            #raw = pool.starmap(task, args)
+            
+            result = pool.starmap_async(task, args)
+            raw = []
+            for result in result.get():
+                raw.append(result)
             
             dist = [i[0] for i in raw]
             curve = [i[1] for i in raw]
@@ -159,7 +165,12 @@ class Topo_calc:
                     for i, n_iter in zip(self.random_start_points_batched, self.random_max_samples_batched)
 
             ]
-            raw = pool.starmap(task_batch, args)
+            #raw = pool.starmap(task_batch, args)
+
+            result = pool.starmap_async(task, args)
+            raw = []
+            for result in result.get():
+                raw.append(result)
             # reshape 
             #print(raw)
             hist = np.array(raw).reshape(self.n_samples, 2)
