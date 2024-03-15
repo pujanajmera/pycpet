@@ -1,0 +1,33 @@
+======[Sampling topology]======
+[Volume ]   ==>> Box: 1.500000 1.500000 1.500000
+[Npoints]   ==>> 1000
+[Threads]   ==>> 8
+[STEP SIZE] ==>> 0.001
+=~=~=~=~[Trajectory 0]=~=~=~=~
+====[Initializing threads]====
+[Thread: 68494] ==>> Spinning up...
+[Thread: 68495] ==>> Spinning up...
+[Thread: 68496] ==>> Spinning up...
+[Thread: 68497] ==>> Spinning up...
+[Thread: 68499] ==>> Spinning up...
+[Thread: 68501] ==>> Spinning up...
+[Thread: 68498] ==>> Spinning up...
+[Thread: 68500] ==>> Spinning up...
+[Thread: 68501] ==>> 124 Points calculated
+[Thread: 68497] ==>> 133 Points calculated
+[Thread: 68496] ==>> 114 Points calculated
+[Thread: 68495] ==>> 117 Points calculated
+[Thread: 68498] ==>> 124 Points calculated
+[Thread: 68500] ==>> 142 Points calculated
+[Thread: 68494] ==>> 117 Points calculated
+[Thread: 68499] ==>> 129 Points calculated
+Timer: 3.21523 sec
+====[Computing  Histograms]====
+[Bins] ==>> 25 x 25
+[XLim] ==>> [0.002, 3.507]
+[YLim] ==>> [2.973, 0.574]
+Timer: 6.6204e-05 sec
+==[Computing Distance Matrix]==
+Timer: 1.182e-06 sec
+Distance matrix:
+0 

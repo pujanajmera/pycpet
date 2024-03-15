@@ -1,0 +1,30 @@
+======[Sampling topology]======
+[Volume ]   ==>> Box: 1.500000 1.500000 1.500000
+[Npoints]   ==>> 100000
+[Threads]   ==>> 8
+[STEP SIZE] ==>> 0.001
+=~=~=~=~[Trajectory 0]=~=~=~=~
+====[Initializing threads]====
+[Thread: 60421] ==>> Spinning up...
+[Thread: 60423] ==>> Spinning up...
+[Thread: 60424] ==>> Spinning up...
+[Thread: 60425] ==>> Spinning up...
+[Thread: 60422] ==>> Spinning up...
+[Thread: 60428] ==>> Spinning up...
+[Thread: 60426] ==>> Spinning up...
+[Thread: 60427] ==>> Spinning up...
+[Thread: 60427] ==>> 12404 Points calculated
+[Thread: 60425] ==>> 12465 Points calculated
+[Thread: 60422] ==>> 12444 Points calculated
+[Thread: 60424] ==>> 12654 Points calculated
+[Thread: 60426] ==>> 12466 Points calculated
+[Thread: 60423] ==>> 12517 Points calculated
+[Thread: 60428] ==>> 12544 Points calculated
+[Thread: 60421] ==>> 12506 Points calculated
+Timer: 1443.6104 sec
+====[Computing  Histograms]====
+[Bins] ==>> 25 x 25
+[XLim] ==>> [0, 3.71]
+[YLim] ==>> [0.019, 0.019]
+/var/spool/slurm/d/job20519322/slurm_script: line 9: 60420 Killed                  cpet -p 20k_charges.pqr -o options_mcpet_generic.txt -t 8
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=20519322.batch cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.

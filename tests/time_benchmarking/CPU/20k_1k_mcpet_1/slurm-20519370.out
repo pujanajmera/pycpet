@@ -1,0 +1,17 @@
+======[Sampling topology]======
+[Volume ]   ==>> Box: 1.500000 1.500000 1.500000
+[Npoints]   ==>> 1000
+[Threads]   ==>> 1
+[STEP SIZE] ==>> 0.001
+=~=~=~=~[Trajectory 0]=~=~=~=~
+1000 Points calculated
+Timer: 108.170525 sec
+====[Computing  Histograms]====
+[Bins] ==>> 25 x 25
+[XLim] ==>> [0, 3.182]
+[YLim] ==>> [0.003, 0.146]
+Timer: 6.8388e-05 sec
+==[Computing Distance Matrix]==
+Timer: 1.614e-06 sec
+Distance matrix:
+0 

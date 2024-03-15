@@ -1,0 +1,33 @@
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+Charge or coordinates is not a useable number. Check pqr file formatting for the following line: ATOM    146  N   ASN A   11       18.525   39.309   32.320 -0.18  1.55
+
+Traceback (most recent call last):
+  File "/jet/home/ajmera/.local/bin/compute_topo_dev_multi_process.py", line 7, in <module>
+    exec(compile(f.read(), __file__, 'exec'))
+  File "/jet/home/ajmera/programs/CPET-python/CPET/source/compute_topo_dev_multi_process.py", line 18, in <module>
+    main()
+  File "/jet/home/ajmera/programs/CPET-python/CPET/source/compute_topo_dev_multi_process.py", line 13, in main
+    topo = Topo_calc(options)
+  File "/jet/home/ajmera/programs/CPET-python/CPET/source/topo_calc.py", line 36, in __init__
+    self.x, self.Q = parse_pqr(self.path_to_pqr)
+  File "/jet/home/ajmera/programs/CPET-python/CPET/utils/parser.py", line 157, in parse_pqr
+    assert temp != [], "charge incorrectly parsed"
+UnboundLocalError: local variable 'temp' referenced before assignment

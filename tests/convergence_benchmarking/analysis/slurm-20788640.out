@@ -1,0 +1,101 @@
+number of topologies in folder "tops": 75
+['./tops/cpet/4k_100000_001_1_0.top', './tops/cpet/4k_100000_001_2_0.top', './tops/cpet/4k_100000_001_3_0.top', './tops/cpet/4k_100000_01_1_0.top', './tops/cpet/4k_100000_01_2_0.top', './tops/cpet/4k_100000_01_3_0.top', './tops/cpet/4k_100000_05_1_0.top', './tops/cpet/4k_100000_05_2_0.top', './tops/cpet/4k_100000_05_3_0.top', './tops/cpet/4k_100000_1_1_0.top', './tops/cpet/4k_100000_1_2_0.top', './tops/cpet/4k_100000_1_3_0.top', './tops/cpet/4k_100000_5_1_0.top', './tops/cpet/4k_100000_5_2_0.top', './tops/cpet/4k_100000_5_3_0.top', './tops/cpet/4k_10000_001_1_0.top', './tops/cpet/4k_10000_001_2_0.top', './tops/cpet/4k_10000_001_3_0.top', './tops/cpet/4k_10000_01_1_0.top', './tops/cpet/4k_10000_01_2_0.top', './tops/cpet/4k_10000_01_3_0.top', './tops/cpet/4k_10000_05_1_0.top', './tops/cpet/4k_10000_05_2_0.top', './tops/cpet/4k_10000_05_3_0.top', './tops/cpet/4k_10000_1_1_0.top', './tops/cpet/4k_10000_1_2_0.top', './tops/cpet/4k_10000_1_3_0.top', './tops/cpet/4k_10000_5_1_0.top', './tops/cpet/4k_10000_5_2_0.top', './tops/cpet/4k_10000_5_3_0.top', './tops/cpet/4k_1000_001_1_0.top', './tops/cpet/4k_1000_001_2_0.top', './tops/cpet/4k_1000_001_3_0.top', './tops/cpet/4k_1000_01_1_0.top', './tops/cpet/4k_1000_01_2_0.top', './tops/cpet/4k_1000_01_3_0.top', './tops/cpet/4k_1000_05_1_0.top', './tops/cpet/4k_1000_05_2_0.top', './tops/cpet/4k_1000_05_3_0.top', './tops/cpet/4k_1000_1_1_0.top', './tops/cpet/4k_1000_1_2_0.top', './tops/cpet/4k_1000_1_3_0.top', './tops/cpet/4k_1000_5_1_0.top', './tops/cpet/4k_1000_5_2_0.top', './tops/cpet/4k_1000_5_3_0.top', './tops/cpet/4k_100_001_1_0.top', './tops/cpet/4k_100_001_2_0.top', './tops/cpet/4k_100_001_3_0.top', './tops/cpet/4k_100_01_1_0.top', './tops/cpet/4k_100_01_2_0.top', './tops/cpet/4k_100_01_3_0.top', './tops/cpet/4k_100_05_1_0.top', './tops/cpet/4k_100_05_2_0.top', './tops/cpet/4k_100_05_3_0.top', './tops/cpet/4k_100_1_1_0.top', './tops/cpet/4k_100_1_2_0.top', './tops/cpet/4k_100_1_3_0.top', './tops/cpet/4k_100_5_1_0.top', './tops/cpet/4k_100_5_2_0.top', './tops/cpet/4k_100_5_3_0.top', './tops/cpet/4k_10_001_1_0.top', './tops/cpet/4k_10_001_2_0.top', './tops/cpet/4k_10_001_3_0.top', './tops/cpet/4k_10_01_1_0.top', './tops/cpet/4k_10_01_2_0.top', './tops/cpet/4k_10_01_3_0.top', './tops/cpet/4k_10_05_1_0.top', './tops/cpet/4k_10_05_2_0.top', './tops/cpet/4k_10_05_3_0.top', './tops/cpet/4k_10_1_1_0.top', './tops/cpet/4k_10_1_2_0.top', './tops/cpet/4k_10_1_3_0.top', './tops/cpet/4k_10_5_1_0.top', './tops/cpet/4k_10_5_2_0.top', './tops/cpet/4k_10_5_3_0.top']
+MAKING HISTO
+./tops/cpet/4k_100000_001_1_0.top
+./tops/cpet/4k_100000_001_2_0.top
+./tops/cpet/4k_100000_001_3_0.top
+./tops/cpet/4k_100000_01_1_0.top
+./tops/cpet/4k_100000_01_2_0.top
+./tops/cpet/4k_100000_01_3_0.top
+./tops/cpet/4k_100000_05_1_0.top
+./tops/cpet/4k_100000_05_2_0.top
+./tops/cpet/4k_100000_05_3_0.top
+./tops/cpet/4k_100000_1_1_0.top
+./tops/cpet/4k_100000_1_2_0.top
+./tops/cpet/4k_100000_1_3_0.top
+./tops/cpet/4k_100000_5_1_0.top
+./tops/cpet/4k_100000_5_2_0.top
+./tops/cpet/4k_100000_5_3_0.top
+./tops/cpet/4k_10000_001_1_0.top
+./tops/cpet/4k_10000_001_2_0.top
+./tops/cpet/4k_10000_001_3_0.top
+./tops/cpet/4k_10000_01_1_0.top
+./tops/cpet/4k_10000_01_2_0.top
+./tops/cpet/4k_10000_01_3_0.top
+./tops/cpet/4k_10000_05_1_0.top
+./tops/cpet/4k_10000_05_2_0.top
+./tops/cpet/4k_10000_05_3_0.top
+./tops/cpet/4k_10000_1_1_0.top
+./tops/cpet/4k_10000_1_2_0.top
+./tops/cpet/4k_10000_1_3_0.top
+./tops/cpet/4k_10000_5_1_0.top
+./tops/cpet/4k_10000_5_2_0.top
+./tops/cpet/4k_10000_5_3_0.top
+./tops/cpet/4k_1000_001_1_0.top
+./tops/cpet/4k_1000_001_2_0.top
+./tops/cpet/4k_1000_001_3_0.top
+./tops/cpet/4k_1000_01_1_0.top
+./tops/cpet/4k_1000_01_2_0.top
+./tops/cpet/4k_1000_01_3_0.top
+./tops/cpet/4k_1000_05_1_0.top
+./tops/cpet/4k_1000_05_2_0.top
+./tops/cpet/4k_1000_05_3_0.top
+./tops/cpet/4k_1000_1_1_0.top
+./tops/cpet/4k_1000_1_2_0.top
+./tops/cpet/4k_1000_1_3_0.top
+./tops/cpet/4k_1000_5_1_0.top
+./tops/cpet/4k_1000_5_2_0.top
+./tops/cpet/4k_1000_5_3_0.top
+./tops/cpet/4k_100_001_1_0.top
+./tops/cpet/4k_100_001_2_0.top
+./tops/cpet/4k_100_001_3_0.top
+./tops/cpet/4k_100_01_1_0.top
+./tops/cpet/4k_100_01_2_0.top
+./tops/cpet/4k_100_01_3_0.top
+./tops/cpet/4k_100_05_1_0.top
+./tops/cpet/4k_100_05_2_0.top
+./tops/cpet/4k_100_05_3_0.top
+./tops/cpet/4k_100_1_1_0.top
+./tops/cpet/4k_100_1_2_0.top
+./tops/cpet/4k_100_1_3_0.top
+./tops/cpet/4k_100_5_1_0.top
+./tops/cpet/4k_100_5_2_0.top
+./tops/cpet/4k_100_5_3_0.top
+./tops/cpet/4k_10_001_1_0.top
+./tops/cpet/4k_10_001_2_0.top
+./tops/cpet/4k_10_001_3_0.top
+./tops/cpet/4k_10_01_1_0.top
+./tops/cpet/4k_10_01_2_0.top
+./tops/cpet/4k_10_01_3_0.top
+./tops/cpet/4k_10_05_1_0.top
+./tops/cpet/4k_10_05_2_0.top
+./tops/cpet/4k_10_05_3_0.top
+./tops/cpet/4k_10_1_1_0.top
+./tops/cpet/4k_10_1_2_0.top
+./tops/cpet/4k_10_1_3_0.top
+./tops/cpet/4k_10_5_1_0.top
+./tops/cpet/4k_10_5_2_0.top
+./tops/cpet/4k_10_5_3_0.top
+1666650
+1666650
+Max distance: 4.27218
+Max curvature: 5.4115
+MAKING DIST MAT
+MAKING MATRIX...
+GOING OVER HISTOGRAMS
+constructed distance matrix for folder "tops"
+Estimated number of clusters: 2
+Percentage of each cluster: 
+Cluster 1: 53.333333333333336% of total
+Cluster 0: 46.666666666666664% of total
+Silhouette Coefficient: 0.0669779910920527
+moving central topologies to compressed folder...
+saving compressed dictionary...
+./compressed_out/0_4k_10_001_3_0.top
+./compressed_out/0_4k_10_01_2_0.top
+20
+20
+Max distance: 2.50869
+Max curvature: 1.33432
+MAKING MATRIX...
+GOING OVER HISTOGRAMS

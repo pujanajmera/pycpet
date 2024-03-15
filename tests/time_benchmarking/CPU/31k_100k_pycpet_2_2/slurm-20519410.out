@@ -1,0 +1,25 @@
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+... > Initialized Topo_calc!
+... > Computing Topo!
+Number of samples: 100000
+Number of charges: 31852
+Step size: 0.001
+slurmstepd: error: *** JOB 20519410 ON r199 CANCELLED AT 2023-11-20T05:10:36 ***

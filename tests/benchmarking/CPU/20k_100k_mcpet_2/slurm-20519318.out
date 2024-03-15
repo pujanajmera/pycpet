@@ -1,9 +1,0 @@
-======[Sampling topology]======
-[Volume ]   ==>> Box: 1.500000 1.500000 1.500000
-[Npoints]   ==>> 100000
-[Threads]   ==>> 2
-[STEP SIZE] ==>> 0.001
-=~=~=~=~[Trajectory 0]=~=~=~=~
-====[Initializing threads]====
-[Thread: 87170] ==>> Spinning up...
-[Thread: 87171] ==>> Spinning up...
