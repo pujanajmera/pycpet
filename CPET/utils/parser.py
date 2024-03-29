@@ -70,7 +70,6 @@ def filter_pqr_atom_num(x, Q, atom_num_list, filter_list):
 
     return x_filtered, Q_filtered
 
-
 def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False, ret_resid=False):
     """
     Parses pqr file to obtain charges and positions of charges (beta, removes charges that are 0)
