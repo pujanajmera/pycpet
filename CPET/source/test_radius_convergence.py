@@ -1,5 +1,5 @@
 import numpy as np
-from CPET.source.topo_calc import Topo_calc
+from CPET.source.calculator import calculator
 import warnings 
 warnings.filterwarnings(action='ignore')
 from scipy.stats import chisquare
@@ -40,6 +40,7 @@ def mean_and_curve_to_hist(mean_dist, curve):
     histogram = actual.flatten()
     return np.array(histogram)
 
+
 def distance_numpy(hist1, hist2):
     a = (hist1 - hist2) ** 2
     b = hist1 + hist2
@@ -63,7 +64,7 @@ def main():
         #"filter_resids": ["HEM"]
     }
 
-    topo_20 = Topo_calc(options)
+    topo_20 = calculator(options)
     ret = topo_20.compute_topo()
     dist_c = ret[0] 
     curve_c = ret[1]
@@ -72,7 +73,7 @@ def main():
 
     options_30 = deepcopy(options)
     options_30["filter_radius"] = 30.0
-    topo_30 = Topo_calc(options_30)
+    topo_30 = calculator(options_30)
     ret = topo_30.compute_topo()
     dist_c = ret[0] 
     curve_c = ret[1]
@@ -80,7 +81,7 @@ def main():
 
     options_40 = deepcopy(options)
     options_40["filter_radius"] = 40.0
-    topo_40 = Topo_calc(options_40)
+    topo_40 = calculator(options_40)
     ret = topo_40.compute_topo()
     dist_c = ret[0] 
     curve_c = ret[1]
@@ -88,7 +89,7 @@ def main():
 
     options_50 = deepcopy(options)
     options_50["filter_radius"] = 50.0
-    topo_50 = Topo_calc(options_50)
+    topo_50 = calculator(options_50)
     ret = topo_50.compute_topo()
     dist_c = ret[0] 
     curve_c = ret[1]
@@ -96,7 +97,7 @@ def main():
 
     options_200 = deepcopy(options)
     options_200["filter_radius"] = 200.0
-    topo_200 = Topo_calc(options_200)
+    topo_200 = calculator(options_200)
     ret = topo_200.compute_topo()
     dist_c = ret[0] 
     curve_c = ret[1]

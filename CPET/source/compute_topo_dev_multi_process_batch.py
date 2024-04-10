@@ -1,5 +1,5 @@
 import numpy as np
-from CPET.source.topo_calc import Topo_calc
+from CPET.source.calculator import calculator
 import warnings
 warnings.filterwarnings(action='ignore')
 
@@ -21,7 +21,7 @@ def main():
         "filter_in_box": True, 
     }
 
-    topo = Topo_calc(options)
+    topo = calculator(options)
     hist = topo.compute_topo_batched()
     np.savetxt("hist_cpet.txt", hist)
 

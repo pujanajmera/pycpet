@@ -5,6 +5,7 @@ from CPET.utils.parser import parse_pqr, filter_pqr
 from CPET.utils.calculator import calculate_field_at_point
 from CPET.utils.writeoutput import write_field_to_file
 from CPET.utils.transformations import get_transformation
+from CPET.utils.parser import parse_pqr, parse_pdb
 
 
 def main():
