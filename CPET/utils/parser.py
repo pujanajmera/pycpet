@@ -1,7 +1,51 @@
 import numpy as np
 
+def initialize_box_points(center, x, y, dimensions, n_samples, step_size):
+    """
+    Initializes random points in box centered at the origin
+    Takes
+        center(array) - center of box of shape (1,3)
+        x(array) - point to create x axis from center of shape (1,3)
+        y(array) - point to create x axis from center of shape (1,3)
+        dimensions(array) - L, W, H of box of shape (1,3)
+        n_samples(int) - number of samples to compute
+        step_size(float) - step_size of box
+    Returns
+        random_points_local(array) - array of random starting points in the box of shape (n_samples,3)
+        random_max_samples(array) - array of maximum sample number for each streamline of shape (n_samples, 1)
+        transformation_matrix(array) - matrix that contains the basis vectors for the box of shape (3,3)
+    """
+    # Convert lists to numpy arrays
+    x = x - center  # Translate to origin
+    y = y - center  # Translate to origin
+    half_length, half_width, half_height = dimensions
+    # Normalize the vectors
+    x_unit = x / np.linalg.norm(x)
+    y_unit = y / np.linalg.norm(y)
+    # Calculate the z unit vector by taking the cross product of x and y
+    z_unit = np.cross(x_unit, y_unit)
+    z_unit = z_unit / np.linalg.norm(z_unit)
+    # Recalculate the y unit vector
+    y_unit = np.cross(z_unit, x_unit)
+    y_unit = y_unit / np.linalg.norm(y_unit)
+    # Generate random samples in the local coordinate system of the box
+    random_x = np.random.uniform(-half_length, half_length, n_samples)
+    random_y = np.random.uniform(-half_width, half_width, n_samples)
+    random_z = np.random.uniform(-half_height, half_height, n_samples)
+    # Each row in random_points_local corresponds to x, y, and z coordinates of a point in the box's coordinate system
+    random_points_local = np.column_stack([random_x, random_y, random_z])
+    # Convert these points back to the global coordinate system
+    transformation_matrix = np.column_stack(
+        [x_unit, y_unit, z_unit]
+    ).T  # Each column is a unit vector
+    max_distance = 2 * np.linalg.norm(
+        np.array(dimensions)
+    )  # Define maximum sample limit as 2 times the diagonal
+    random_max_samples = np.random.randint(1, max_distance / step_size, n_samples)
+    return random_points_local, random_max_samples, transformation_matrix
 
-def filter_pqr_radius(x, Q, center, radius=2.0):
+
+def filter_radius(x, Q, center, radius=2.0):
     # Filter out points that are inside the box
     x_recentered = x - center
     r = np.linalg.norm(x_recentered, axis=1)
@@ -14,7 +58,8 @@ def filter_pqr_radius(x, Q, center, radius=2.0):
     #print(np.linalg.norm(x_filtered, axis=1))
     return x_filtered, Q_filtered
 
-def filter_pqr_residue(x, Q, resids, filter_list):
+
+def filter_residue(x, Q, resids, filter_list):
     # Filter out points that are inside the box
     x = x
     filter_inds = []
@@ -27,6 +72,7 @@ def filter_pqr_residue(x, Q, resids, filter_list):
     Q_filtered = Q[filter_inds]
 
     return x_filtered, Q_filtered
+
 
 def filter_in_box(x, Q, center, dimensions): 
     x_recentered = x - center
@@ -51,7 +97,8 @@ def filter_in_box(x, Q, center, dimensions):
     #print("masked points: {}".format(len(mask)))
     return x_filtered, Q_filtered
 
-def filter_pqr_atom_num(x, Q, atom_num_list, filter_list):
+
+def filter_atom_num(x, Q, atom_num_list, filter_list):
     # Filter out points that are inside the box
     x_filtered = []
     Q_filtered = []
@@ -61,6 +108,7 @@ def filter_pqr_atom_num(x, Q, atom_num_list, filter_list):
             Q_filtered.append(Q[i])
 
     return x_filtered, Q_filtered
+
 
 def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
     """
@@ -152,3 +200,65 @@ def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
         return np.array(x), np.array(Q).reshape(-1, 1), res_name
 
     return np.array(x), np.array(Q).reshape(-1, 1)
+
+
+def parse_pdb(pdb_file_path, get_charges=False):
+    """
+    Takes: 
+        pdb_file_path(str) - path to pdb file
+        get_charges(bool) - whether to parse/return charges
+
+    Returns:
+        atom_info(list of tuples) - containing information about each atom in the pdb file
+    """
+
+    xyz = [] 
+    Q = []
+    atom_number = []
+    residue_name = [] 
+    residue_number = []
+
+    with open(pdb_file_path, 'r') as file:
+        for line in file:
+            if line.startswith("ATOM"):
+                atom_number_line = int(line[6:11].strip())
+                atom_type_line = line[12:16].strip()
+                residue_name_line = line[17:20].strip()
+                residue_number_line = int(line[22:26].strip())
+                x = float(line[30:38].strip())
+                y = float(line[38:46].strip())
+                z = float(line[46:54].strip())
+                #atom_info.append((atom_number, atom_type, residue_name, residue_number, x, y, z))
+                
+
+                xyz.append([x, y, z])
+                atom_number.append(atom_number_line)
+                residue_name.append(residue_name_line)
+                residue_number.append(residue_number_line)
+
+                if get_charges:
+                    Q.append(float(line[55:64].strip()))
+    if get_charges:
+        return np.array(xyz), np.array(Q).reshape(-1, 1), np.array(atom_number), np.array(residue_name), np.array(residue_number)
+    return np.array(xyz), np.array(atom_number), np.array(residue_name), np.array(residue_number)
+
+
+
+def calculate_center(coordinates, method):
+    """
+    Helper to calculate the center of a list of atoms
+    Takes:
+        atoms(list) - list of atoms
+        method(str) - method to calculate the center
+    Returns:
+        np.array(center) - center of the atoms
+    """
+    
+    if method == "mean":
+        return np.mean(coordinates, axis=0)
+    elif method == "first":
+        return coordinates[0]
+    elif method == "inverse":
+        first_atom = coordinates[0]
+        average_of_others = np.mean(coordinates[1:], axis=0)
+        return 2 * average_of_others - first_atom

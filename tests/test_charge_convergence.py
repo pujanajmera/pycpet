@@ -1,5 +1,5 @@
 import numpy as np
-from CPET.source.topo_calc import Topo_calc
+from CPET.source.calculator import Topo_calc
 import warnings 
 warnings.filterwarnings(action='ignore')
 from scipy.stats import chisquare

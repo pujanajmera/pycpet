@@ -1,12 +1,18 @@
 import numpy as np
 import time
+import json 
+
 from CPET.utils.calculator import (
     calculate_electric_field,
     curv,
     compute_curv_and_dist,
     Inside_Box,
 )
-from CPET.utils.parser import parse_pqr
+from CPET.utils.parser import (
+    parse_pdb, 
+    calculate_center,
+    initialize_box_points
+)
 
 
 def propagate_topo(x_0, x, Q, step_size):
@@ -26,54 +32,12 @@ def propagate_topo(x_0, x, Q, step_size):
     return x_0
 
 
-def initialize_box_points(center, x, y, dimensions, n_samples, step_size):
-    """
-    Initializes random points in box centered at the origin
-    Takes
-        center(array) - center of box of shape (1,3)
-        x(array) - point to create x axis from center of shape (1,3)
-        y(array) - point to create x axis from center of shape (1,3)
-        dimensions(array) - L, W, H of box of shape (1,3)
-        n_samples(int) - number of samples to compute
-        step_size(float) - step_size of box
-    Returns
-        random_points_local(array) - array of random starting points in the box of shape (n_samples,3)
-        random_max_samples(array) - array of maximum sample number for each streamline of shape (n_samples, 1)
-        transformation_matrix(array) - matrix that contains the basis vectors for the box of shape (3,3)
-    """
-    # Convert lists to numpy arrays
-    x = x - center  # Translate to origin
-    y = y - center  # Translate to origin
-    half_length, half_width, half_height = dimensions
-    # Normalize the vectors
-    x_unit = x / np.linalg.norm(x)
-    y_unit = y / np.linalg.norm(y)
-    # Calculate the z unit vector by taking the cross product of x and y
-    z_unit = np.cross(x_unit, y_unit)
-    z_unit = z_unit / np.linalg.norm(z_unit)
-    # Recalculate the y unit vector
-    y_unit = np.cross(z_unit, x_unit)
-    y_unit = y_unit / np.linalg.norm(y_unit)
-    # Generate random samples in the local coordinate system of the box
-    random_x = np.random.uniform(-half_length, half_length, n_samples)
-    random_y = np.random.uniform(-half_width, half_width, n_samples)
-    random_z = np.random.uniform(-half_height, half_height, n_samples)
-    # Each row in random_points_local corresponds to x, y, and z coordinates of a point in the box's coordinate system
-    random_points_local = np.column_stack([random_x, random_y, random_z])
-    # Convert these points back to the global coordinate system
-    transformation_matrix = np.column_stack(
-        [x_unit, y_unit, z_unit]
-    ).T  # Each column is a unit vector
-    max_distance = 2 * np.linalg.norm(
-        np.array(dimensions)
-    )  # Define maximum sample limit as 2 times the diagonal
-    random_max_samples = np.random.randint(1, max_distance / step_size, n_samples)
-    return random_points_local, random_max_samples, transformation_matrix
-
 
 def main():
-    options = {
-        "path_to_pqr": "./1_wt_run1_0.pqr",
+
+    """
+    default_options = {
+        "path_to_pdb": "./1_wt_run1_0.pqr",
         "center": [55.965, 46.219, 22.123],
         "x": [56.191, 48.344, 22.221],
         "y": [57.118, 46.793, 20.46],
@@ -81,13 +45,35 @@ def main():
         "dimensions": [1.5, 1.5, 1.5],
         "step_size": 0.001,
     }
-    x, Q = parse_pqr(options["path_to_pqr"])
+    """
+
+
+    options_file_path = 'options_atom_sel.json'
+
+    with open(options_file_path, 'r') as file:
+        options = json.load(file)
+    
+
+    atom_data = parse_pdb(options["pdb"])
+    x, Q = parse_pdb(options["path_to_pdb"], )
+    
+    final_values = {}
+    for key in ["center", "x", "y"]:
+        method = options[key]["method"]
+        input_atoms = [(atom_type, residue_number) for atom_type, residue_number in options[key].items() if atom_type != "method"]
+        atoms_to_consider = [atom for atom in atom_data if (atom[1], atom[3]) in input_atoms]
+        final_values[key] = calculate_center(atoms_to_consider, method)
+
+
+    
     center = np.array(options["center"])
     x_vec_pt = np.array(options["x"])
     y_vec_pt = np.array(options["y"])
     dimensions = np.array(options["dimensions"])
     step_size = options["step_size"]
     n_samples = options["n_samples"]
+
+
     (
         random_start_points,
         random_max_samples,

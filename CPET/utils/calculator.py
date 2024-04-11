@@ -99,7 +99,7 @@ def propagate_topo_dev_batch(x_0_list, x, Q, step_size, mask_list=None):
 
 
 
-def initialize_box_points(center, x, y, dimensions, n_samples, step_size):
+def initialize_box_points_random(center, x, y, dimensions, n_samples, step_size):
     """
     Initializes random points in box centered at the origin
     Takes
@@ -142,6 +142,50 @@ def initialize_box_points(center, x, y, dimensions, n_samples, step_size):
     )  # Define maximum sample limit as 2 times the diagonal
     random_max_samples = np.random.randint(1, max_distance / step_size, n_samples)
     return random_points_local, random_max_samples, transformation_matrix
+
+
+def initialize_box_points_uniform(center, x, y, step_size, dimensions):
+    """
+    Initializes random points in box centered at the origin
+    Takes
+        center(array) - center of box of shape (1,3)
+        x(array) - point to create x axis from center of shape (1,3)
+        y(array) - point to create x axis from center of shape (1,3)
+        dimensions(array) - L, W, H of box of shape (1,3)
+        n_samples(int) - number of samples to compute
+        step_size(float) - step_size of box
+    Returns
+        random_points_local(array) - array of random starting points in the box of shape (n_samples,3)
+        transformation_matrix(array) - matrix that contains the basis vectors for the box of shape (3,3)
+    """
+    # Convert lists to numpy arrays
+    x = x - center  # Translate to origin
+    y = y - center  # Translate to origin
+    half_length, half_width, half_height = dimensions
+    # Normalize the vectors
+    x_unit = x / np.linalg.norm(x)
+    y_unit = y / np.linalg.norm(y)
+    # Calculate the z unit vector by taking the cross product of x and y
+    z_unit = np.cross(x_unit, y_unit)
+    z_unit = z_unit / np.linalg.norm(z_unit)
+    # Recalculate the y unit vector
+    y_unit = np.cross(z_unit, x_unit)
+    y_unit = y_unit / np.linalg.norm(y_unit)
+
+    transformation_matrix = np.column_stack(
+        [x_unit, y_unit, z_unit]
+    ).T  # Each column is a unit vector
+
+    # construct a grid of points in the box - lengths are floats
+    x_coords = np.arange(-half_length, half_length, step_size)
+    y_coords = np.arange(-half_width, half_width, step_size)
+    z_coords = np.arange(-half_height, half_height, step_size)
+
+    x_mesh, y_mesh, z_mesh = np.meshgrid(x_coords, y_coords, z_coords)
+    local_coords = np.stack([x_mesh, y_mesh, z_mesh], axis=-1)
+    
+    return local_coords, transformation_matrix
+
 
 
 def calculate_electric_field(x_0, x, Q):
@@ -346,9 +390,11 @@ def compute_field_on_grid(grid_coords, x, Q):
         R = nb_subtract(x_0, x)
         R_sq = R**2
         r_mag_sq = np.einsum("ij->i", R_sq).reshape(-1, 1)
-        r_mag_cube = np.power(r_mag_sq, 3 / 2)
-        E[i] = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
-
+        r_mag_cube = 1 / np.power(r_mag_sq, 3 / 2)
+        # compute field using einsum 
+        E[i] = np.einsum("ij,ij,ij->j", R, r_mag_cube, Q) * 14.3996451
+        # compute without einsum
+        #E[i] = np.sum(R * r_mag_cube * Q, axis=0) * 14.3996451
     # Reshape E back to the shape of the original meshgrid
     E = E.reshape(*grid_coords.shape)
     return E
