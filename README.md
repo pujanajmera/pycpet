@@ -8,14 +8,7 @@ Installing:
 
 pip install -e .
 
-To do items:
-
-- Finish field calculation
-- Improve options parsing
-- Accelerate topology calcs
-- Try gridding topology calcs
-- Add cylinder and sphere region options
-- Test invariances
+Upon installing, you will see the executable cpet.py available. This is the operating script for all calculations. An example options file is provided under source/options, and more details about the available options are below
 
 For pycuda you might need:
 
@@ -25,4 +18,4 @@ export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/cuda/lib64
 
 For c-shared libraries manually setting the number of OMP threads is needed: 
 
-export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=0
