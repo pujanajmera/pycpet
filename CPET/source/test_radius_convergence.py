@@ -49,11 +49,11 @@ def distance_numpy(hist1, hist2):
 
 def main():
     options = {
-        "path_to_pqr": "../../tests/test_files/test_large.pqr",
-        "center": [104.785, 113.388, 117.966],
-        "x": [105.785, 113.388, 117.966],
-        "y": [104.785, 114.388, 117.966],
-        "n_samples": 100000,
+        "path_to_pdb": "/home/santiagovargas/dev/CPET-python/tests/test_files/1XHO-run1-328.pdb",
+        "center": [46.961,  47.634,  56.869],
+        "x": [47.961,  47.634,  56.869],
+        "y": [46.961,  48.634,  56.869],
+        "n_samples": 10000,
         "dimensions": [1.5, 1.5, 1.5],
         "step_size": 0.01,
         "batch_size": 10,
