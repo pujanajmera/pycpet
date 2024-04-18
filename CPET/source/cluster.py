@@ -10,8 +10,8 @@ from glob import glob
 class cluster:
     def __init__(self, options):
         self.cluster_method = options["cluster_method"]
-        self.inputpath = self.options["inputpath"]
-        self.outputpath = self.options["outputpath"]
+        self.inputpath = options["inputpath"]
+        self.outputpath = options["outputpath"]
 
     def Cluster(self):
         if self.cluster_method == "affinity":

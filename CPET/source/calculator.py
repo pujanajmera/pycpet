@@ -9,28 +9,29 @@ from multiprocessing import Pool
 
 from CPET.utils.parser import parse_pdb
 from CPET.utils.c_ops import Math_ops
-from CPET.utils.parallel import task, task_base
+from CPET.utils.parallel import task, task_batch, task_base
 from CPET.utils.calculator import initialize_box_points_random, initialize_box_points_uniform, compute_field_on_grid, calculate_electric_field_dev_c_shared
 from CPET.utils.parser import parse_pdb, filter_radius, filter_residue, filter_in_box, calculate_center
-from CPET.utils.gpu import compute_curv_and_dist_gpu, propagate_topo_matrix_gpu, batched_filter_gpu, initialize_streamline_grid_gpu
+from CPET.utils.gpu import compute_curv_and_dist_mat_gpu, propagate_topo_matrix_gpu, batched_filter_gpu, initialize_streamline_grid_gpu
 
 class calculator:
-    def __init__(self, options):
+    def __init__(self, options, path_to_pdb = None):
         #self.efield_calc = calculator(math_loc=math_loc)
         self.options = options
         self.dimensions = np.array(options["dimensions"])
         self.step_size = options["step_size"]
         self.n_samples = options["n_samples"]
         self.concur_slip = options["concur_slip"]
-        
+        self.path_to_pdb = path_to_pdb
+
         if "GPU_batch_freq" in options.keys():
             self.GPU_batch_freq = options["GPU_batch_freq"]
         else:
             self.GPU_batch_freq = 100
             
-        self.x, self.Q, self.atom_number, self.resids, self.residue_number = parse_pdb(
+        self.x, self.Q, self.atom_number, self.resids, self.residue_number, self.atom_type = parse_pdb(
             self.path_to_pdb, get_charges=True)        
-        
+
         ##################### define center axis
         
         if type(options["center"]) == list:
@@ -38,8 +39,12 @@ class calculator:
 
         elif type(options["center"]) == dict:
             method = options["center"]["method"]
-            centering_atoms = [(atom_type, residue_number) for atom_type, residue_number in options["center"]["atoms"]]
-            pos_considered = [pos for pos in self.x if (self.atom_type, self.residue_number) in centering_atoms]
+            centering_atoms = [(element, options["center"]["atoms"][element]) for element in options["center"]["atoms"]]
+            pos_considered = [
+                pos for atom_res in centering_atoms
+                for idx, pos in enumerate(self.x)
+                if (self.atom_type[idx], self.residue_number[idx]) == atom_res
+            ]
             self.center = calculate_center(pos_considered, method=method)
         else: 
             raise ValueError("center must be a list or dict")
@@ -51,8 +56,12 @@ class calculator:
         
         elif type(options["x"]) == dict:
             method = options["x"]["method"]
-            centering_atoms = [(atom_type, residue_number) for atom_type, residue_number in options["center"]["atoms"]]
-            pos_considered = [pos for pos in self.x if (self.atom_type, self.residue_number) in centering_atoms]
+            centering_atoms = [(element, options["x"]["atoms"][element]) for element in options["x"]["atoms"]]
+            pos_considered = [
+                pos for atom_res in centering_atoms
+                for idx, pos in enumerate(self.x)
+                if (self.atom_type[idx], self.residue_number[idx]) == atom_res
+            ]
             self.x_vec_pt = calculate_center(pos_considered, method=method)
         
         else: 
@@ -65,8 +74,12 @@ class calculator:
         
         elif type(options["y"]) == dict:
             method = options["y"]["method"]
-            centering_atoms = [(atom_type, residue_number) for atom_type, residue_number in options["y"].items() if atom_type != "method"]
-            pos_considered = [pos for pos in self.x if (self.atom_type, self.residue_number) in centering_atoms]
+            centering_atoms = [(element, options["y"]["atoms"][element]) for element in options["y"]["atoms"]]
+            pos_considered = [
+                pos for atom_res in centering_atoms
+                for idx, pos in enumerate(self.x)
+                if (self.atom_type[idx], self.residue_number[idx]) == atom_res
+            ]
             self.y_vec_pt = calculate_center(pos_considered, method=method)
 
         else:
@@ -112,7 +125,7 @@ class calculator:
             self.step_size,
         )
 
-        (
+        '''(
             self.mesh, self.uniform_transformation_matrix
         ) = initialize_box_points_uniform(
             center=self.center,
@@ -120,10 +133,9 @@ class calculator:
             y=self.y_vec_pt,
             dimensions=self.dimensions,
             step_size=self.step_size,
-        )
+        )'''
 
         #self.transformation_matrix and self.uniform_transformation_matrix are the same
-
 
         self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
         #print(self.random_start_points)
@@ -215,14 +227,14 @@ class calculator:
                     for i, n_iter in zip(self.random_start_points_batched, self.random_max_samples_batched)
 
             ]
-            #raw = pool.starmap(task_batch, args)
+            raw = pool.starmap(task_batch, args)
 
-            result = pool.starmap_async(task, args)
+            '''result = pool.starmap_async(task_batch, args)
             raw = []
             for result in result.get():
-                raw.append(result)
+                raw.append(result)'''
             # reshape 
-            #print(raw)
+            # print(raw)
             hist = np.array(raw).reshape(self.n_samples, 2)
             dist = hist[0, :]
             curv = hist[1, :]
@@ -252,16 +264,22 @@ class calculator:
         print("point: {}".format(self.center))
         print("x shape: {}".format(self.x.shape))
         print("Q shape: {}".format(self.Q.shape))
+        start_time = time.time()
         point_mag = np.norm(calculate_electric_field_dev_c_shared(self.x, self.Q, self.center))
+        end_time = time.time()
+        print(f"{end_time - start_time:.2f}")
         return point_mag
     
     def compute_point_field(self):
-        print("... > Computing Point Magnitude!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("point: {}".format(self.center))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
+        #print("... > Computing Point Field!")
+        #print(f"Number of charges: {len(self.Q)}")
+        #print("point: {}".format(self.center))
+        #print("x shape: {}".format(self.x.shape))
+        #print("Q shape: {}".format(self.Q.shape))
+        start_time = time.time()
         point_field = calculate_electric_field_dev_c_shared(self.x, self.Q, self.center)
+        end_time = time.time()
+        print(f"{end_time - start_time}")
         return point_field
 
 
@@ -299,18 +317,18 @@ class calculator:
 
             if(j == len(path_matrix)-1):
                 break
-            path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch,i, x, Q, step_size)
+            path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch,i, x_gpu, Q_gpu, self.step_size)
             if(i%self.GPU_batch_freq == 0 and i>5):
-                path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i,dimensions, M, path_filter, current=True)
+                path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i, self.dimensions, M, path_filter, current=True)
                 #GPU_batch_freq *= 2
             j += 1
             torch.cuda.empty_cache()
             if dumped_values.shape[1]>=self.n_samples:
                 break
     
-        distances, curvatures = compute_curv_and_dist_gpu(dumped_values[0,:,:], dumped_values[1,:,:], dumped_values[2,:,:],dumped_values[3,:,:],dumped_values[4,:,:],dumped_values[5,:,:])
+        distances, curvatures = compute_curv_and_dist_mat_gpu(dumped_values[0,:,:], dumped_values[1,:,:], dumped_values[2,:,:],dumped_values[3,:,:],dumped_values[4,:,:],dumped_values[5,:,:])
     
         end_time = time.time()
-        print(f"Time taken for {self.n_samples} calculations with N~{Q.shape}: {end_time - start_time:.2f} seconds")
+        print(f"Time taken for {self.n_samples} calculations with N~{self.Q.shape}: {end_time - start_time:.2f} seconds")
         topology = np.column_stack((distances.cpu().numpy(), curvatures.cpu().numpy()))
         return topology

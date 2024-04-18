@@ -217,10 +217,11 @@ def parse_pdb(pdb_file_path, get_charges=False):
     atom_number = []
     residue_name = [] 
     residue_number = []
+    atom_type = []
 
     with open(pdb_file_path, 'r') as file:
         for line in file:
-            if line.startswith("ATOM"):
+            if line.startswith("ATOM") or line.startswith("HETATM"):
                 atom_number_line = int(line[6:11].strip())
                 atom_type_line = line[12:16].strip()
                 residue_name_line = line[17:20].strip()
@@ -235,12 +236,13 @@ def parse_pdb(pdb_file_path, get_charges=False):
                 atom_number.append(atom_number_line)
                 residue_name.append(residue_name_line)
                 residue_number.append(residue_number_line)
+                atom_type.append(atom_type_line)
 
                 if get_charges:
                     Q.append(float(line[55:64].strip()))
     if get_charges:
-        return np.array(xyz), np.array(Q).reshape(-1, 1), np.array(atom_number), np.array(residue_name), np.array(residue_number)
-    return np.array(xyz), np.array(atom_number), np.array(residue_name), np.array(residue_number)
+        return np.array(xyz), np.array(Q).reshape(-1, 1), np.array(atom_number), np.array(residue_name), np.array(residue_number), np.array(atom_type)
+    return np.array(xyz), np.array(atom_number), np.array(residue_name), np.array(residue_number), np.array(atom_type)
 
 
 def calculate_center(coordinates, method):

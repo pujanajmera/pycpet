@@ -256,7 +256,7 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q, debug=False):
     #print("power op")
     r_mag_cube = np.power(r_mag_sq, 3 / 2)
     #print("einsum 2")
-    E = Math.einsum_operation(R, 1 / r_mag_cube, Q)
+    E = Math.einsum_operation(R, 1 / r_mag_cube, Q) * 14.3996451
     #print(E.shape)
     # print("-")
     #print("end efield calc")
@@ -283,7 +283,7 @@ def calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q):
     r_mag_cube_list = np.power(r_mag_sq_list, 3 / 2)
     recip_r_mag_list = [1/val for val in r_mag_cube_list]
     #print("recip r {}".format(recip_r_mag_list))
-    E_list = Math.einsum_operation_batch(R_list, recip_r_mag_list, Q, batch_size)
+    E_list = Math.einsum_operation_batch(R_list, recip_r_mag_list, Q, batch_size) * 14.3996451
     #print("passed einsum op")
     # print(E.shape)
     #print("-")
