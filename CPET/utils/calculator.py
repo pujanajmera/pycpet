@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 import pkg_resources
+import matplotlib
+import matplotlib.pyplot as plt
 
 package_name = "CPET-python"
 package = pkg_resources.get_distribution(package_name)
@@ -98,7 +100,6 @@ def propagate_topo_dev_batch(x_0_list, x, Q, step_size, mask_list=None):
     return x_0_list
 
 
-
 def initialize_box_points_random(center, x, y, dimensions, n_samples, step_size):
     """
     Initializes random points in box centered at the origin
@@ -185,7 +186,6 @@ def initialize_box_points_uniform(center, x, y, step_size, dimensions):
     local_coords = np.stack([x_mesh, y_mesh, z_mesh], axis=-1)
     
     return local_coords, transformation_matrix
-
 
 
 def calculate_electric_field(x_0, x, Q):
@@ -522,3 +522,122 @@ def Inside_Box(local_point, dimensions):
         and -half_height <= local_point[2] <= half_height
     )
     return is_inside
+
+
+def distance_numpy(hist1, hist2):
+    a = (hist1 - hist2) ** 2
+    b = hist1 + hist2
+    return np.sum(np.divide(a, b, out=np.zeros_like(a), where=b != 0)) / 2.0
+
+
+def mean_and_curve_to_hist(mean_dist, curve): 
+    #Calculate reasonable maximum distances and curvatures
+    #curvatures, distances = [],[]
+    max_distance = max(mean_dist)
+    max_curvature = max(curve)
+    
+    # bins is number of histograms bins in x and y direction (so below is 200x200 bins)
+    # range gives xrange, yrange for the histogram
+    a, b, c, q = plt.hist2d(
+        mean_dist,
+        curve,
+        bins=200,
+        range=[[0, max_distance], [0, max_curvature]],
+        norm=matplotlib.colors.LogNorm(),
+        density=True,
+        cmap="jet",
+    )
+
+    NormConstant = 0
+    for j in a:
+        for m in j:
+            NormConstant += m
+
+    actual = []
+    for j in a:
+        actual.append([m / NormConstant for m in j])
+
+    actual = np.array(actual)
+    histogram = actual.flatten()
+    return np.array(histogram)
+
+
+def make_histograms(topo_files, plot=False):
+    histograms = []
+
+    #Calculate reasonable maximum distances and curvatures
+    dist_list = []
+    curv_list = []
+    for topo_file in topo_files:
+        curvatures, distances = [],[]
+        print(topo_file)
+        with open(topo_file) as topology_data:
+            for line in topology_data:
+                if line.startswith("#"):
+                    continue
+
+                line = line.split()
+                distances.append(float(line[0]))
+                curvatures.append(float(line[1]))
+        dist_list.extend(distances)
+        curv_list.extend(curvatures)
+    print(len(dist_list))
+    print(len(curv_list))
+
+    max_distance = max(dist_list)
+    max_curvature = max(curv_list)
+    print(f"Max distance: {max_distance}")
+    print(f"Max curvature: {max_curvature}")
+    #Make histograms
+    for topo_file in topo_files:
+        curvatures, distances = [], []
+
+        with open(topo_file) as topology_data:
+            for line in topology_data:
+                if line.startswith("#"):
+                    continue
+
+                line = line.split(",")
+                distances.append(float(line[0]))
+                curvatures.append(float(line[1]))
+
+        # bins is number of histograms bins in x and y direction (so below is 100x100 bins)
+        # range gives xrange, yrange for the histogram
+        a, b, c, q = plt.hist2d(
+            distances,
+            curvatures,
+            bins=200,
+            range=[[0, max_distance], [0, max_curvature]],
+            norm=matplotlib.colors.LogNorm(),
+            density=True,
+            cmap="jet",
+        )
+
+        NormConstant = 0
+        for j in a:
+            for m in j:
+                NormConstant += m
+
+        actual = []
+        for j in a:
+            actual.append([m / NormConstant for m in j])
+
+        actual = np.array(actual)
+        histograms.append(actual.flatten())
+        if plot:
+            plt.show()
+
+    return np.array(histograms)
+
+
+def construct_distance_matrix(histograms):
+    matrix = np.diag(np.zeros(len(histograms)))
+    for i, hist1 in enumerate(histograms):
+        for j, hist2 in enumerate(histograms[i + 1 :]):
+            j += i + 1
+            matrix[i][j] = distance_numpy(hist1, hist2)
+            matrix[j][i] = matrix[i][j]
+    return matrix
+
+
+

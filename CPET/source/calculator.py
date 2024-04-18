@@ -10,7 +10,7 @@ from multiprocessing import Pool
 from CPET.utils.parser import parse_pdb
 from CPET.utils.c_ops import Math_ops
 from CPET.utils.parallel import task, task_base
-from CPET.utils.calculator import initialize_box_points_random, initialize_box_points_uniform, compute_field_on_grid
+from CPET.utils.calculator import initialize_box_points_random, initialize_box_points_uniform, compute_field_on_grid, calculate_electric_field_dev_c_shared
 from CPET.utils.parser import parse_pdb, filter_radius, filter_residue, filter_in_box, calculate_center
 from CPET.utils.gpu import compute_curv_and_dist_gpu, propagate_topo_matrix_gpu, batched_filter_gpu, initialize_streamline_grid_gpu
 
@@ -18,7 +18,6 @@ class calculator:
     def __init__(self, options):
         #self.efield_calc = calculator(math_loc=math_loc)
         self.options = options
-        self.path_to_pdb = options["path_to_pdb"]
         self.dimensions = np.array(options["dimensions"])
         self.step_size = options["step_size"]
         self.n_samples = options["n_samples"]
@@ -246,6 +245,24 @@ class calculator:
         print("Q shape: {}".format(self.Q.shape))
         field_box = compute_field_on_grid(self.mesh, self.x, self.Q)
         return field_box
+
+    def compute_point_mag(self):
+        print("... > Computing Point Magnitude!")
+        print(f"Number of charges: {len(self.Q)}")
+        print("point: {}".format(self.center))
+        print("x shape: {}".format(self.x.shape))
+        print("Q shape: {}".format(self.Q.shape))
+        point_mag = np.norm(calculate_electric_field_dev_c_shared(self.x, self.Q, self.center))
+        return point_mag
+    
+    def compute_point_field(self):
+        print("... > Computing Point Magnitude!")
+        print(f"Number of charges: {len(self.Q)}")
+        print("point: {}".format(self.center))
+        print("x shape: {}".format(self.x.shape))
+        print("Q shape: {}".format(self.Q.shape))
+        point_field = calculate_electric_field_dev_c_shared(self.x, self.Q, self.center)
+        return point_field
 
 
     def compute_topo_batch_filter(self):

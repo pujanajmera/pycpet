@@ -243,7 +243,6 @@ def parse_pdb(pdb_file_path, get_charges=False):
     return np.array(xyz), np.array(atom_number), np.array(residue_name), np.array(residue_number)
 
 
-
 def calculate_center(coordinates, method):
     """
     Helper to calculate the center of a list of atoms

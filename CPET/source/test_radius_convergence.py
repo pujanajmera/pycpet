@@ -1,5 +1,6 @@
 import numpy as np
 from CPET.source.calculator import calculator
+from CPET.utils.calculator import distance_numpy, mean_and_curve_to_hist
 import warnings 
 warnings.filterwarnings(action='ignore')
 from scipy.stats import chisquare
@@ -7,45 +8,6 @@ from scipy.stats import entropy
 import matplotlib.pyplot as plt 
 import matplotlib
 from copy import deepcopy
-
-
-def mean_and_curve_to_hist(mean_dist, curve): 
-    #Calculate reasonable maximum distances and curvatures
-    #curvatures, distances = [],[]
-    max_distance = max(mean_dist)
-    max_curvature = max(curve)
-    
-    # bins is number of histograms bins in x and y direction (so below is 200x200 bins)
-    # range gives xrange, yrange for the histogram
-    a, b, c, q = plt.hist2d(
-        mean_dist,
-        curve,
-        bins=100,
-        range=[[0, max_distance], [0, max_curvature]],
-        norm=matplotlib.colors.LogNorm(),
-        density=True,
-        cmap="jet",
-    )
-
-    NormConstant = 0
-    for j in a:
-        for m in j:
-            NormConstant += m
-
-    actual = []
-    for j in a:
-        actual.append([m / NormConstant for m in j])
-
-    actual = np.array(actual)
-    histogram = actual.flatten()
-    return np.array(histogram)
-
-
-def distance_numpy(hist1, hist2):
-    a = (hist1 - hist2) ** 2
-    b = hist1 + hist2
-    return np.sum(np.divide(a, b, out=np.zeros_like(a), where=b != 0)) / 2.0
-
 
 def main():
     options = {
