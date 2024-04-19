@@ -11,7 +11,7 @@ from CPET.utils.parser import parse_pdb
 from CPET.utils.c_ops import Math_ops
 from CPET.utils.parallel import task, task_batch, task_base
 from CPET.utils.calculator import initialize_box_points_random, initialize_box_points_uniform, compute_field_on_grid, calculate_electric_field_dev_c_shared
-from CPET.utils.parser import parse_pdb, filter_radius, filter_residue, filter_in_box, calculate_center
+from CPET.utils.parser import parse_pdb, filter_radius, filter_residue, filter_in_box, calculate_center, filter_resnum
 from CPET.utils.gpu import compute_curv_and_dist_mat_gpu, propagate_topo_matrix_gpu, batched_filter_gpu, initialize_streamline_grid_gpu
 
 class calculator:
@@ -85,11 +85,16 @@ class calculator:
         else:
             raise ValueError("y must be a list or dict")
 
-        
+        print(len(self.Q))
         if "filter_resids" in options.keys(): 
             #print("filtering residues: {}".format(options["filter_resids"]))                
             self.x, self.Q = filter_residue(
                 self.x, self.Q, self.resids, filter_list=options["filter_resids"])
+            
+        if "filter_resnum" in options.keys(): 
+            #print("filtering residues: {}".format(options["filter_resids"]))                
+            self.x, self.Q = filter_resnum(
+                self.x, self.Q, self.residue_number, filter_list=options["filter_resnum"])
 
         if "filter_radius" in options.keys():
             print("filtering by radius: {} Ang".format(options["filter_radius"]))
@@ -271,11 +276,11 @@ class calculator:
         return point_mag
     
     def compute_point_field(self):
-        #print("... > Computing Point Field!")
-        #print(f"Number of charges: {len(self.Q)}")
-        #print("point: {}".format(self.center))
-        #print("x shape: {}".format(self.x.shape))
-        #print("Q shape: {}".format(self.Q.shape))
+        print("... > Computing Point Field!")
+        print(f"Number of charges: {len(self.Q)}")
+        print("point: {}".format(self.center))
+        print("x shape: {}".format(self.x.shape))
+        print("Q shape: {}".format(self.Q.shape))
         start_time = time.time()
         point_field = calculate_electric_field_dev_c_shared(self.x, self.Q, self.center)
         end_time = time.time()
@@ -302,6 +307,8 @@ class calculator:
 
         Q_gpu = torch.tensor(self.Q).cuda()
         x_gpu = torch.tensor(self.x).cuda()
+        dim_gpu = torch.tensor(self.dimensions).cuda()
+        step_size_gpu = torch.tensor([self.step_size]).cuda()
 
         path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gpu(self.center, self.x_vec_pt, self.y_vec_pt, self.dimensions, self.n_samples, self.step_size)
         path_matrix_torch=torch.tensor(path_matrix).cuda()
@@ -310,22 +317,23 @@ class calculator:
         start_time = time.time()
         j=0
         start_time = time.time()
-
         for i in range(len(path_matrix)):
-            if i % 100 == 0:
-                print(i)
+            '''if i % 100 == 0:
+                print(i)'''
 
             if(j == len(path_matrix)-1):
                 break
-            path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch,i, x_gpu, Q_gpu, self.step_size)
+            #path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, torch.tensor([i]).cuda(), x_gpu, Q_gpu, step_size_gpu)
+            path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, i, x_gpu, Q_gpu, self.step_size)
             if(i%self.GPU_batch_freq == 0 and i>5):
-                path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i, self.dimensions, M, path_filter, current=True)
+                path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i, dim_gpu, M, path_filter, current=True)
                 #GPU_batch_freq *= 2
             j += 1
             torch.cuda.empty_cache()
             if dumped_values.shape[1]>=self.n_samples:
                 break
-    
+        print(path_matrix_torch.shape)
+        print(dumped_values.shape)
         distances, curvatures = compute_curv_and_dist_mat_gpu(dumped_values[0,:,:], dumped_values[1,:,:], dumped_values[2,:,:],dumped_values[3,:,:],dumped_values[4,:,:],dumped_values[5,:,:])
     
         end_time = time.time()

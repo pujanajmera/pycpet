@@ -73,6 +73,20 @@ def filter_residue(x, Q, resids, filter_list):
 
     return x_filtered, Q_filtered
 
+def filter_resnum(x, Q, resnums, filter_list):
+    # Filter out points that are inside the box
+    x = x
+    filter_inds = []
+    for resnum in resnums: 
+        if resnum in filter_list:
+            filter_inds.append(False)
+        else: 
+            filter_inds.append(True)
+    x_filtered = x[filter_inds]
+    Q_filtered = Q[filter_inds]
+
+    return x_filtered, Q_filtered
+
 
 def filter_in_box(x, Q, center, dimensions): 
     x_recentered = x - center
