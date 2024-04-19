@@ -11,7 +11,7 @@ from CPET.utils.parser import parse_pdb
 from CPET.utils.c_ops import Math_ops
 from CPET.utils.parallel import task, task_batch, task_base
 from CPET.utils.calculator import initialize_box_points_random, initialize_box_points_uniform, compute_field_on_grid, calculate_electric_field_dev_c_shared
-from CPET.utils.parser import parse_pdb, filter_radius, filter_residue, filter_in_box, calculate_center, filter_resnum
+from CPET.utils.parser import parse_pdb, filter_radius, filter_residue, filter_in_box, calculate_center, filter_resnum, filter_resnum_andname
 from CPET.utils.gpu import compute_curv_and_dist_mat_gpu, propagate_topo_matrix_gpu, batched_filter_gpu, initialize_streamline_grid_gpu
 
 class calculator:
@@ -95,6 +95,11 @@ class calculator:
             #print("filtering residues: {}".format(options["filter_resids"]))                
             self.x, self.Q = filter_resnum(
                 self.x, self.Q, self.residue_number, filter_list=options["filter_resnum"])
+            
+        if "filter_resnum_andname" in options.keys():
+            #print("filtering residues: {}".format(options["filter_resids"]))                
+            self.x, self.Q = filter_resnum_andname(
+                self.x, self.Q, self.residue_number, self.resids, filter_list=options["filter_resnum_andname"])
 
         if "filter_radius" in options.keys():
             print("filtering by radius: {} Ang".format(options["filter_radius"]))

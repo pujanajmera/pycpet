@@ -87,6 +87,19 @@ def filter_resnum(x, Q, resnums, filter_list):
 
     return x_filtered, Q_filtered
 
+def filter_resnum_andname(x, Q, resnums, resnames, filter_list):
+    # Filter out points that are inside the box
+    x = x
+    filter_inds = []
+    for i in range(len(resnums)): 
+        if {str(resnums[i]): resnames[i]} in filter_list:
+            filter_inds.append(False)
+        else: 
+            filter_inds.append(True)
+    x_filtered = x[filter_inds]
+    Q_filtered = Q[filter_inds]
+
+    return x_filtered, Q_filtered
 
 def filter_in_box(x, Q, center, dimensions): 
     x_recentered = x - center
