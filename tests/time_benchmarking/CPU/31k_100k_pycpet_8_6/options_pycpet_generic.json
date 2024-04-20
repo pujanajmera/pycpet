@@ -1,0 +1,11 @@
+{
+        "path_to_pqr": "31k_charges.pqr",
+        "center": [104.785, 113.388, 117.966],
+        "x": [105.785, 113.388, 117.966],
+        "y": [104.785, 114.388, 117.966],
+        "n_samples": 100000,
+        "dimensions": [1.5, 1.5, 1.5],
+        "step_size": 0.001,
+        "concur_slip": 6,
+	"_comment":"WARNING: keeping filter_res_radius will overwrrite filter_radius and filter_resname"
+}
