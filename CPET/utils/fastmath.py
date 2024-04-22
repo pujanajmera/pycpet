@@ -1,5 +1,6 @@
 import numpy as np
 from numba import jit
+import numba as nb
 
 """
 Making basic math faster!!
@@ -24,7 +25,7 @@ def power(a, b):
     return out_
 
 
-@jit(nopython=True)
+@nb.njit
 def nb_subtract(a, b): # this throws warning in some numpy versions
     """
     Computes subtraction
@@ -37,13 +38,13 @@ def nb_subtract(a, b): # this throws warning in some numpy versions
     return np.subtract(a, b)
 
 
-@jit(nopython=True)
+@nb.njit(parallel=True)
 def nb_norm(x):
     x_norm = np.linalg.norm(x)
     return x_norm
 
 
-@jit(nopython=True)
+@nb.njit
 def nb_cross(a, b):
     """
     Computes cross product
@@ -54,3 +55,16 @@ def nb_cross(a, b):
         np.cross(a,b) - cross product between a and b - jitted!
     """
     return np.cross(a, b)
+
+@nb.njit(parallel=True)
+def custom_norm_3d(data):
+    # Assumes data is an N x M x 3 array
+    N, M, _ = data.shape
+    result = np.empty((N, M, 1), dtype=data.dtype)
+    for i in nb.prange(N):  # Parallel over the first dimension
+        for j in range(M):
+            sum_sq = 0.0
+            for k in range(3):  # Only 3 because we know the last dimension size
+                sum_sq += data[i, j, k] ** 2
+            result[i, j, 0] = np.sqrt(sum_sq)
+    return result

@@ -24,6 +24,8 @@ class CPET:
             self.run_topo()
         elif self.m == "topo_GPU":
             self.run_topo_GPU()
+        elif self.m == "topo_griddev":
+            self.run_topo_griddev()
         elif self.m == "mtopo":
             self.run_mtopo() #For dev primarily
         elif self.m == "volume":
@@ -71,12 +73,32 @@ class CPET:
             print("protein file: {}".format(protein))
             files_done = [x for x in os.listdir(self.outputpath) if x.split(".")[-1]=="top"]
             if protein+".top" not in files_done:
-                hist = self.calculator.compute_topo_batch_filter()
+                hist = self.calculator.compute_topo_GPU_batch_filter()
                 if not benchmarking:
                     np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
                 if benchmarking:
                     np.savetxt(self.outputpath + "/{}_{}_{}_{}.top".format(protein, self.calculator.n_samples, str(self.calculator.step_size)[2:], self.replica), hist)
-    
+
+    def run_topo_griddev(self, num=50000, benchmarking=False):
+        files_input = glob(self.inputpath + "/*.pdb")
+        if len(files_input) == 0:
+            raise ValueError("No pdb files found in the input directory")
+        if len(files_input) == 1:
+            warnings.warn("Only one pdb file found in the input directory")
+        for i in range(num):
+            file = choice(files_input)
+            self.calculator = calculator(self.options, path_to_pdb = file)
+            protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
+            files_input.remove(file)
+            print("protein file: {}".format(protein))
+            files_done = [x for x in os.listdir(self.outputpath) if x.split(".")[-1]=="top"]
+            if protein+".top" not in files_done:
+                hist = self.calculator.compute_topo_griddev()
+                if not benchmarking:
+                    np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
+                if benchmarking:
+                    np.savetxt(self.outputpath + "/{}_{}_{}_{}.top".format(protein, self.calculator.n_samples, str(self.calculator.step_size)[2:], self.replica), hist)
+
     def run_topo_mtopo(self, num=50000, benchmarking=False):
         '''files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
