@@ -246,4 +246,4 @@ dependencies:
       - torch==2.1.0
       - tqdm==4.66.1
       - triton==2.1.0
-prefix: /home/santiagovargas/anaconda3/envs/CPET_ENV
+prefix: ~/.conda/envs/CPET_ENV

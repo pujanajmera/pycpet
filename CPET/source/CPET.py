@@ -2,6 +2,7 @@ from CPET.source.calculator import calculator
 from CPET.source.cluster import cluster
 from CPET.source.benchmark import gen_param_dist_mat, analyze_param_dist_mat
 from CPET.utils.calculator import make_histograms, construct_distance_matrix
+from torch.profiler import profile, record_function, ProfilerActivity
 from glob import glob
 from random import choice
 import os
@@ -18,6 +19,7 @@ class CPET:
         self.benchmark_samples = self.options["benchmark"]["n_samples"]
         self.benchmark_step_sizes = self.options["benchmark"]["step_size"]
         self.benchmark_replicas = self.options["benchmark"]["replicas"]
+        self.profile = self.options["profile"]
     
     def run(self):
         if self.m == "topo":

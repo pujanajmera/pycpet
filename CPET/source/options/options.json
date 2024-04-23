@@ -3,6 +3,7 @@
         "inputpath": "/jet/home/ajmera/che230029p/PyCPET/tests/test_benchmarking/pdb",
         "outputpath": "/jet/home/ajmera/che230029p/PyCPET/tests/test_benchmarking/cpet",
         "GPU_batch_freq": 100,
+        "profile": true,
         "center": {
                 "method": "first",
                 "atoms": {

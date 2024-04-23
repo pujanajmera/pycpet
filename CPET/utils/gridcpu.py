@@ -12,7 +12,7 @@ def einsum(R, r_mag_cube, Q_reshaped):
     epsilon = 1e-10
 
     # Resulting array with appropriate dimensions
-    E_batch = np.zeros((R.shape[0], R.shape[2]))
+    E_batch = np.zeros((R.shape[0], R.shape[2]), dtype=np.float32)
 
     # Nested loops to perform the operation equivalent to the einsum
     for i in nb.prange(R.shape[0]):  # Loop over the first dimension
@@ -165,8 +165,8 @@ def initialize_streamline_grid_gridcpu(center, x, y, dimensions, n_samples, step
         np.array(dimensions)
     )  # Define maximum sample limit as 2 times the diagonal
     M = round(max_distance/step_size)
-    random_max_samples = np.random.randint(1, M, N)
-    path_matrix = np.zeros((M+2,N,3))
+    random_max_samples = np.random.randint(1, M, N, dtype=np.int32)
+    path_matrix = np.zeros((M+2,N,3),dtype=np.float32)
     path_matrix[0] = random_points_local
     path_filter = generate_path_filter_gridcpu(random_max_samples,M)
     print(M, N)

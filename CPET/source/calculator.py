@@ -5,6 +5,7 @@
 import numpy as np
 import time
 from multiprocessing import Pool
+from torch.profiler import profile, record_function, ProfilerActivity
 
 
 from CPET.utils.parser import parse_pdb
@@ -23,6 +24,7 @@ class calculator:
         self.step_size = options["step_size"]
         self.n_samples = options["n_samples"]
         self.concur_slip = options["concur_slip"]
+        self.profile = options["profile"]
         self.path_to_pdb = path_to_pdb
 
         if "GPU_batch_freq" in options.keys():
@@ -298,56 +300,112 @@ class calculator:
 
     def compute_topo_GPU_batch_filter(self):
         import torch
+        if self.profile == True:
+            with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+                         record_shapes=True, profile_memory=True, with_stack=True) as prof:
+                print("... > Computing Topo in Batches on a GPU!")
+                print(f"Number of samples: {self.n_samples}")
+                print(f"Number of charges: {len(self.Q)}")
+                print(f"Step size: {self.step_size}")
+                
 
-        print("... > Computing Topo in Batches on a GPU!")
-        print(f"Number of samples: {self.n_samples}")
-        print(f"Number of charges: {len(self.Q)}")
-        print(f"Step size: {self.step_size}")
-        
+                self.x_vec_pt
+                self.x
+                self.y_vec_pt
+                self.dimensions
+                self.step_size
+                self.n_samples
+                self.GPU_batch_freq
 
-        self.x_vec_pt
-        self.x
-        self.y_vec_pt
-        self.dimensions
-        self.step_size
-        self.n_samples
-        self.GPU_batch_freq
+                Q_gpu = torch.tensor(self.Q).cuda()
+                x_gpu = torch.tensor(self.x).cuda()
+                dim_gpu = torch.tensor(self.dimensions).cuda()
+                step_size_gpu = torch.tensor([self.step_size]).cuda()
 
-        Q_gpu = torch.tensor(self.Q).cuda()
-        x_gpu = torch.tensor(self.x).cuda()
-        dim_gpu = torch.tensor(self.dimensions).cuda()
-        step_size_gpu = torch.tensor([self.step_size]).cuda()
+                path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gpu(self.center, self.x_vec_pt, self.y_vec_pt, self.dimensions, self.n_samples, self.step_size)
+                path_matrix_torch=torch.tensor(path_matrix).cuda()
+                path_filter=torch.tensor(path_filter).cuda()
+                dumped_values=torch.tensor(np.empty((6,0,3))).cuda()
+                start_time = time.time()
+                j=0
+                start_time = time.time()
+                for i in range(len(path_matrix)):
+                    if i % 100 == 0:
+                        print(i)
 
-        path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gpu(self.center, self.x_vec_pt, self.y_vec_pt, self.dimensions, self.n_samples, self.step_size)
-        path_matrix_torch=torch.tensor(path_matrix).cuda()
-        path_filter=torch.tensor(path_filter).cuda()
-        dumped_values=torch.tensor(np.empty((6,0,3))).cuda()
-        start_time = time.time()
-        j=0
-        start_time = time.time()
-        for i in range(len(path_matrix)):
-            '''if i % 100 == 0:
-                print(i)'''
-
-            if(j == len(path_matrix)-1):
-                break
-            #path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, torch.tensor([i]).cuda(), x_gpu, Q_gpu, step_size_gpu)
-            path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, i, x_gpu, Q_gpu, self.step_size)
-            if(i%self.GPU_batch_freq == 0 and i>5):
+                    if(j == len(path_matrix)-1):
+                        break
+                    #path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, torch.tensor([i]).cuda(), x_gpu, Q_gpu, step_size_gpu)
+                    path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, i, x_gpu, Q_gpu, self.step_size)
+                    if(i%self.GPU_batch_freq == 0 and i>5):
+                        path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i, dim_gpu, M, path_filter, current=True)
+                        #GPU_batch_freq *= 2
+                    j += 1
+                    if dumped_values.shape[1]>=self.n_samples:
+                        break
+                torch.cuda.empty_cache()
                 path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i, dim_gpu, M, path_filter, current=True)
-                #GPU_batch_freq *= 2
-            j += 1
+                print(path_matrix_torch.shape)
+                print(dumped_values.shape)
+                distances, curvatures = compute_curv_and_dist_mat_gpu(dumped_values[0,:,:], dumped_values[1,:,:], dumped_values[2,:,:],dumped_values[3,:,:],dumped_values[4,:,:],dumped_values[5,:,:])
+            
+                end_time = time.time()
+                print(f"Time taken for {self.n_samples} calculations with N~{self.Q.shape}: {end_time - start_time:.2f} seconds")
+                topology = np.column_stack((distances.cpu().numpy(), curvatures.cpu().numpy()))
+            print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=10))
+            prof.export_chrome_trace("trace.json")  # Optional: Export trace to view it in Chrome's trace viewer
+                
+
+        else:
+            print("... > Computing Topo in Batches on a GPU!")
+            print(f"Number of samples: {self.n_samples}")
+            print(f"Number of charges: {len(self.Q)}")
+            print(f"Step size: {self.step_size}")
+            
+
+            self.x_vec_pt
+            self.x
+            self.y_vec_pt
+            self.dimensions
+            self.step_size
+            self.n_samples
+            self.GPU_batch_freq
+
+            Q_gpu = torch.tensor(self.Q).cuda()
+            x_gpu = torch.tensor(self.x).cuda()
+            dim_gpu = torch.tensor(self.dimensions).cuda()
+            step_size_gpu = torch.tensor([self.step_size]).cuda()
+
+            path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gpu(self.center, self.x_vec_pt, self.y_vec_pt, self.dimensions, self.n_samples, self.step_size)
+            path_matrix_torch=torch.tensor(path_matrix).cuda()
+            path_filter=torch.tensor(path_filter).cuda()
+            dumped_values=torch.tensor(np.empty((6,0,3))).cuda()
+            start_time = time.time()
+            j=0
+            start_time = time.time()
+            for i in range(len(path_matrix)):
+                if i % 100 == 0:
+                    print(i)
+
+                if(j == len(path_matrix)-1):
+                    break
+                #path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, torch.tensor([i]).cuda(), x_gpu, Q_gpu, step_size_gpu)
+                path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, i, x_gpu, Q_gpu, self.step_size)
+                if(i%self.GPU_batch_freq == 0 and i>5):
+                    path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i, dim_gpu, M, path_filter, current=True)
+                    #GPU_batch_freq *= 2
+                j += 1
+                if dumped_values.shape[1]>=self.n_samples:
+                    break
             torch.cuda.empty_cache()
-            if dumped_values.shape[1]>=self.n_samples:
-                break
-        path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i, dim_gpu, M, path_filter, current=True)
-        print(path_matrix_torch.shape)
-        print(dumped_values.shape)
-        distances, curvatures = compute_curv_and_dist_mat_gpu(dumped_values[0,:,:], dumped_values[1,:,:], dumped_values[2,:,:],dumped_values[3,:,:],dumped_values[4,:,:],dumped_values[5,:,:])
-    
-        end_time = time.time()
-        print(f"Time taken for {self.n_samples} calculations with N~{self.Q.shape}: {end_time - start_time:.2f} seconds")
-        topology = np.column_stack((distances.cpu().numpy(), curvatures.cpu().numpy()))
+            path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i, dim_gpu, M, path_filter, current=True)
+            print(path_matrix_torch.shape)
+            print(dumped_values.shape)
+            distances, curvatures = compute_curv_and_dist_mat_gpu(dumped_values[0,:,:], dumped_values[1,:,:], dumped_values[2,:,:],dumped_values[3,:,:],dumped_values[4,:,:],dumped_values[5,:,:])
+        
+            end_time = time.time()
+            print(f"Time taken for {self.n_samples} calculations with N~{self.Q.shape}: {end_time - start_time:.2f} seconds")
+            topology = np.column_stack((distances.cpu().numpy(), curvatures.cpu().numpy()))
         return topology
     
 

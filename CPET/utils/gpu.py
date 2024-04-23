@@ -2,6 +2,7 @@ import numpy as np
 import time
 import torch
 import torch.jit as jit
+from typing import Tuple
 from CPET.utils.parser import parse_pqr
 
 #@profile
@@ -10,14 +11,15 @@ def calculate_electric_field_torch_batch_gpu(x_0: torch.Tensor, x: torch.Tensor,
     N = x_0.size(0)
     E = torch.zeros(N, 3, device=x_0.device)
     Q_reshaped=Q.unsqueeze(0)
-    for start in range(0, N, 100):
-        end = min(start + 100, N)
+    for start in range(0, N, 1000):
+        end = min(start + 1000, N)
         x_0_batch = x_0[start:end]
         R = x_0_batch.unsqueeze(1) - x.unsqueeze(0)
         r_mag = torch.norm(R, dim=-1, keepdim=True)
         r_mag_cube = r_mag.pow(3)
-        E_batch = torch.einsum("ijk,ijk,ijk->ik", R, 1 / r_mag_cube, Q_reshaped) * 14.3996451
-        E[start:end] = E_batch
+        #E_batch = torch.einsum("ijk,ijk,ijk->ik", R, 1 / r_mag_cube, Q_reshaped) * 14.3996451
+        #E[start:end] = E_batch
+        E[start:end] = torch.einsum("ijk,ijk,ijk->ik", R, 1/r_mag_cube, Q_reshaped) * 14.3996451
     return E
 
 #@torch.jit.script
@@ -145,6 +147,7 @@ def initialize_streamline_grid_gpu(center, x, y, dimensions, n_samples, step_siz
     print(M, N)
     return path_matrix, transformation_matrix, M, path_filter,random_max_samples
 
+'''
 @torch.jit.script
 def generate_path_filter_gpu(arr, M):
     # Initialize the matrix with zeros
@@ -160,30 +163,57 @@ def generate_path_filter_gpu(arr, M):
             mat[i] = 1
     #return np.expand_dims(mat.T,axis=2)
     return torch.unsqueeze(mat.permute(1, 0), dim=2)
+'''
 
-def first_false_index_gpu(arr):
+@torch.jit.script
+def generate_path_filter_gpu(arr: torch.Tensor, M: int) -> torch.Tensor:
+    # Initialize the matrix with zeros
+    mat = torch.zeros((len(arr), M), dtype=torch.int64, device='cuda')
+
+    # Compute indices where value is not -1
+    valid_indices = arr != -1
+
+    # Compute the range limits for each valid index
+    limits = arr[valid_indices] + 2  # +2 to include two more elements
+
+    # Use broadcasting to create the filter mask
+    # Create a row vector from 0 to M-1 and compare it against column vector 'limits'
+    index_matrix = torch.arange(M, device='cuda').expand(len(limits), M)
+    # Compare each limit with the index matrix and set values to 1 where condition is true
+    mat[valid_indices] = (index_matrix < limits.unsqueeze(1)).long()
+
+    # Set entire rows to 1 where the value is -1
+    mat[arr == -1] = 1
+
+    # Return the matrix with added dimension to match the original output shape
+    return torch.unsqueeze(mat.permute(1, 0), dim=2)
+
+@torch.jit.script
+def first_false_index_gpu(arr: torch.Tensor):
     """
     For each column in arr, find the first index where the value is False.
     Args:
     - arr (numpy.ndarray): An array of shape (M, N, 1) of booleans
-    Returns:
+    Returns: 
     - numpy.ndarray: An array of shape (N,) containing the first index where the value is False in each column of arr. 
                      If no False value is found in a column, the value is set to -1 for that column.
     """
     
     # Find where the tensor is False
-    false_indices = torch.nonzero(arr == False, as_tuple=True)
-    row_indices, col_indices = false_indices
+    false_tensor = torch.zeros_like(arr, dtype=torch.bool)
+
+    false_indices = torch.nonzero(arr == false_tensor)
+    row_indices = false_indices[:,0]
+    col_indices = false_indices[:,1]
 
     # Create a tensor of -1's to initialize the result
-    result = torch.full((arr.shape[1],), -1, dtype=torch.int64)
+    result = torch.full((arr.shape[1],), -1, dtype=torch.int64, device = arr.device)
 
     # For each column index where we found a False value
     unique_cols = torch.unique(col_indices)
     for col in unique_cols:
         # Find the minimum row index for that column where the value is False
-        min_row_for_col = torch.min(row_indices[col_indices == col])
-        result[col] = min_row_for_col 
+        result[col] = torch.min(row_indices[col_indices == col])
     return result
 
 @torch.jit.script
@@ -193,25 +223,22 @@ def t_delete(tensor, indices):
     new_tensor = tensor[:, keep_mask]
     return new_tensor
 
-def batched_filter_gpu(path_matrix, dumped_values, i, dimensions, M, path_filter, current=True):
+@torch.jit.script
+def batched_filter_gpu(path_matrix: torch.Tensor, dumped_values: torch.Tensor, i: int, dimensions: torch.Tensor, M: int, path_filter: torch.Tensor, current: bool = True) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     _, N, _ = path_matrix.shape
     #print(f"Current status: \n path_matrix: {path_matrix.shape} \n dumped_values: {dumped_values.shape} \n path_filter: {path_filter.shape}")
     #First, get new path_matrix by multiplying the maximum path length randomly generated for each streamline
     #print("filtering by maximum path length")
-    diff_matrix_path = path_matrix * path_filter - path_matrix#Elementwise multiplication to zero values
+    diff_matrix_path = (path_matrix * path_filter - path_matrix).to('cuda') #Elementwise multiplication to zero values
     #path_indices = np.where(np.any(diff_matrix_path.cpu().numpy() != 0, axis=(0, 2)))[0]
-    #path_indices = torch.where(torch.any(diff_matrix_path != 0, dim=(0, 2)))[0]
-    path_indices = torch.where(torch.any(torch.any(diff_matrix_path != 0, dim=0), dim=1))[0]
+    path_indices = torch.where(torch.any(diff_matrix_path != 0, dim=(0, 2)))[0]
 
     path_stopping_points = torch.sum(path_filter,dim=(0,2))-1
     for n in path_indices:
         # Extract the first 3 and last 3 rows for column n
         idx = path_stopping_points[n]
         #print(idx)
-        if idx == len(path_matrix)-2:
-            new_data = torch.cat((path_matrix[:3, n, :], path_matrix[-3:, n, :]), dim=0)
-        else:
-            new_data = torch.cat((path_matrix[:3, n, :], path_matrix[idx:idx+3, n, :]), dim=0)
+        new_data = torch.cat((path_matrix[:3, n, :], path_matrix[idx:idx+3, n, :]), dim=0) if idx != len(path_matrix) - 2 else torch.cat((path_matrix[:3, n, :], path_matrix[-3:, n, :]), dim=0)
         new_data = new_data.unsqueeze(1)  # Add a second dimension to match dumped_values shape
         #print(path_matrix.shape)
         #print(new_data.shape)
@@ -228,7 +255,7 @@ def batched_filter_gpu(path_matrix, dumped_values, i, dimensions, M, path_filter
     #print(len(first_false[first_false==-1]))
     #print("filtering by inside box: 3")
     #outside_box_filter = torch.tensor(generate_path_filter(first_false,M)).cuda()
-    outside_box_filter = generate_path_filter_gpu(first_false,torch.tensor([M+2], dtype=torch.int64).cuda())
+    outside_box_filter = generate_path_filter_gpu(first_false,M+2)
     
     #print(outside_box_filter.shape)
     #print("filtering by inside box: 4")
@@ -239,7 +266,7 @@ def batched_filter_gpu(path_matrix, dumped_values, i, dimensions, M, path_filter
     box_stopping_points = torch.sum(outside_box_filter,dim=(0,2))-1
     for n in box_indices:
         # Extract the first 3 and last 3 rows for column n
-        if (path_indices == torch.tensor([n], device = path_matrix.device)).any():
+        if torch.any(path_indices == n):
             continue
         idx = box_stopping_points[n]
         new_data = torch.cat((path_matrix[:3, n, :], path_matrix[idx:idx+3, n, :]), dim=0)
