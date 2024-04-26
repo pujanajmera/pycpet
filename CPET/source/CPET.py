@@ -178,9 +178,9 @@ class CPET:
         if len(files_input) > 5:
             warnings.warn("More than 5 pdb files found in the input directory, choosing 5 random pdbs to benchmarking on")
             files_input = [choice(files_input) for i in range(num)]
-        
+        topo_files = []
         for step_size in self.benchmark_step_sizes:
-            for n_samples in self.benchmark_samples:
+            for n_samples in sorted(self.benchmark_samples, reverse=True):
                 for i in range(self.benchmark_replicas):
                     self.replica = i
                     for file in files_input:
@@ -188,15 +188,21 @@ class CPET:
                         self.calculator.n_samples = n_samples
                         self.calculator.step_size = step_size
                         protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
-                        hist = self.calculator.compute_topo_batched()
-                        np.savetxt("{}_{}_{}_{}.top".format(protein, self.calculator.n_samples, str(self.calculator.step_size)[2:], self.replica), hist)
+                        files_done = [x for x in os.listdir(self.outputpath) if x.split(".")[-1]=="top"]
+                        outstring = "{}_{}_{}_{}.top".format(protein, self.calculator.n_samples, str(self.calculator.step_size)[2:], self.replica)
+                        if outstring in files_done:
+                            topo_files.append(self.outputpath + "/" + outstring)
+                            continue
+                        hist = self.calculator.compute_topo_GPU_batch_filter()
+                        np.savetxt(self.outputpath + "/" + outstring, hist)
+                        topo_files.append(self.outputpath + "/" + outstring)
         for file in files_input:
-            topo_files = glob(self.outputpath + "/{}*.top".format(file.split("/")[-1].split(".")[0]))
-            if len(topo_files) != num*len(self.benchmark_samples)*len(self.benchmark_step_sizes):
+            topo_file_protein = [x for x in topo_files if file.split("/")[-1].split(".")[0] in x]
+            if len(topo_file_protein) != num*len(self.benchmark_samples)*len(self.benchmark_step_sizes):
                 raise ValueError("Incorrect number of output topologies for requested benchmark parameters")
-            histograms = make_histograms(topo_files)
+            histograms = make_histograms(topo_file_protein)
             distance_matrix = construct_distance_matrix(histograms)
-            avg_dist = gen_param_dist_mat(distance_matrix, topo_files)
+            avg_dist = gen_param_dist_mat(distance_matrix, topo_file_protein)
             analyze_param_dist_mat(avg_dist, threshold=self.options["benchmark"]["threshold"], mode=self.options["benchmark"]["mode"])        
         
     def run_cluster(self):

@@ -584,8 +584,9 @@ def make_histograms(topo_files, plot=False):
     print(len(dist_list))
     print(len(curv_list))
 
+    #Do 95th percentiles instead to take care of extreme cases for curvature
     max_distance = max(dist_list)
-    max_curvature = max(curv_list)
+    max_curvature = np.percentile(curv_list, 95)
     print(f"Max distance: {max_distance}")
     print(f"Max curvature: {max_curvature}")
     #Make histograms
@@ -597,7 +598,7 @@ def make_histograms(topo_files, plot=False):
                 if line.startswith("#"):
                     continue
 
-                line = line.split(",")
+                line = line.split()
                 distances.append(float(line[0]))
                 curvatures.append(float(line[1]))
 

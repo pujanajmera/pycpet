@@ -6,6 +6,8 @@ import numpy as np
 import time
 from multiprocessing import Pool
 from torch.profiler import profile, record_function, ProfilerActivity
+import torch
+import torch.jit as jit
 
 
 from CPET.utils.parser import parse_pdb
@@ -297,12 +299,10 @@ class calculator:
         print(f"{end_time - start_time}")
         return point_field
 
-
     def compute_topo_GPU_batch_filter(self):
-        import torch
         if self.profile == True:
             with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
-                         record_shapes=True, profile_memory=True, with_stack=True) as prof:
+                         use_cuda=True, record_shapes=True, profile_memory=True, with_stack=True) as prof:
                 print("... > Computing Topo in Batches on a GPU!")
                 print(f"Number of samples: {self.n_samples}")
                 print(f"Number of charges: {len(self.Q)}")
@@ -317,15 +317,31 @@ class calculator:
                 self.n_samples
                 self.GPU_batch_freq
 
-                Q_gpu = torch.tensor(self.Q).cuda()
-                x_gpu = torch.tensor(self.x).cuda()
-                dim_gpu = torch.tensor(self.dimensions).cuda()
-                step_size_gpu = torch.tensor([self.step_size]).cuda()
+                '''
+                Q_gpu = torch.tensor(self.Q, dtype=torch.float16).cuda()
+                Q_gpu = Q_gpu.unsqueeze(0)
+                x_gpu = torch.tensor(self.x, dtype=torch.float16).cuda()
+                dim_gpu = torch.tensor(self.dimensions, dtype=torch.float16).cuda()
+                step_size_gpu = torch.tensor([self.step_size], dtype=torch.float16).cuda()
+                '''
+
+                Q_gpu = torch.tensor(self.Q, dtype=torch.float32).cuda()
+                Q_gpu = Q_gpu.unsqueeze(0)
+                x_gpu = torch.tensor(self.x, dtype=torch.float32).cuda()
+                dim_gpu = torch.tensor(self.dimensions, dtype=torch.float32).cuda()
+                step_size_gpu = torch.tensor([self.step_size], dtype=torch.float32).cuda()
 
                 path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gpu(self.center, self.x_vec_pt, self.y_vec_pt, self.dimensions, self.n_samples, self.step_size)
-                path_matrix_torch=torch.tensor(path_matrix).cuda()
-                path_filter=torch.tensor(path_filter).cuda()
-                dumped_values=torch.tensor(np.empty((6,0,3))).cuda()
+                
+                '''
+                path_matrix_torch=torch.tensor(path_matrix, dtype=torch.float16).cuda()
+                path_filter=torch.tensor(path_filter, dtype=torch.float16).cuda()
+                dumped_values=torch.tensor(np.empty((6,0,3)), dtype=torch.float16).cuda()
+                '''
+                path_matrix_torch=torch.tensor(path_matrix, dtype=torch.float32).cuda()
+                path_filter=torch.tensor(path_filter, dtype=torch.float32).cuda()
+                dumped_values=torch.tensor(np.empty((6,0,3)), dtype=torch.float32).cuda()
+
                 start_time = time.time()
                 j=0
                 start_time = time.time()
@@ -335,8 +351,8 @@ class calculator:
 
                     if(j == len(path_matrix)-1):
                         break
-                    #path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, torch.tensor([i]).cuda(), x_gpu, Q_gpu, step_size_gpu)
-                    path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, i, x_gpu, Q_gpu, self.step_size)
+                    path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, torch.tensor([i]).cuda(), x_gpu, Q_gpu, step_size_gpu)
+                    #path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, i, x_gpu, Q_gpu, self.step_size)
                     if(i%self.GPU_batch_freq == 0 and i>5):
                         path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i, dim_gpu, M, path_filter, current=True)
                         #GPU_batch_freq *= 2
@@ -370,16 +386,29 @@ class calculator:
             self.step_size
             self.n_samples
             self.GPU_batch_freq
+            '''
+            Q_gpu = torch.tensor(self.Q, dtype=torch.float16).cuda()
+            Q_gpu = Q_gpu.unsqueeze(0)
+            x_gpu = torch.tensor(self.x, dtype=torch.float16).cuda()
+            dim_gpu = torch.tensor(self.dimensions, dtype=torch.float16).cuda()
+            step_size_gpu = torch.tensor([self.step_size], dtype=torch.float16).cuda()
+            '''
 
-            Q_gpu = torch.tensor(self.Q).cuda()
-            x_gpu = torch.tensor(self.x).cuda()
-            dim_gpu = torch.tensor(self.dimensions).cuda()
-            step_size_gpu = torch.tensor([self.step_size]).cuda()
+            Q_gpu = torch.tensor(self.Q, dtype=torch.float32).cuda()
+            Q_gpu = Q_gpu.unsqueeze(0)
+            x_gpu = torch.tensor(self.x, dtype=torch.float32).cuda()
+            dim_gpu = torch.tensor(self.dimensions, dtype=torch.float32).cuda()
+            step_size_gpu = torch.tensor([self.step_size], dtype=torch.float32).cuda()
 
             path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gpu(self.center, self.x_vec_pt, self.y_vec_pt, self.dimensions, self.n_samples, self.step_size)
-            path_matrix_torch=torch.tensor(path_matrix).cuda()
-            path_filter=torch.tensor(path_filter).cuda()
-            dumped_values=torch.tensor(np.empty((6,0,3))).cuda()
+            '''
+            path_matrix_torch=torch.tensor(path_matrix, dtype=torch.float16).cuda()
+            path_filter=torch.tensor(path_filter, dtype=torch.float16).cuda()
+            dumped_values=torch.tensor(np.empty((6,0,3)), dtype=torch.float16).cuda()
+            '''
+            path_matrix_torch=torch.tensor(path_matrix, dtype=torch.float32).cuda()
+            path_filter=torch.tensor(path_filter, dtype=torch.float32).cuda()
+            dumped_values=torch.tensor(np.empty((6,0,3)), dtype=torch.float32).cuda()
             start_time = time.time()
             j=0
             start_time = time.time()
@@ -389,8 +418,8 @@ class calculator:
 
                 if(j == len(path_matrix)-1):
                     break
-                #path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, torch.tensor([i]).cuda(), x_gpu, Q_gpu, step_size_gpu)
-                path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, i, x_gpu, Q_gpu, self.step_size)
+                path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, torch.tensor([i]).cuda(), x_gpu, Q_gpu, step_size_gpu)
+                #path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, i, x_gpu, Q_gpu, self.step_size)
                 if(i%self.GPU_batch_freq == 0 and i>5):
                     path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i, dim_gpu, M, path_filter, current=True)
                     #GPU_batch_freq *= 2

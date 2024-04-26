@@ -4,27 +4,27 @@ import torch
 import torch.jit as jit
 from typing import Tuple
 from CPET.utils.parser import parse_pqr
-
+from torch.profiler import profile, record_function, ProfilerActivity
+'''
 #@profile
 @torch.jit.script
 def calculate_electric_field_torch_batch_gpu(x_0: torch.Tensor, x: torch.Tensor, Q: torch.Tensor) -> torch.Tensor:
     N = x_0.size(0)
     E = torch.zeros(N, 3, device=x_0.device)
-    Q_reshaped=Q.unsqueeze(0)
+
     for start in range(0, N, 1000):
         end = min(start + 1000, N)
-        x_0_batch = x_0[start:end]
-        R = x_0_batch.unsqueeze(1) - x.unsqueeze(0)
-        r_mag = torch.norm(R, dim=-1, keepdim=True)
-        r_mag_cube = r_mag.pow(3)
-        #E_batch = torch.einsum("ijk,ijk,ijk->ik", R, 1 / r_mag_cube, Q_reshaped) * 14.3996451
-        #E[start:end] = E_batch
-        E[start:end] = torch.einsum("ijk,ijk,ijk->ik", R, 1/r_mag_cube, Q_reshaped) * 14.3996451
+        #x_0_batch = x_0[start:end]
+        #R = x_0_batch.unsqueeze(1) - x.unsqueeze(0)
+        R = x_0[start:end].unsqueeze(1) - x.unsqueeze(0)
+        r_mag_cube = torch.norm(R, dim=-1, keepdim=True).pow(3)
+        E[start:end] = torch.einsum("ijk,ijk,ijk->ik", R, 1/r_mag_cube, Q) * 14.3996451
+
     return E
 
-#@torch.jit.script
-#def propagate_topo_matrix_gpu(path_matrix: torch.Tensor,i: torch.Tensor, x: torch.Tensor, Q: torch.Tensor, step_size: torch.Tensor) -> torch.Tensor:
-def propagate_topo_matrix_gpu(path_matrix, i, x, Q, step_size):
+@torch.jit.script
+def propagate_topo_matrix_gpu(path_matrix: torch.Tensor,i: torch.Tensor, x: torch.Tensor, Q: torch.Tensor, step_size: torch.Tensor) -> torch.Tensor:
+#def propagate_topo_matrix_gpu(path_matrix, i, x, Q, step_size):
     """
     Propagates position based on normalized electric field at a given point
     Takes
@@ -37,10 +37,38 @@ def propagate_topo_matrix_gpu(path_matrix, i, x, Q, step_size):
     """
     path_matrix_prior = path_matrix[int(i)]
     E = calculate_electric_field_torch_batch_gpu(path_matrix_prior, x, Q)  # Compute field
-    E_norm = torch.norm(E, dim=-1).unsqueeze(-1)
-    E_normalized = E / E_norm
-    path_matrix[i+1] = path_matrix_prior + step_size*E_normalized
+    path_matrix[i+1] = path_matrix_prior + step_size* E / torch.norm(E, dim=-1, keepdim=True)
     return path_matrix
+'''
+
+@torch.jit.script
+def propagate_topo_matrix_gpu(path_matrix: torch.Tensor,i: torch.Tensor, x: torch.Tensor, Q: torch.Tensor, step_size: torch.Tensor) -> torch.Tensor:
+    """
+    Propagates position based on normalized electric field at a given point
+    Takes
+        x_0(array) - position to propagate based on field at that point of shape (1,3)
+        x(array) - positions of charges of shape (N,3)
+        Q(array) - magnitude and sign of charges of shape (N,1)
+        step_size(float) - size of streamline step to take when propagating, real and positive
+    Returns
+        x_0 - new position on streamline after propagation via electric field
+    """
+    path_matrix_prior = path_matrix[int(i)]
+    N = path_matrix_prior.size(0)
+    #E = torch.zeros(N, 3, device=path_matrix_prior.device, dtype=torch.float16)
+    E = torch.zeros(N, 3, device=path_matrix_prior.device, dtype=torch.float32)
+    for start in range(0, N, 1000):
+        end = min(start + 1000, N)
+        #x_0_batch = x_0[start:end]
+        #R = x_0_batch.unsqueeze(1) - x.unsqueeze(0)
+        R = path_matrix_prior[start:end].unsqueeze(1) - x.unsqueeze(0)
+        r_mag_cube = torch.norm(R, dim=-1, keepdim=True).pow(3)
+        #E[start:end] = torch.einsum("ijk,ijk,ijk->ik", R, 1/r_mag_cube, Q) * 14.3996451
+        E[start:end] = (R*(1/r_mag_cube)*Q).sum(dim=1) * 14.3996451
+
+    path_matrix[i+1] = path_matrix_prior + step_size* E / torch.norm(E, dim=-1, keepdim=True)
+    return path_matrix
+
 
 @torch.jit.script
 def curv_mat_gpu(v_prime: torch.Tensor, v_prime_prime: torch.Tensor) -> torch.Tensor:
@@ -73,6 +101,8 @@ def compute_curv_and_dist_mat_gpu(x_init,x_init_plus,x_init_plus_plus,x_0,x_0_pl
     curv_init = curv_mat_gpu(x_init_plus - x_init, x_init_plus_plus - 2 * x_init_plus + x_init)
     curv_final = curv_mat_gpu(x_0_plus - x_0, x_0_plus_plus - 2 * x_0_plus + x_0)
     curv_mean = (curv_init + curv_final) / 2
+    print(x_init)
+    print(x_0)
     dist = torch.norm(x_init - x_0, dim=-1)
     return dist, curv_mean
     
@@ -220,8 +250,7 @@ def first_false_index_gpu(arr: torch.Tensor):
 def t_delete(tensor, indices):
     keep_mask = torch.ones(tensor.shape[1], dtype=torch.bool)
     keep_mask[indices] = False
-    new_tensor = tensor[:, keep_mask]
-    return new_tensor
+    return tensor[:, keep_mask]
 
 @torch.jit.script
 def batched_filter_gpu(path_matrix: torch.Tensor, dumped_values: torch.Tensor, i: int, dimensions: torch.Tensor, M: int, path_filter: torch.Tensor, current: bool = True) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -229,14 +258,28 @@ def batched_filter_gpu(path_matrix: torch.Tensor, dumped_values: torch.Tensor, i
     #print(f"Current status: \n path_matrix: {path_matrix.shape} \n dumped_values: {dumped_values.shape} \n path_filter: {path_filter.shape}")
     #First, get new path_matrix by multiplying the maximum path length randomly generated for each streamline
     #print("filtering by maximum path length")
-    diff_matrix_path = (path_matrix * path_filter - path_matrix).to('cuda') #Elementwise multiplication to zero values
-    #path_indices = np.where(np.any(diff_matrix_path.cpu().numpy() != 0, axis=(0, 2)))[0]
-    path_indices = torch.where(torch.any(diff_matrix_path != 0, dim=(0, 2)))[0]
+    diff_matrix_path = path_matrix * path_filter - path_matrix #Elementwise multiplication to zero values
+    
+    #path_indices = torch.tensor(np.where(np.any(diff_matrix_path.cpu().numpy() != 0, axis=(0, 2)))[0], device=diff_matrix_path.device)
+    #path_indices = torch.where(torch.any(diff_matrix_path != 0, dim=(0, 2)))[0]
+    #print(path_indices.shape)
+    #path_indices = torch.nonzero(torch.any(diff_matrix_path != 0, dim=(0,2),keepdim=False))[:, 0]
+    path_indices = torch.any(diff_matrix_path != 0, dim=(0, 2)).nonzero()[:, 0]
+    '''
+    # Reshape the tensor to merge the first and third dimensions
+    reshaped_diff_matrix = diff_matrix_path.permute(1, 0, 2).reshape(diff_matrix_path.size(1), -1)
 
+    # Check if any element in each column is non-zero
+    column_nonzero = (reshaped_diff_matrix != 0).any(dim=0)
+
+    # Find indices of columns with at least one non-zero element
+    path_indices = torch.nonzero(column_nonzero).squeeze(1)
+    print(path_indices.shape)
+    '''
     path_stopping_points = torch.sum(path_filter,dim=(0,2))-1
     for n in path_indices:
         # Extract the first 3 and last 3 rows for column n
-        idx = path_stopping_points[n]
+        idx = int(path_stopping_points[n])
         #print(idx)
         new_data = torch.cat((path_matrix[:3, n, :], path_matrix[idx:idx+3, n, :]), dim=0) if idx != len(path_matrix) - 2 else torch.cat((path_matrix[:3, n, :], path_matrix[-3:, n, :]), dim=0)
         new_data = new_data.unsqueeze(1)  # Add a second dimension to match dumped_values shape
