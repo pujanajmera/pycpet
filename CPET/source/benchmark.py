@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 def gen_param_dist_mat(dist_mat, topo_file_list):
     distances = pd.DataFrame(dist_mat)
@@ -26,12 +27,12 @@ def gen_param_dist_mat(dist_mat, topo_file_list):
     # Ensure the matrix is symmetric
     averaged_distances = (averaged_distances + averaged_distances.T) / 2
 
-    '''# (Optional) Plot the distance matrix
+    # (Optional) Plot the distance matrix
     plt.figure(figsize=(10,8))
     sns.heatmap(averaged_distances, cmap="Greens_r", linewidths=0.1)
     plt.title("Averaged Distance Matrix")
     plt.show()
-    '''
+    
 
     return averaged_distances
 

@@ -8,5 +8,6 @@ setup(
     packages=find_packages(),
     scripts=[
         "./CPET/source/cpet.py",
+        "./CPET/test/test_radius_convergence.py",
     ],
 )

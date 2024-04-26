@@ -57,8 +57,8 @@ def propagate_topo_matrix_gpu(path_matrix: torch.Tensor,i: torch.Tensor, x: torc
     N = path_matrix_prior.size(0)
     #E = torch.zeros(N, 3, device=path_matrix_prior.device, dtype=torch.float16)
     E = torch.zeros(N, 3, device=path_matrix_prior.device, dtype=torch.float32)
-    for start in range(0, N, 1000):
-        end = min(start + 1000, N)
+    for start in range(0, N, 100):
+        end = min(start + 100, N)
         #x_0_batch = x_0[start:end]
         #R = x_0_batch.unsqueeze(1) - x.unsqueeze(0)
         R = path_matrix_prior[start:end].unsqueeze(1) - x.unsqueeze(0)

@@ -534,7 +534,7 @@ def mean_and_curve_to_hist(mean_dist, curve):
     #Calculate reasonable maximum distances and curvatures
     #curvatures, distances = [],[]
     max_distance = max(mean_dist)
-    max_curvature = max(curve)
+    max_curvature = np.percentile(curve, 95)
     
     # bins is number of histograms bins in x and y direction (so below is 200x200 bins)
     # range gives xrange, yrange for the histogram

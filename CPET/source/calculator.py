@@ -431,10 +431,12 @@ class calculator:
             print(path_matrix_torch.shape)
             print(dumped_values.shape)
             distances, curvatures = compute_curv_and_dist_mat_gpu(dumped_values[0,:,:], dumped_values[1,:,:], dumped_values[2,:,:],dumped_values[3,:,:],dumped_values[4,:,:],dumped_values[5,:,:])
-        
+            print(distances)
+            print(curvatures)
             end_time = time.time()
             print(f"Time taken for {self.n_samples} calculations with N~{self.Q.shape}: {end_time - start_time:.2f} seconds")
             topology = np.column_stack((distances.cpu().numpy(), curvatures.cpu().numpy()))
+            print(topology.shape)
         return topology
     
 
