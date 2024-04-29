@@ -8,6 +8,7 @@ import argparse
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import os
 
 def main():
     parser = argparse.ArgumentParser(description='CPET: A tool for computing and analyzing electric fields in proteins')
@@ -21,14 +22,21 @@ def main():
 
     iter = 3
 
+    current_dir_files = os.listdir()
+
     for radius in [None,50,40,30,20]:
         if radius is not None:
             options["filter_radius"] = radius
         for i in range(iter):
+            filestring = f"rad_conv_{radius}_{i}.top"
+            if filestring in current_dir_files:
+                print(filestring+" already exists. Skipping...")
+                topo_file_list.append(filestring)
+                continue
             topo = calculator(options, path_to_pdb = file)
             ret = topo.compute_topo_GPU_batch_filter()
-            np.savetxt(f"rad_conv_{radius}_{i}.top", ret)
-            topo_file_list.append(f"./rad_conv_{radius}_{i}.top")
+            np.savetxt(filestring, ret)
+            topo_file_list.append(filestring)
     
     histograms = make_histograms(topo_file_list)
     distance_matrix = construct_distance_matrix(histograms)
@@ -60,6 +68,7 @@ def main():
     plt.figure(figsize=(10,8))
     sns.heatmap(averaged_distances, cmap="Greens_r", annot=True,linewidths=0.1)
     plt.title("Averaged Distance Matrix")
-    plt.save("rad_conv.png", dpi=300)
+    plt.show()
+    plt.imsave("averaged_distance_matrix.png",averaged_distances)
     
 main()
