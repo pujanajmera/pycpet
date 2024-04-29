@@ -22,7 +22,8 @@ def main():
     iter = 3
 
     for radius in [None,50,40,30,20]:
-        options["filter_radius"] = radius
+        if radius is not None:
+            options["filter_radius"] = radius
         for i in range(iter):
             topo = calculator(options, path_to_pdb = file)
             ret = topo.compute_topo_GPU_batch_filter()
