@@ -54,7 +54,7 @@ def filter_radius(x, Q, center, radius=2.0):
     # remove masked points
     x_filtered = x[mask]
     Q_filtered = Q[mask]
-    #print("radius filter leaves: {}".format(len(Q_filtered)))
+    print("radius filter leaves: {}".format(len(Q_filtered)))
     #print(np.linalg.norm(x_filtered, axis=1))
     return x_filtered, Q_filtered
 

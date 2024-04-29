@@ -68,7 +68,10 @@ class CPET:
         if len(files_input) == 1:
             warnings.warn("Only one pdb file found in the input directory")
         for i in range(num):
-            file = choice(files_input)
+            if len(files_input) != 0:
+                file = choice(files_input)
+            else:
+                break
             self.calculator = calculator(self.options, path_to_pdb = file)
             protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
             files_input.remove(file)

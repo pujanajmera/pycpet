@@ -534,7 +534,7 @@ def mean_and_curve_to_hist(mean_dist, curve):
     #Calculate reasonable maximum distances and curvatures
     #curvatures, distances = [],[]
     max_distance = max(mean_dist)
-    max_curvature = np.percentile(curve, 95)
+    max_curvature = max(curve)
     
     # bins is number of histograms bins in x and y direction (so below is 200x200 bins)
     # range gives xrange, yrange for the histogram
@@ -586,7 +586,7 @@ def make_histograms(topo_files, plot=False):
 
     #Do 95th percentiles instead to take care of extreme cases for curvature
     max_distance = max(dist_list)
-    max_curvature = np.percentile(curv_list, 95)
+    max_curvature = max(curv_list)
     print(f"Max distance: {max_distance}")
     print(f"Max curvature: {max_curvature}")
     #Make histograms

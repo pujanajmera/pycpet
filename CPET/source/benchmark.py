@@ -29,7 +29,7 @@ def gen_param_dist_mat(dist_mat, topo_file_list):
 
     # (Optional) Plot the distance matrix
     plt.figure(figsize=(10,8))
-    sns.heatmap(averaged_distances, cmap="Greens_r", linewidths=0.1)
+    sns.heatmap(averaged_distances, cmap="Greens_r", annot=True, linewidths=0.1)
     plt.title("Averaged Distance Matrix")
     plt.show()
     

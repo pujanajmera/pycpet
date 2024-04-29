@@ -15,7 +15,7 @@ from CPET.utils.c_ops import Math_ops
 from CPET.utils.parallel import task, task_batch, task_base
 from CPET.utils.calculator import initialize_box_points_random, initialize_box_points_uniform, compute_field_on_grid, calculate_electric_field_dev_c_shared
 from CPET.utils.parser import parse_pdb, filter_radius, filter_residue, filter_in_box, calculate_center, filter_resnum, filter_resnum_andname
-from CPET.utils.gpu import compute_curv_and_dist_mat_gpu, propagate_topo_matrix_gpu, batched_filter_gpu, initialize_streamline_grid_gpu
+from CPET.utils.gpu import compute_curv_and_dist_mat_gpu, propagate_topo_matrix_gpu, batched_filter_gpu, initialize_streamline_grid_gpu, batched_filter_gpu_end
 from CPET.utils.gridcpu import compute_curv_and_dist_mat_gridcpu, propagate_topo_matrix_gridcpu, batched_filter_gridcpu, initialize_streamline_grid_gridcpu
 
 class calculator:
@@ -308,7 +308,6 @@ class calculator:
                 print(f"Number of charges: {len(self.Q)}")
                 print(f"Step size: {self.step_size}")
                 
-
                 self.x_vec_pt
                 self.x
                 self.y_vec_pt
@@ -360,7 +359,7 @@ class calculator:
                     if dumped_values.shape[1]>=self.n_samples:
                         break
                 torch.cuda.empty_cache()
-                path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i, dim_gpu, M, path_filter, current=True)
+                path_matrix_torch, dumped_values, path_filter= batched_filter_gpu_end(path_matrix_torch, dumped_values, i, dim_gpu, M, path_filter, current=True)
                 print(path_matrix_torch.shape)
                 print(dumped_values.shape)
                 distances, curvatures = compute_curv_and_dist_mat_gpu(dumped_values[0,:,:], dumped_values[1,:,:], dumped_values[2,:,:],dumped_values[3,:,:],dumped_values[4,:,:],dumped_values[5,:,:])
@@ -378,7 +377,6 @@ class calculator:
             print(f"Number of charges: {len(self.Q)}")
             print(f"Step size: {self.step_size}")
             
-
             self.x_vec_pt
             self.x
             self.y_vec_pt
@@ -399,28 +397,34 @@ class calculator:
             x_gpu = torch.tensor(self.x, dtype=torch.float32).cuda()
             dim_gpu = torch.tensor(self.dimensions, dtype=torch.float32).cuda()
             step_size_gpu = torch.tensor([self.step_size], dtype=torch.float32).cuda()
-
+            
+            
             path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gpu(self.center, self.x_vec_pt, self.y_vec_pt, self.dimensions, self.n_samples, self.step_size)
             '''
             path_matrix_torch=torch.tensor(path_matrix, dtype=torch.float16).cuda()
             path_filter=torch.tensor(path_filter, dtype=torch.float16).cuda()
             dumped_values=torch.tensor(np.empty((6,0,3)), dtype=torch.float16).cuda()
+            
+            
             '''
             path_matrix_torch=torch.tensor(path_matrix, dtype=torch.float32).cuda()
-            path_filter=torch.tensor(path_filter, dtype=torch.float32).cuda()
+            path_filter=torch.tensor(path_filter, dtype=torch.bool).cuda()
             dumped_values=torch.tensor(np.empty((6,0,3)), dtype=torch.float32).cuda()
+            
+
             start_time = time.time()
             j=0
             start_time = time.time()
             for i in range(len(path_matrix)):
                 if i % 100 == 0:
                     print(i)
-
                 if(j == len(path_matrix)-1):
                     break
                 path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, torch.tensor([i]).cuda(), x_gpu, Q_gpu, step_size_gpu)
+                
                 #path_matrix_torch = propagate_topo_matrix_gpu(path_matrix_torch, i, x_gpu, Q_gpu, self.step_size)
                 if(i%self.GPU_batch_freq == 0 and i>5):
+                    
                     path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i, dim_gpu, M, path_filter, current=True)
                     #GPU_batch_freq *= 2
                 j += 1
@@ -430,6 +434,9 @@ class calculator:
             path_matrix_torch, dumped_values, path_filter= batched_filter_gpu(path_matrix_torch, dumped_values, i, dim_gpu, M, path_filter, current=True)
             print(path_matrix_torch.shape)
             print(dumped_values.shape)
+            #np.savetxt("dumped_values.txt", dumped_values[3,:,:].cpu().numpy())
+            #np.savetxt("dumped_values_2.txt", dumped_values[4,:,:].cpu().numpy())
+            #np.savetxt("dumped_values_3.txt", dumped_values[5,:,:].cpu().numpy())
             distances, curvatures = compute_curv_and_dist_mat_gpu(dumped_values[0,:,:], dumped_values[1,:,:], dumped_values[2,:,:],dumped_values[3,:,:],dumped_values[4,:,:],dumped_values[5,:,:])
             print(distances)
             print(curvatures)
