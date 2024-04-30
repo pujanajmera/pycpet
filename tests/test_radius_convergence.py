@@ -38,7 +38,7 @@ def main():
             np.savetxt(filestring, ret)
             topo_file_list.append(filestring)
     
-    histograms = make_histograms(topo_file_list)
+    histograms = make_histograms(topo_file_list,plot=True)
     distance_matrix = construct_distance_matrix(histograms)
 
     distances = pd.DataFrame(distance_matrix)

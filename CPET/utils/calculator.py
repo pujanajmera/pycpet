@@ -579,7 +579,7 @@ def make_histograms(topo_files, plot=False):
                 line = line.split()
                 distances.append(float(line[0]))
                 curvatures.append(float(line[1]))
-        print(max(distances),max(curvatures))
+        #print(max(distances),max(curvatures))
         dist_list.extend(distances)
         curv_list.extend(curvatures)
     print(len(dist_list))
@@ -592,6 +592,11 @@ def make_histograms(topo_files, plot=False):
     #max_curvature = np.percentile(curv_list, 98)
     print(f"Max distance: {max_distance}")
     print(f"Max curvature: {max_curvature}")
+    #Need 0.02A resolution for max_distance
+    max_distance_nbins = int(max_distance / 0.02)
+    #Need 0.02A resolution for max_curvature
+    max_curvature_nbins = int(max_curvature / 0.02)
+
     #Make histograms
     for topo_file in topo_files:
         curvatures, distances = [], []
@@ -604,13 +609,13 @@ def make_histograms(topo_files, plot=False):
                 line = line.split()
                 distances.append(float(line[0]))
                 curvatures.append(float(line[1]))
-
+        print(f"Plotting histo for {topo_file}")
         # bins is number of histograms bins in x and y direction (so below is 100x100 bins)
         # range gives xrange, yrange for the histogram
         a, b, c, q = plt.hist2d(
             distances,
             curvatures,
-            bins=200,
+            bins=(max_distance_nbins, max_curvature_nbins) ,  
             range=[[0, max_distance], [0, max_curvature]],
             norm=matplotlib.colors.LogNorm(),
             density=True,

@@ -36,7 +36,7 @@ class calculator:
             
         self.x, self.Q, self.atom_number, self.resids, self.residue_number, self.atom_type = parse_pdb(
             self.path_to_pdb, get_charges=True)        
-
+        
         ##################### define center axis
         
         if type(options["center"]) == list:
