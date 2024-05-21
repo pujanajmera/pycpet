@@ -3,6 +3,8 @@ import torch
 import pkg_resources
 import matplotlib
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from scipy.spatial.distance import pdist, squareform
 
 package_name = "CPET-python"
 package = pkg_resources.get_distribution(package_name)
@@ -178,9 +180,9 @@ def initialize_box_points_uniform(center, x, y, step_size, dimensions):
     ).T  # Each column is a unit vector
 
     # construct a grid of points in the box - lengths are floats
-    x_coords = np.arange(-half_length, half_length, step_size)
-    y_coords = np.arange(-half_width, half_width, step_size)
-    z_coords = np.arange(-half_height, half_height, step_size)
+    x_coords = np.arange(-half_length, half_length+step_size, step_size)
+    y_coords = np.arange(-half_width, half_width+step_size, step_size)
+    z_coords = np.arange(-half_height, half_height+step_size, step_size)
 
     x_mesh, y_mesh, z_mesh = np.meshgrid(x_coords, y_coords, z_coords)
     local_coords = np.stack([x_mesh, y_mesh, z_mesh], axis=-1)
@@ -395,10 +397,38 @@ def compute_field_on_grid(grid_coords, x, Q):
         E[i] = np.einsum("ij,ij,ij->j", R, r_mag_cube, Q) * 14.3996451
         # compute without einsum
         #E[i] = np.sum(R * r_mag_cube * Q, axis=0) * 14.3996451
-    # Reshape E back to the shape of the original meshgrid
-    E = E.reshape(*grid_coords.shape)
-    return E
 
+    point_field_concat = np.concatenate((reshaped_meshgrid, E), axis=1)
+
+    return point_field_concat.astype(np.half)
+
+def compute_ESP_on_grid(grid_coords, x, Q):
+    """
+    Computes electrostatic potential at each point in a meshgrid given positions of charges.
+
+    Takes:
+        grid_coords(array): Meshgrid of points with shape (M, M, M, 3) where M is the number of points along each dimension.
+        x(array): Positions of charges of shape (N, 3).
+        Q(array): Magnitude and sign of charges of shape (N, 1).
+    Returns:
+        point_ESP_concat(array): Position and electrostatic potential at each point in the meshgrid of shape (M**3, 4).
+    """
+    # Reshape meshgrid to a 2D array of shape (M*M*M, 3)
+    reshaped_meshgrid = grid_coords.reshape(-1, 3)
+    # Initialize an array to hold the electric field values
+    ESP = np.zeros((reshaped_meshgrid.shape[0],1), dtype=float)
+    print(ESP.shape)
+
+    # Calculate the electric field at each point in the meshgrid
+    for i, x_0 in enumerate(reshaped_meshgrid):
+        # Create matrix R
+        R = nb_subtract(x_0, x)
+        r_mag = np.sqrt(np.einsum("ij,ij->i", R, R)).reshape(-1, 1) #Has shape (N,1)
+        ESP[i] = np.sum(Q / r_mag) * 14.3996451
+
+    point_ESP_concat = np.concatenate((reshaped_meshgrid, ESP), axis=1)
+
+    return point_ESP_concat.astype(np.half)
 
 def calculate_field_at_point(x, Q, x_0=np.array([0, 0, 0])):
     """
@@ -529,39 +559,6 @@ def distance_numpy(hist1, hist2):
     b = hist1 + hist2
     return np.sum(np.divide(a, b, out=np.zeros_like(a), where=b != 0)) / 2.0
 
-
-def mean_and_curve_to_hist(mean_dist, curve): 
-    #Calculate reasonable maximum distances and curvatures
-    #curvatures, distances = [],[]
-    max_distance = max(mean_dist)
-    max_curvature = max(curve)
-    
-    # bins is number of histograms bins in x and y direction (so below is 200x200 bins)
-    # range gives xrange, yrange for the histogram
-    a, b, c, q = plt.hist2d(
-        mean_dist,
-        curve,
-        bins=200,
-        range=[[0, max_distance], [0, max_curvature]],
-        norm=matplotlib.colors.LogNorm(),
-        density=True,
-        cmap="jet",
-    )
-
-    NormConstant = 0
-    for j in a:
-        for m in j:
-            NormConstant += m
-
-    actual = []
-    for j in a:
-        actual.append([m / NormConstant for m in j])
-
-    actual = np.array(actual)
-    histogram = actual.flatten()
-    return np.array(histogram)
-
-
 def make_histograms(topo_files, plot=False):
     histograms = []
 
@@ -638,6 +635,18 @@ def make_histograms(topo_files, plot=False):
 
     return np.array(histograms)
 
+def make_fields(field_files):
+    fields = []
+    for field_file in field_files:
+        field = []
+        with open(field_file) as field_data:
+            for line in field_data:
+                if line.startswith("#"):
+                    continue
+                line = line.split()
+                field.append([float(line[3]), float(line[4]), float(line[5])])
+        fields.append(np.array(field))
+    return fields
 
 def construct_distance_matrix(histograms):
     matrix = np.diag(np.zeros(len(histograms)))
@@ -647,6 +656,51 @@ def construct_distance_matrix(histograms):
             matrix[i][j] = distance_numpy(hist1, hist2)
             matrix[j][i] = matrix[i][j]
     return matrix
+
+def construct_distance_matrix_alt(histograms):
+    flattened_hists = [hist.flatten() for hist in histograms]
+    np.save("flattened_hists.npy", flattened_hists)
+    scaler = StandardScaler()
+    flattened_hists_scaled = scaler.fit_transform(flattened_hists)
+    matrix = squareform(pdist(flattened_hists_scaled, 'euclidean'))
+    return matrix
+
+def construct_distance_matrix_alt2(histograms):
+    new_histograms = []
+    for h in histograms:
+        h_copy = np.copy(h)  # Make a copy of the histogram
+        h_copy[h_copy < 0.001] = 0  # Set values less than 0.001 to zero in the 
+        h_copy = h_copy/np.sum(h_copy)  # Normalize the histogram
+        new_histograms.append(h_copy)  # Append the modified copy to the new list
+    matrix = np.diag(np.zeros(len(new_histograms)))
+    for i, hist1 in enumerate(new_histograms):
+        for j, hist2 in enumerate(new_histograms[i + 1 :]):
+            j += i + 1
+            matrix[i][j] = distance_numpy(hist1, hist2)
+            matrix[j][i] = matrix[i][j]
+    return matrix
+
+def construct_distance_matrix_volume(fields):
+    '''
+    Computes the distance matrix between vector fields using the cosine similarity
+    Takes
+        fields(list of arrays) - vector fields of shape (N,3)
+    Returns
+        matrix(array) - distance matrix between vector fields
+    '''
+    matrix = np.diag(np.zeros(len(fields)))
+    for i, field1 in enumerate(fields):
+        for j, field2 in enumerate(fields[i + 1 :]):
+            j += i + 1
+            # Dot product calculation for vector fields
+            dot_product = np.sum(field1 * field2, axis=-1)
+            norms = np.linalg.norm(field1, axis=-1) * np.linalg.norm(field2, axis=-1)
+            cosine_similarity = dot_product / norms
+            # Average over all vector similarities in the field
+            matrix[i][j] = np.mean(cosine_similarity)
+            matrix[j][i] = matrix[i][j]
+    return matrix
+
 
 
 

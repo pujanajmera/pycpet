@@ -1,6 +1,6 @@
 import numpy as np
 from CPET.source.calculator import calculator
-from CPET.utils.calculator import make_histograms, construct_distance_matrix
+from CPET.utils.calculator import make_histograms, construct_distance_matrix_alt2, construct_distance_matrix
 import warnings 
 warnings.filterwarnings(action='ignore')
 import json
@@ -24,7 +24,7 @@ def main():
 
     current_dir_files = os.listdir()
 
-    for radius in [None,50,40,30,20]:
+    for radius in [None,90,80,70,60,50,40,30,20]:
         if radius is not None:
             options["filter_radius"] = radius
         for i in range(iter):
@@ -38,7 +38,7 @@ def main():
             np.savetxt(filestring, ret)
             topo_file_list.append(filestring)
     
-    histograms = make_histograms(topo_file_list,plot=True)
+    histograms = make_histograms(topo_file_list,plot=False)
     distance_matrix = construct_distance_matrix(histograms)
 
     distances = pd.DataFrame(distance_matrix)

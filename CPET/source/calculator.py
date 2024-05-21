@@ -13,7 +13,7 @@ import torch.jit as jit
 from CPET.utils.parser import parse_pdb
 from CPET.utils.c_ops import Math_ops
 from CPET.utils.parallel import task, task_batch, task_base
-from CPET.utils.calculator import initialize_box_points_random, initialize_box_points_uniform, compute_field_on_grid, calculate_electric_field_dev_c_shared
+from CPET.utils.calculator import initialize_box_points_random, initialize_box_points_uniform, compute_field_on_grid, calculate_electric_field_dev_c_shared, compute_ESP_on_grid
 from CPET.utils.parser import parse_pdb, filter_radius, filter_residue, filter_in_box, calculate_center, filter_resnum, filter_resnum_andname
 from CPET.utils.gpu import compute_curv_and_dist_mat_gpu, propagate_topo_matrix_gpu, batched_filter_gpu, initialize_streamline_grid_gpu, batched_filter_gpu_end
 from CPET.utils.gridcpu import compute_curv_and_dist_mat_gridcpu, propagate_topo_matrix_gridcpu, batched_filter_gridcpu, initialize_streamline_grid_gridcpu
@@ -127,35 +127,37 @@ class calculator:
                 #print("filtering charges in sampling box")
                 self.x, self.Q = filter_in_box(x=self.x, Q=self.Q, center=self.center,  dimensions=self.dimensions)
 
-        (
-            self.random_start_points,
-            self.random_max_samples,
-            self.transformation_matrix,
-        ) = initialize_box_points_random(
-            self.center,
-            self.x_vec_pt,
-            self.y_vec_pt,
-            self.dimensions,
-            self.n_samples,
-            self.step_size,
-        )
-
-        '''(
-            self.mesh, self.uniform_transformation_matrix
-        ) = initialize_box_points_uniform(
-            center=self.center,
-            x=self.x_vec_pt,
-            y=self.y_vec_pt,
-            dimensions=self.dimensions,
-            step_size=self.step_size,
-        )'''
+        if options["CPET_method"] == "topo_GPU" or options["CPET_method"] == "topo" or options["CPET_method"] == "topo_griddev" or options["CPET_method"] == "benchmark":
+            (
+                self.random_start_points,
+                self.random_max_samples,
+                self.transformation_matrix,
+            ) = initialize_box_points_random(
+                self.center,
+                self.x_vec_pt,
+                self.y_vec_pt,
+                self.dimensions,
+                self.n_samples,
+                self.step_size,
+            )
+        
+        elif options["CPET_method"] == "volume" or options["CPET_method"] == "volume_ESP":
+            (
+                self.mesh, self.transformation_matrix
+            ) = initialize_box_points_uniform(
+                center=self.center,
+                x=self.x_vec_pt,
+                y=self.y_vec_pt,
+                dimensions=self.dimensions,
+                step_size=self.step_size,
+            )
 
         #self.transformation_matrix and self.uniform_transformation_matrix are the same
 
         self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
         #print(self.random_start_points)
         
-        if "batch_size" in options.keys(): 
+        if "batch_size" in options.keys() and options["CPET_method"] == "woohoo": 
             self.batch_size = options["batch_size"]
             # reshape the random_start_points and random_max_samples to be batches of size batch_size
             self.random_start_points_batched = np.array(self.random_start_points).reshape(int(self.n_samples/self.batch_size), self.batch_size, 3)
@@ -273,7 +275,17 @@ class calculator:
         field_box = compute_field_on_grid(self.mesh, self.x, self.Q)
         return field_box
 
-
+    def compute_box_ESP(self):
+        print("... > Computing Box!")
+        print(f"Number of charges: {len(self.Q)}")
+        print("mesh shape: {}".format(self.mesh.shape))
+        print("x shape: {}".format(self.x.shape))
+        print("Q shape: {}".format(self.Q.shape))
+        print("Transformation matrix: {}".format(self.transformation_matrix))
+        print("Center: {}".format(self.center))
+        field_box = compute_ESP_on_grid(self.mesh, self.x, self.Q)
+        return field_box
+    
     def compute_point_mag(self):
         print("... > Computing Point Magnitude!")
         print(f"Number of charges: {len(self.Q)}")
@@ -299,10 +311,15 @@ class calculator:
         print(f"{end_time - start_time}")
         return point_field
 
+
     def compute_topo_GPU_batch_filter(self):
         if self.profile == True:
             with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
                          use_cuda=True, record_shapes=True, profile_memory=True, with_stack=True) as prof:
+                num_per_dim = round(self.n_samples ** (1/3))
+                if num_per_dim ** 3 < self.n_samples:
+                    num_per_dim += 1
+                self.n_samples = num_per_dim ** 3
                 print("... > Computing Topo in Batches on a GPU!")
                 print(f"Number of samples: {self.n_samples}")
                 print(f"Number of charges: {len(self.Q)}")
@@ -330,7 +347,7 @@ class calculator:
                 dim_gpu = torch.tensor(self.dimensions, dtype=torch.float32).cuda()
                 step_size_gpu = torch.tensor([self.step_size], dtype=torch.float32).cuda()
 
-                path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gpu(self.center, self.x_vec_pt, self.y_vec_pt, self.dimensions, self.n_samples, self.step_size)
+                path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gpu(self.center, self.x_vec_pt, self.y_vec_pt, self.dimensions, num_per_dim, self.step_size)
                 
                 '''
                 path_matrix_torch=torch.tensor(path_matrix, dtype=torch.float16).cuda()
@@ -372,6 +389,10 @@ class calculator:
                 
 
         else:
+            num_per_dim = round(self.n_samples ** (1/3))
+            if num_per_dim ** 3 < self.n_samples:
+                num_per_dim += 1
+            self.n_samples = num_per_dim ** 3
             print("... > Computing Topo in Batches on a GPU!")
             print(f"Number of samples: {self.n_samples}")
             print(f"Number of charges: {len(self.Q)}")
@@ -399,7 +420,7 @@ class calculator:
             step_size_gpu = torch.tensor([self.step_size], dtype=torch.float32).cuda()
             
             
-            path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gpu(self.center, self.x_vec_pt, self.y_vec_pt, self.dimensions, self.n_samples, self.step_size)
+            path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gpu(self.center, self.x_vec_pt, self.y_vec_pt, self.dimensions, num_per_dim, self.step_size)
             '''
             path_matrix_torch=torch.tensor(path_matrix, dtype=torch.float16).cuda()
             path_filter=torch.tensor(path_filter, dtype=torch.float16).cuda()
