@@ -38,6 +38,9 @@ class CPET:
             self.run_point_mag()
         elif self.m == "cluster" or self.m == "cluster_volume":
             self.run_cluster()
+        else:
+            print("You have reached the limit of this package's capabilities at the moment, we do not support the function called as of yet")
+            exit()
     
     def run_topo(self, num=100000, benchmarking=False):
         files_input = glob(self.inputpath + "/*.pdb")
@@ -76,7 +79,8 @@ class CPET:
             print("protein file: {}".format(protein))
             files_done = [x for x in os.listdir(self.outputpath) if x.split(".")[-1]=="top"]
             if protein+".top" not in files_done:
-                hist = self.calculator.compute_topo_GPU_batch_filter()
+                #hist = self.calculator.compute_topo_GPU_batch_filter()
+                hist = self.calculator.compute_topo_GPU_batch_filter_alt() #Running alt mode with batching as a test
                 if not benchmarking:
                     np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
                 if benchmarking:

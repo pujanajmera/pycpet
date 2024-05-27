@@ -50,7 +50,7 @@ def propagate_topo_matrix_gpu(path_matrix: torch.Tensor,i: torch.Tensor, x: torc
 
 
 @torch.jit.script
-def propagate_topo_matrix_gpu(path_matrix: torch.Tensor,i: torch.Tensor, x: torch.Tensor, Q: torch.Tensor, step_size: torch.Tensor) -> torch.Tensor:
+def propagate_topo_matrix_gpu_alt(path_matrix: torch.Tensor,i: torch.Tensor, x: torch.Tensor, Q: torch.Tensor, step_size: torch.Tensor) -> torch.Tensor:
     """
     Propagates position based on normalized electric field at a given point
     Takes
@@ -68,7 +68,7 @@ def propagate_topo_matrix_gpu(path_matrix: torch.Tensor,i: torch.Tensor, x: torc
     #check_tensor(path_matrix_prior, "Path Matrix Prior")
     N = path_matrix_prior.size(0)
     #E = torch.zeros(N, 3, device=path_matrix_prior.device, dtype=torch.float16)
-    E = torch.zeros(N, 3, device=path_matrix_prior.device, dtype=torch.float32)
+    E = torch.zeros(N, 3, device=path_matrix_prior.device, dtype=torch.float64)
 
     for start in range(0, N, 100):
         end = min(start + 100, N)
@@ -91,7 +91,7 @@ def propagate_topo_matrix_gpu(path_matrix: torch.Tensor,i: torch.Tensor, x: torc
 
 
 @torch.jit.script
-def curv_mat_gpu(v_prime: torch.Tensor, v_prime_prime: torch.Tensor) -> torch.Tensor:
+def curv_mat_gpu_alt(v_prime: torch.Tensor, v_prime_prime: torch.Tensor) -> torch.Tensor:
     """
     Computes curvature of the streamline at a given point
     Takes
@@ -104,7 +104,7 @@ def curv_mat_gpu(v_prime: torch.Tensor, v_prime_prime: torch.Tensor) -> torch.Te
     return curvature
 
 @torch.jit.script
-def compute_curv_and_dist_mat_gpu(x_init,x_init_plus,x_init_plus_plus,x_0,x_0_plus,x_0_plus_plus):
+def compute_curv_and_dist_mat_gpu_alt(x_init,x_init_plus,x_init_plus_plus,x_0,x_0_plus,x_0_plus_plus):
     """
     Computes mean curvature at beginning and end of streamline and the Euclidian distance between beginning and end of streamline
     Takes
@@ -118,8 +118,8 @@ def compute_curv_and_dist_mat_gpu(x_init,x_init_plus,x_init_plus_plus,x_0,x_0_pl
         dist(float) - Euclidian distance between beginning and end of streamline
         curv_mean(float) - mean curvature between beginning and end of streamline
     """
-    curv_init = curv_mat_gpu(x_init_plus - x_init, x_init_plus_plus - 2 * x_init_plus + x_init)
-    curv_final = curv_mat_gpu(x_0_plus - x_0, x_0_plus_plus - 2 * x_0_plus + x_0)
+    curv_init = curv_mat_gpu_alt(x_init_plus - x_init, x_init_plus_plus - 2 * x_init_plus + x_init)
+    curv_final = curv_mat_gpu_alt(x_0_plus - x_0, x_0_plus_plus - 2 * x_0_plus + x_0)
     curv_mean = (curv_init + curv_final) / 2
     #print(x_init)
     #print(x_0)
@@ -127,7 +127,7 @@ def compute_curv_and_dist_mat_gpu(x_init,x_init_plus,x_init_plus_plus,x_0,x_0_pl
     return dist, curv_mean
     
 @torch.jit.script
-def Inside_Box_gpu(local_points, dimensions):
+def Inside_Box_gpu_alt(local_points, dimensions):
     """
     Checks if a streamline point is inside a box
     Takes
@@ -147,7 +147,7 @@ def Inside_Box_gpu(local_points, dimensions):
     return is_inside
 
 
-def initialize_streamline_grid_gpu(center, x, y, dimensions, num_per_dim, step_size):
+def initialize_streamline_grid_gpu_alt(center, x, y, dimensions, num_per_dim, step_size, GPU_batch_freq, self):
     """
     Initializes random points in box centered at the origin
     Takes
@@ -194,6 +194,7 @@ def initialize_streamline_grid_gpu(center, x, y, dimensions, num_per_dim, step_s
     points = np.stack([x_grid.ravel(), y_grid.ravel(), z_grid.ravel()], axis=-1)
 
     
+
     # Convert these points back to the global coordinate system
     transformation_matrix = np.column_stack(
         [x_unit, y_unit, z_unit]
@@ -206,18 +207,27 @@ def initialize_streamline_grid_gpu(center, x, y, dimensions, num_per_dim, step_s
     random_max_samples = torch.tensor(np.random.randint(1, M, N_cr**3)).cuda()
     print(random_max_samples)
     np.savetxt("points.txt", points)
-    path_matrix = np.zeros((M+2,N_cr**3,3))
+
+    Q_gpu = torch.tensor(self.Q, dtype=torch.float64).cuda()
+    Q_gpu = Q_gpu.unsqueeze(0)
+    x_gpu = torch.tensor(self.x, dtype=torch.float64).cuda()
+    dim_gpu = torch.tensor(dimensions, dtype=torch.float64).cuda()
+    step_size_gpu = torch.tensor([step_size], dtype=torch.float64).cuda()
+
+    path_matrix = np.zeros((GPU_batch_freq,N_cr**3,3))
+    path_matrix=torch.tensor(path_matrix, dtype=torch.float64).cuda()
     path_matrix[0] = torch.tensor(points)
-    path_filter = generate_path_filter_gpu(random_max_samples,torch.tensor([M+2], dtype=torch.int64).cuda())
+    path_matrix = propagate_topo_matrix_gpu_alt(path_matrix, torch.tensor([0]).cuda(), x_gpu, Q_gpu, step_size_gpu)
+    path_filter = generate_path_filter_gpu_alt(random_max_samples,torch.tensor([M+2], dtype=torch.int16).cuda())
     print(M, N_cr**3)
-    return path_matrix, transformation_matrix, M, path_filter,random_max_samples
+    return path_matrix, transformation_matrix, M, path_filter,random_max_samples, x_gpu, Q_gpu, dim_gpu, step_size_gpu
 
 
 #@torch.jit.script
-def generate_path_filter_gpu(arr, M):
+def generate_path_filter_gpu_alt(arr, M):
     # Initialize the matrix with zeros
 
-    mat = torch.zeros((len(arr), int(M)), dtype=torch.int64, device='cuda')
+    mat = torch.zeros((len(arr), int(M)), dtype=torch.int16, device='cuda')
 
     # Iterate over the array
     for i, value in enumerate(arr):
@@ -231,7 +241,7 @@ def generate_path_filter_gpu(arr, M):
 
 '''
 @torch.jit.script
-def generate_path_filter_gpu(arr: torch.Tensor, M: int) -> torch.Tensor:
+def generate_path_filter_gpu_alt(arr: torch.Tensor, M: int) -> torch.Tensor:
     # Initialize the matrix with zeros
     mat = torch.zeros((len(arr), M), dtype=torch.int64, device='cuda')
 
@@ -255,7 +265,7 @@ def generate_path_filter_gpu(arr: torch.Tensor, M: int) -> torch.Tensor:
 '''
 
 @torch.jit.script
-def first_false_index_gpu(arr: torch.Tensor):
+def first_false_index_gpu_alt(arr: torch.Tensor):
     """
     For each column in arr, find the first index where the value is False.
     Args:
@@ -283,30 +293,31 @@ def first_false_index_gpu(arr: torch.Tensor):
     return result
 
 @torch.jit.script
-def t_delete(tensor, indices):
+def t_delete_alt(tensor, indices):
     keep_mask = torch.ones(tensor.shape[1], dtype=torch.bool)
     keep_mask[indices] = False
     return tensor[:, keep_mask]
 
 #@torch.jit.script
-def batched_filter_gpu(path_matrix: torch.Tensor, dumped_values: torch.Tensor, i: int, dimensions: torch.Tensor, M: int, path_filter: torch.Tensor, current: bool = True) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def batched_filter_gpu_alt(path_matrix: torch.Tensor, dumped_values: torch.Tensor, i: int, dimensions: torch.Tensor, M: int, path_filter: torch.Tensor, GPU_batch_freq, init_points, current: bool = True) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     _, N, _ = path_matrix.shape
     #print(f"Current status: \n path_matrix: {path_matrix.shape} \n dumped_values: {dumped_values.shape} \n path_filter: {path_filter.shape}")
     #Next, generate the "inside box" matrix operator and apply it
     #print("filtering by inside box: 1")
-    inside_box_mat = Inside_Box_gpu(path_matrix[:i+1,...], dimensions)
+    inside_box_mat = Inside_Box_gpu_alt(path_matrix, dimensions)
     #print(inside_box_mat.shape)
     #print("filtering by inside box: 2")
-    first_false = first_false_index_gpu(inside_box_mat)
+    first_false = first_false_index_gpu_alt(inside_box_mat)
     #print(len(first_false[first_false==-1]))
     #print("filtering by inside box: 3")
     #outside_box_filter = torch.tensor(generate_path_filter(first_false,M)).cuda()
-    outside_box_filter = generate_path_filter_gpu(first_false,M+2)
+    outside_box_filter = generate_path_filter_gpu_alt(first_false,GPU_batch_freq)
     torch.cuda.empty_cache()
-    #print(outside_box_filter.shape)
+    #print(outside_box_filter[:,0:2,:])
     #print("filtering by inside box: 4")
     diff_matrix_box = path_matrix * outside_box_filter - path_matrix
-
+    #print(diff_matrix_box)
+    #print(outside_box_filter)
     #box_indices = np.where(np.any(diff_matrix_box.cpu().numpy() != 0, axis=(0, 2)))[0]
     box_indices = torch.where(torch.any(torch.any(diff_matrix_box != 0, dim=0), dim=1))[0]
 
@@ -317,10 +328,10 @@ def batched_filter_gpu(path_matrix: torch.Tensor, dumped_values: torch.Tensor, i
         # Extract the first 3 and last 3 rows for column n
         idx = int(box_stopping_points[n])
         #print(idx)
-        if idx >= i-2:
+        if idx >= GPU_batch_freq-2:
             ignore_indices.append(n)
             continue
-        new_data = torch.cat((path_matrix[:3, n, :], path_matrix[idx:idx+3, n, :]), dim=0) if idx != len(path_matrix) - 2 else torch.cat((path_matrix[:3, n, :], path_matrix[-3:, n, :]), dim=0)
+        new_data = torch.concat((init_points[:, n, :], path_matrix[idx:idx+3, n, :]), dim=0)# if idx != len(path_matrix) - 2 else path_matrix[-3:, n, :]
         new_data = new_data.unsqueeze(1)  # Add a second dimension to match dumped_values shape
         # Concatenate new_data to dumped_values
         dumped_values = torch.cat((dumped_values, new_data), dim=1)  # Concatenate along the second dimension
@@ -328,7 +339,8 @@ def batched_filter_gpu(path_matrix: torch.Tensor, dumped_values: torch.Tensor, i
 
     #First, get new path_matrix by multiplying the maximum path length randomly generated for each streamline
     #print("filtering by maximum path length")
-    diff_matrix_path = path_matrix * path_filter - path_matrix #Elementwise multiplication to zero values
+    path_filter_temp = path_filter[i*(GPU_batch_freq-2):GPU_batch_freq+i*(GPU_batch_freq-2),...]
+    diff_matrix_path = path_matrix * path_filter_temp - path_matrix #Elementwise multiplication to zero values
     
     #path_indices = torch.tensor(np.where(np.any(diff_matrix_path.cpu().numpy() != 0, axis=(0, 2)))[0], device=diff_matrix_path.device)
     #path_indices = torch.where(torch.any(diff_matrix_path != 0, dim=(0, 2)))[0]
@@ -338,19 +350,21 @@ def batched_filter_gpu(path_matrix: torch.Tensor, dumped_values: torch.Tensor, i
 
     del diff_matrix_path
     print("FILTERING BY PATH INDICES")
-    path_stopping_points = torch.sum(path_filter,dim=(0,2))-1
+    path_stopping_points = torch.sum(path_filter_temp,dim=(0,2))-1
+    #for i in path_stopping_points:
+    #    print(i)
     for n in path_indices:
         # Extract the first 3 and last 3 rows for column n
         if torch.any(box_indices == n):
             continue
         #print(idx)
         idx = int(path_stopping_points[n])
-        if idx >= i-2:
+        if idx >= GPU_batch_freq-2:
             
             ignore_indices.append(n)
             continue
         #print(idx)
-        new_data = torch.cat((path_matrix[:3, n, :], path_matrix[idx:idx+3, n, :]), dim=0) if idx != len(path_matrix) - 2 else torch.cat((path_matrix[:3, n, :], path_matrix[-3:, n, :]), dim=0)
+        new_data = torch.concat((init_points[:, n, :], path_matrix[idx:idx+3, n, :]), dim=0)# if idx != len(path_matrix) - 2 else path_matrix[-3:, n, :]
         new_data = new_data.unsqueeze(1)  # Add a second dimension to match dumped_values shape
         #print(path_matrix.shape)
         #print(new_data.shape)
@@ -372,30 +386,33 @@ def batched_filter_gpu(path_matrix: torch.Tensor, dumped_values: torch.Tensor, i
     #path_filt = np.delete(path_filter.cpu().numpy(), filter_indices, axis=1)
     #path_mat = torch.cat([path_matrix[:, :idx], path_matrix[:, idx+1:]], dim=1)
     #path_filt = torch.cat([path_filter[:, :idx], path_filter[:, idx+1:]], dim=1)
-    path_mat = t_delete(path_matrix, new_filter_indices)
-    path_filt = t_delete(path_filter, new_filter_indices)
+    path_mat = t_delete_alt(path_matrix, new_filter_indices)
+    path_filt = t_delete_alt(path_filter, new_filter_indices)
+    init_points_new = t_delete_alt(init_points, new_filter_indices)
     #print("4.", path_mat.shape)
-
+    path_mat_new = torch.zeros(GPU_batch_freq, path_mat.shape[1], 3, device=path_mat.device, dtype=torch.float64)
+    path_mat_new[0:2,...] = path_mat[-2:,...]
     #return torch.tensor(path_mat).cuda(), torch.tensor(dumped_values).cuda(), torch.tensor(path_filt).cuda()
-    return path_mat, dumped_values, path_filt
+    return path_mat_new, dumped_values, path_filt, init_points_new
 
 
-def batched_filter_gpu_end(path_matrix: torch.Tensor, dumped_values: torch.Tensor, i: int, dimensions: torch.Tensor, M: int, path_filter: torch.Tensor, current: bool = True) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def batched_filter_gpu_end_alt(path_matrix: torch.Tensor, dumped_values: torch.Tensor, i: int, dimensions: torch.Tensor, M: int, path_filter: torch.Tensor, remainder: int, init_points: torch.Tensor, current: bool = True) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     _, N, _ = path_matrix.shape
     print(f"Current status: \n path_matrix: {path_matrix.shape} \n dumped_values: {dumped_values.shape} \n path_filter: {path_filter.shape}")
     #Next, generate the "inside box" matrix operator and apply it
     #print("filtering by inside box: 1")
-    inside_box_mat = Inside_Box_gpu(path_matrix[:i+1,...], dimensions)
+    inside_box_mat = Inside_Box_gpu_alt(path_matrix, dimensions)
     #print(inside_box_mat.shape)
     #print("filtering by inside box: 2")
-    first_false = first_false_index_gpu(inside_box_mat)
+    first_false = first_false_index_gpu_alt(inside_box_mat)
     #print(len(first_false[first_false==-1]))
     #print("filtering by inside box: 3")
     #outside_box_filter = torch.tensor(generate_path_filter(first_false,M)).cuda()
-    outside_box_filter = generate_path_filter_gpu(first_false,M+2)
+    outside_box_filter = generate_path_filter_gpu_alt(first_false, remainder+2)
     torch.cuda.empty_cache()
     #print(outside_box_filter.shape)
     #print("filtering by inside box: 4")
+    #outside_box_filter = outside_box_filter[-(remainder+2):,...]
     diff_matrix_box = path_matrix * outside_box_filter - path_matrix
 
     #box_indices = np.where(np.any(diff_matrix_box.cpu().numpy() != 0, axis=(0, 2)))[0]
@@ -407,7 +424,7 @@ def batched_filter_gpu_end(path_matrix: torch.Tensor, dumped_values: torch.Tenso
     for n in box_indices:
         # Extract the first 3 and last 3 rows for column n
         idx = int(box_stopping_points[n])
-        new_data = torch.cat((path_matrix[:3, n, :], path_matrix[idx:idx+3, n, :]), dim=0) if idx != len(path_matrix) - 2 else torch.cat((path_matrix[:3, n, :], path_matrix[-3:, n, :]), dim=0)
+        new_data = torch.concat((init_points[:, n, :], path_matrix[idx:idx+3, n, :]), dim=0)# if idx != len(path_matrix) - 2 else path_matrix[-3:, n, :]
         new_data = new_data.unsqueeze(1)  # Add a second dimension to match dumped_values shape
         # Concatenate new_data to dumped_values
         dumped_values = torch.cat((dumped_values, new_data), dim=1)  # Concatenate along the second dimension
@@ -415,7 +432,8 @@ def batched_filter_gpu_end(path_matrix: torch.Tensor, dumped_values: torch.Tenso
 
     #First, get new path_matrix by multiplying the maximum path length randomly generated for each streamline
     #print("filtering by maximum path length")
-    diff_matrix_path = path_matrix * path_filter - path_matrix #Elementwise multiplication to zero values
+    path_filter_temp = path_filter[-(remainder+2):,...]
+    diff_matrix_path = path_matrix * path_filter_temp - path_matrix #Elementwise multiplication to zero values
     
     #path_indices = torch.tensor(np.where(np.any(diff_matrix_path.cpu().numpy() != 0, axis=(0, 2)))[0], device=diff_matrix_path.device)
     #path_indices = torch.where(torch.any(diff_matrix_path != 0, dim=(0, 2)))[0]
@@ -425,14 +443,14 @@ def batched_filter_gpu_end(path_matrix: torch.Tensor, dumped_values: torch.Tenso
 
     del diff_matrix_path
     
-    path_stopping_points = torch.sum(path_filter,dim=(0,2))-1
+    path_stopping_points = torch.sum(path_filter_temp,dim=(0,2))-1
     for n in path_indices:
         # Extract the first 3 and last 3 rows for column n
         if torch.any(box_indices == n):
             continue
         idx = int(path_stopping_points[n])
         #print(idx)
-        new_data = torch.cat((path_matrix[:3, n, :], path_matrix[idx:idx+3, n, :]), dim=0) if idx != len(path_matrix) - 2 else torch.cat((path_matrix[:3, n, :], path_matrix[-3:, n, :]), dim=0)
+        new_data = torch.concat((init_points[:, n, :], path_matrix[idx:idx+3, n, :]), dim=0)# if idx != len(path_matrix) - 2 else path_matrix[-3:, n, :]
         new_data = new_data.unsqueeze(1)  # Add a second dimension to match dumped_values shape
         #print(path_matrix.shape)
         #print(new_data.shape)
@@ -448,12 +466,13 @@ def batched_filter_gpu_end(path_matrix: torch.Tensor, dumped_values: torch.Tenso
     #path_filt = np.delete(path_filter.cpu().numpy(), filter_indices, axis=1)
     #path_mat = torch.cat([path_matrix[:, :idx], path_matrix[:, idx+1:]], dim=1)
     #path_filt = torch.cat([path_filter[:, :idx], path_filter[:, idx+1:]], dim=1)
-    path_mat = t_delete(path_matrix, filter_indices)
-    path_filt = t_delete(path_filter, filter_indices)
+    path_mat = t_delete_alt(path_matrix, filter_indices)
+    path_filt = t_delete_alt(path_filter, filter_indices)
+    init_points_new = t_delete_alt(init_points, filter_indices)
     #print("4.", path_mat.shape)
 
     #return torch.tensor(path_mat).cuda(), torch.tensor(dumped_values).cuda(), torch.tensor(path_filt).cuda()
-    return path_mat, dumped_values, path_filt
+    return path_mat, dumped_values, path_filt, init_points_new
 
 
 
