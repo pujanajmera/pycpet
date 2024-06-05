@@ -3,7 +3,9 @@
         "inputpath": "/jet/home/ajmera/che230029p/PyCPET/tests/test_benchmarking/pdb",
         "outputpath": "/jet/home/ajmera/che230029p/PyCPET/tests/test_benchmarking/cpet",
         "GPU_batch_freq": 100,
-        "profile": true,
+        "profile": false,
+        "initializer": "uniform",
+        "dtype": "float32",
         "center": {
                 "method": "first",
                 "atoms": {
@@ -24,14 +26,14 @@
                         "CB": 3
                 }
         },
-        "n_samples": 100000,
+        "n_samples": 10000,
         "dimensions": [
                 2.0,
                 2.0,
                 2.0
         ],
-        "step_size": 0.001,
-        "batch_size": 50,
+        "step_size": 0.01,
+        "batch_size": 100,
         "concur_slip": 12,
         "filter_resname": [
                 {

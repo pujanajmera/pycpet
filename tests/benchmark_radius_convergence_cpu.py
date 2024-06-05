@@ -32,15 +32,17 @@ def main():
         for i in range(iter):
             filestring = f"rad_conv_{radius}_{i}.top"
             if filestring in current_dir_files:
-                print(filestring+" already exists. Skipping...")
+                print(filestring + " already exists. Skipping...")
                 topo_file_list.append(filestring)
                 continue
             topo = calculator(options, path_to_pdb = file)
-            print("center: {}".format(topo.center))
+            #print("center: {}".format(topo.center))
+            ret = topo.compute_topo_GPU_batch_filter_alt()
             #ret = topo.compute_topo_GPU_batch_filter()
+            
             #ret = topo.compute_topo_batched()
             #ret = topo.compute_topo()
-            ret = topo.compute_topo_complete_c_shared()
+            #ret = topo.compute_topo_complete_c_shared()
             np.savetxt(filestring, ret)
             topo_file_list.append(filestring)
     
@@ -57,8 +59,8 @@ def main():
     # Map each label to its group
     group_map = {label: label.split('_')[0] for label in labels}
     grouped_labels = [group_map[label] for label in labels]
-    print(group_map)
-    print(grouped_labels)
+    #print(group_map)
+    #print(grouped_labels)
     # Apply the new labels to the DataFrame
     distances.columns = grouped_labels
     distances.index = grouped_labels

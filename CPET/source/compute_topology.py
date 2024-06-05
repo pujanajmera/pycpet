@@ -1,6 +1,6 @@
 import numpy as np
 import time
-import json 
+import json
 
 from CPET.utils.calculator import (
     calculate_electric_field,
@@ -8,11 +8,7 @@ from CPET.utils.calculator import (
     compute_curv_and_dist,
     Inside_Box,
 )
-from CPET.utils.parser import (
-    parse_pdb, 
-    calculate_center,
-    initialize_box_points
-)
+from CPET.utils.parser import parse_pdb, calculate_center, initialize_box_points
 
 
 def propagate_topo(x_0, x, Q, step_size):
@@ -32,9 +28,7 @@ def propagate_topo(x_0, x, Q, step_size):
     return x_0
 
 
-
 def main():
-
     """
     default_options = {
         "path_to_pdb": "./1_wt_run1_0.pqr",
@@ -47,32 +41,35 @@ def main():
     }
     """
 
+    options_file_path = "options_atom_sel.json"
 
-    options_file_path = 'options_atom_sel.json'
-
-    with open(options_file_path, 'r') as file:
+    with open(options_file_path, "r") as file:
         options = json.load(file)
-    
 
     atom_data = parse_pdb(options["pdb"])
-    x, Q = parse_pdb(options["path_to_pdb"], )
-    
+    x, Q = parse_pdb(
+        options["path_to_pdb"],
+    )
+
     final_values = {}
     for key in ["center", "x", "y"]:
         method = options[key]["method"]
-        input_atoms = [(atom_type, residue_number) for atom_type, residue_number in options[key].items() if atom_type != "method"]
-        atoms_to_consider = [atom for atom in atom_data if (atom[1], atom[3]) in input_atoms]
+        input_atoms = [
+            (atom_type, residue_number)
+            for atom_type, residue_number in options[key].items()
+            if atom_type != "method"
+        ]
+        atoms_to_consider = [
+            atom for atom in atom_data if (atom[1], atom[3]) in input_atoms
+        ]
         final_values[key] = calculate_center(atoms_to_consider, method)
 
-
-    
     center = np.array(options["center"])
     x_vec_pt = np.array(options["x"])
     y_vec_pt = np.array(options["y"])
     dimensions = np.array(options["dimensions"])
     step_size = options["step_size"]
     n_samples = options["n_samples"]
-
 
     (
         random_start_points,

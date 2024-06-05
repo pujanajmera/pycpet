@@ -6,6 +6,7 @@ import os
 import numpy as np
 import warnings
 
+
 class CPET:
     def __init__(self, options):
         self.options = options
@@ -18,7 +19,7 @@ class CPET:
         self.benchmark_step_sizes = self.options["benchmark"]["step_size"]
         self.benchmark_replicas = self.options["benchmark"]["replicas"]
         self.profile = self.options["profile"]
-    
+
     def run(self):
         if self.m == "topo":
             self.run_topo()
@@ -27,7 +28,7 @@ class CPET:
         elif self.m == "topo_griddev":
             self.run_topo_griddev()
         elif self.m == "mtopo":
-            self.run_mtopo() #For dev primarily
+            self.run_mtopo()  # For dev primarily
         elif self.m == "volume":
             self.run_volume()
         elif self.m == "volume_ESP":
@@ -39,9 +40,11 @@ class CPET:
         elif self.m == "cluster" or self.m == "cluster_volume":
             self.run_cluster()
         else:
-            print("You have reached the limit of this package's capabilities at the moment, we do not support the function called as of yet")
+            print(
+                "You have reached the limit of this package's capabilities at the moment, we do not support the function called as of yet"
+            )
             exit()
-    
+
     def run_topo(self, num=100000, benchmarking=False):
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
@@ -50,18 +53,29 @@ class CPET:
             warnings.warn("Only one pdb file found in the input directory")
         for i in range(num):
             file = choice(files_input)
-            self.calculator = calculator(self.options, path_to_pdb = file)
+            self.calculator = calculator(self.options, path_to_pdb=file)
             protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
             files_input.remove(file)
             print("protein file: {}".format(protein))
-            files_done = [x for x in os.listdir(self.outputpath) if x.split(".")[-1]=="top"]
-            if protein+".top" not in files_done:
+            files_done = [
+                x for x in os.listdir(self.outputpath) if x.split(".")[-1] == "top"
+            ]
+            if protein + ".top" not in files_done:
                 hist = self.calculator.compute_topo()
                 if not benchmarking:
                     np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
                 if benchmarking:
-                    np.savetxt(self.outputpath + "/{}_{}_{}_{}.top".format(protein, self.calculator.n_samples, str(self.calculator.step_size)[2:], self.replica), hist)
-    
+                    np.savetxt(
+                        self.outputpath
+                        + "/{}_{}_{}_{}.top".format(
+                            protein,
+                            self.calculator.n_samples,
+                            str(self.calculator.step_size)[2:],
+                            self.replica,
+                        ),
+                        hist,
+                    )
+
     def run_topo_GPU(self, num=100000, benchmarking=False):
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
@@ -73,18 +87,31 @@ class CPET:
                 file = choice(files_input)
             else:
                 break
-            self.calculator = calculator(self.options, path_to_pdb = file)
+            self.calculator = calculator(self.options, path_to_pdb=file)
             protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
             files_input.remove(file)
             print("protein file: {}".format(protein))
-            files_done = [x for x in os.listdir(self.outputpath) if x.split(".")[-1]=="top"]
-            if protein+".top" not in files_done:
-                #hist = self.calculator.compute_topo_GPU_batch_filter()
-                hist = self.calculator.compute_topo_GPU_batch_filter_alt() #Running alt mode with batching as a test
+            files_done = [
+                x for x in os.listdir(self.outputpath) if x.split(".")[-1] == "top"
+            ]
+            if protein + ".top" not in files_done:
+                # hist = self.calculator.compute_topo_GPU_batch_filter()
+                hist = (
+                    self.calculator.compute_topo_GPU_batch_filter_alt()
+                )  # Running alt mode with batching as a test
                 if not benchmarking:
                     np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
                 if benchmarking:
-                    np.savetxt(self.outputpath + "/{}_{}_{}_{}.top".format(protein, self.calculator.n_samples, str(self.calculator.step_size)[2:], self.replica), hist)
+                    np.savetxt(
+                        self.outputpath
+                        + "/{}_{}_{}_{}.top".format(
+                            protein,
+                            self.calculator.n_samples,
+                            str(self.calculator.step_size)[2:],
+                            self.replica,
+                        ),
+                        hist,
+                    )
 
     def run_topo_griddev(self, num=100000, benchmarking=False):
         files_input = glob(self.inputpath + "/*.pdb")
@@ -94,20 +121,31 @@ class CPET:
             warnings.warn("Only one pdb file found in the input directory")
         for i in range(num):
             file = choice(files_input)
-            self.calculator = calculator(self.options, path_to_pdb = file)
+            self.calculator = calculator(self.options, path_to_pdb=file)
             protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
             files_input.remove(file)
             print("protein file: {}".format(protein))
-            files_done = [x for x in os.listdir(self.outputpath) if x.split(".")[-1]=="top"]
-            if protein+".top" not in files_done:
+            files_done = [
+                x for x in os.listdir(self.outputpath) if x.split(".")[-1] == "top"
+            ]
+            if protein + ".top" not in files_done:
                 hist = self.calculator.compute_topo_griddev()
                 if not benchmarking:
                     np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
                 if benchmarking:
-                    np.savetxt(self.outputpath + "/{}_{}_{}_{}.top".format(protein, self.calculator.n_samples, str(self.calculator.step_size)[2:], self.replica), hist)
+                    np.savetxt(
+                        self.outputpath
+                        + "/{}_{}_{}_{}.top".format(
+                            protein,
+                            self.calculator.n_samples,
+                            str(self.calculator.step_size)[2:],
+                            self.replica,
+                        ),
+                        hist,
+                    )
 
     def run_topo_mtopo(self, num=100000, benchmarking=False):
-        '''files_input = glob(self.inputpath + "/*.pdb")
+        """files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
             raise ValueError("No pdb files found in the input directory")
         if len(files_input) == 1:
@@ -124,7 +162,8 @@ class CPET:
                 if not benchmarking:
                     np.savetxt(self.outputpath + "{}.top".format(protein), hist)
                 if benchmarking:
-                    np.savetxt(self.outputpath + "{}_{}_{}_{}.top".format(protein, self.calculator.n_samples, str(self.calculator.step_size)[2:], self.replica), hist)'''
+                    np.savetxt(self.outputpath + "{}_{}_{}_{}.top".format(protein, self.calculator.n_samples, str(self.calculator.step_size)[2:], self.replica), hist)
+        """
         return "You have reached the limit of this package's capabilities at the moment, we do not support the function called as of yet"
 
     def run_volume(self, num=100000):
@@ -135,15 +174,21 @@ class CPET:
             warnings.warn("Only one pdb file found in the input directory")
         for i in range(num):
             file = choice(files_input)
-            self.calculator = calculator(self.options, path_to_pdb = file)
+            self.calculator = calculator(self.options, path_to_pdb=file)
             protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
             files_input.remove(file)
             print("protein file: {}".format(protein))
-            files_done = [x for x in os.listdir(self.outputpath) if x[-11:]=="_efield.dat"]
-            if protein+".top" not in files_done:
+            files_done = [
+                x for x in os.listdir(self.outputpath) if x[-11:] == "_efield.dat"
+            ]
+            if protein + ".top" not in files_done:
                 field_box = self.calculator.compute_box()
-                np.savetxt(self.outputpath + "/{}_efield.dat".format(protein), field_box, fmt='%.3f')
-  
+                np.savetxt(
+                    self.outputpath + "/{}_efield.dat".format(protein),
+                    field_box,
+                    fmt="%.3f",
+                )
+
     def run_point_field(self):
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
@@ -151,13 +196,13 @@ class CPET:
         if len(files_input) == 1:
             warnings.warn("Only one pdb file found in the input directory")
         outfile = self.outputpath + "/point_field.dat"
-        with open(outfile, "w") as f:        
+        with open(outfile, "w") as f:
             for file in files_input:
-                self.calculator = calculator(self.options, path_to_pdb = file)
+                self.calculator = calculator(self.options, path_to_pdb=file)
                 protein = file.split("/")[-1].split(".")[0]
                 print("protein file: {}".format(protein))
                 point_field = self.calculator.compute_point_field()
-                f.write("{}:{}\n".format(protein,point_field))
+                f.write("{}:{}\n".format(protein, point_field))
 
     def run_point_mag(self):
         files_input = glob(self.inputpath + "/*.pdb")
@@ -168,11 +213,11 @@ class CPET:
         outfile = self.outputpath + "/point_mag.dat"
         with open(outfile, "w") as f:
             for file in files_input:
-                self.calculator = calculator(self.options, path_to_pdb = file)
+                self.calculator = calculator(self.options, path_to_pdb=file)
                 protein = file.split("/")[-1].split(".")[0]
                 print("protein file: {}".format(protein))
                 point_field = self.calculator.compute_point_mag()
-                f.write("{}:{}\n".format(protein,point_field))   
+                f.write("{}:{}\n".format(protein, point_field))
 
     def run_volume_ESP(self, num=100000):
         files_input = glob(self.inputpath + "/*.pdb")
@@ -182,14 +227,20 @@ class CPET:
             warnings.warn("Only one pdb file found in the input directory")
         for i in range(num):
             file = choice(files_input)
-            self.calculator = calculator(self.options, path_to_pdb = file)
+            self.calculator = calculator(self.options, path_to_pdb=file)
             protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
             files_input.remove(file)
             print("protein file: {}".format(protein))
-            files_done = [x for x in os.listdir(self.outputpath) if x[-11:]=="_efield.dat"]
-            if protein+".top" not in files_done:
+            files_done = [
+                x for x in os.listdir(self.outputpath) if x[-11:] == "_efield.dat"
+            ]
+            if protein + ".top" not in files_done:
                 field_box = self.calculator.compute_box_ESP()
-                np.savetxt(self.outputpath + "/{}_esp.dat".format(protein), field_box, fmt='%.3f')
-        
+                np.savetxt(
+                    self.outputpath + "/{}_esp.dat".format(protein),
+                    field_box,
+                    fmt="%.3f",
+                )
+
     def run_cluster(self):
         self.cluster.Cluster()

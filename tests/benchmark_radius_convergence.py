@@ -12,10 +12,11 @@ import os
 
 def main():
     parser = argparse.ArgumentParser(description='CPET: A tool for computing and analyzing electric fields in proteins')
-    parser.add_argument('-o', type=json.loads, help='Options for CPET', default=json.load(open("./options/options.json")))
+    parser.add_argument('-o', type=str, help='Options for CPET', default="./options/options.json")
     parser.add_argument('-pdb', type=str, help='Path to pdb file', default="./tests/1a0m.pdb")
     args = parser.parse_args()
     options = args.o
+    options = json.load(open(options))
     file = args.pdb
 
     topo_file_list = []
@@ -25,6 +26,7 @@ def main():
     current_dir_files = os.listdir()
 
     for radius in [None,90,80,70,60,50,40,30,20]:
+        print(f"Running for radius: {radius}")
         if radius is not None:
             options["filter_radius"] = radius
         for i in range(iter):

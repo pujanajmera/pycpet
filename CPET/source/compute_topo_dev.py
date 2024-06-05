@@ -57,8 +57,6 @@ def propagate_topo_dev(x_0, x, Q, step_size, math=None, efield_func=-1):
     return x_0
 
 
-
-
 def initialize_box_points(center, x, y, dimensions, n_samples, step_size):
     """
     Initializes random points in box centered at the origin

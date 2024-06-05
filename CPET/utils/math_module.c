@@ -51,7 +51,7 @@ void dot(double* ret, double* A, double* B, int rows, int cols){
     int provided = 0;
     double sum;
     //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize 
-    #pragma omp parallel shared(A, B, ret) private(i,j)
+    //#pragma omp parallel shared(A, B, ret) private(i,j)
     {
         for(i=0; i < rows; i++){
             sum = 0;
@@ -67,15 +67,15 @@ void dot(double* ret, double* A, double* B, int rows, int cols){
 }
 
 
-void cross_product(double *u, double *v, double *product)
+void cross_product(float *u, float *v, float *product)
 {
-        double p1 = u[1]*v[2]
+        float p1 = u[1]*v[2]
                 - u[2]*v[1];
 
-        double p2 = u[2]*v[0]
+        float p2 = u[2]*v[0]
                 - u[0]*v[2];
 
-        double p3 = u[0]*v[1]
+        float p3 = u[0]*v[1]
                 - u[1]*v[0];
 
         product[0] = p1;
@@ -85,7 +85,7 @@ void cross_product(double *u, double *v, double *product)
 }
 
 
-void norm(double *u, double *norm_val)
+void norm(float *u, float *norm_val)
 {
     *norm_val = sqrt(
         pow(u[0], 2) + 
@@ -95,34 +95,37 @@ void norm(double *u, double *norm_val)
 }
 
 
-double euclidean_dist(double* x_0, double* x_1){
-    double sum = 0;
+double euclidean_dist(float* x_0, float* x_1){
+    float sum = 0;
     for(int i = 0; i < 3; i++){
-        sum += pow(x_0[i] - x_1[i], 2);
+        sum += pow(abs(x_0[i] - x_1[i]), 2);
     }
+    //printf("u %f %f %f\n", x_0[0], x_0[1], x_0[2]);
+    //printf("v %f %f %f\n", x_1[0], x_1[1], x_1[2]);
+    //printf("euclidean dist %f\n", sqrt(sum));
     return sqrt(sum);
 }
 
 
-double curve(double* x_0, double* x_1){
+double curve(float* x_0, float* x_1){
     // compute cross of x_0 and x_1
-    double cross_prod[3];
-    double norm_cross_prod;
-    double norm_denom;
+    float cross_prod[3];
+    float norm_cross_prod;
+    float norm_denom;
 
     cross_product(x_0, x_1, cross_prod);
     norm(cross_prod, &norm_cross_prod);
     norm(x_0, &norm_denom);
-    double curve_ret = norm_cross_prod / pow(norm_denom, 3);
+    float curve_ret = norm_cross_prod / pow(norm_denom, 3);
 
     return curve_ret;
 
 }
 
 
-void vecaddn(double* ret, double* A, double* B, int lenA){
+void vecaddn(float* ret, float* A, float* B, int lenA){
     int i; 
-    #pragma omp parallel shared(A, B, ret) private(i)
+    //#pragma omp parallel shared(A, B, ret) private(i)
     {
     for (i = 0; i < lenA; i++) {
                 ret[i] = A[i] + B[i];
@@ -131,20 +134,20 @@ void vecaddn(double* ret, double* A, double* B, int lenA){
 }
 
 
-void einsum_operation_batch(int batch, int rows, double r_mag[batch][rows], double Q[rows], double R[batch][rows][3], double result[batch][3]){
+void einsum_operation_batch(int batch, int rows, float r_mag[batch][rows], float Q[rows], float R[batch][rows][3], float result[batch][3]){
     int i; 
     int j;
     int k;
     int provided = 0;
-    double sum[3] = {0.0, 0.0, 0.0};
-    double factor = 14.3996451;
-    double r_0;
-    double r_1;
-    double r_2;
-    double ele_1;
-    double ele_2;
-    double ele_3;
-    double compute_singular;
+    float sum[3] = {0.0, 0.0, 0.0};
+    float factor = 14.3996451;
+    float r_0;
+    float r_1;
+    float r_2;
+    float ele_1;
+    float ele_2;
+    float ele_3;
+    float compute_singular;
     //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize 
     #pragma omp parallel shared(R, r_mag, Q, result) private(i,j,k)
     {
@@ -171,19 +174,19 @@ void einsum_operation_batch(int batch, int rows, double r_mag[batch][rows], doub
 }
 
 
-void einsum_operation(int rows, double r_mag[rows], double Q[rows], double R[rows][3], double result[3]){
+void einsum_operation(int rows, float r_mag[rows], float Q[rows], float R[rows][3], float result[3]){
     int i; 
     int j;
     int provided = 0;
-    double sum[3] = {0.0, 0.0, 0.0};
-    double factor = 14.3996451;
-    double r_0;
-    double r_1;
-    double r_2;
-    double ele_1;
-    double ele_2;
-    double ele_3;
-    double compute_singular;
+    float sum[3] = {0.0, 0.0, 0.0};
+    float factor = 14.3996451;
+    float r_0;
+    float r_1;
+    float r_2;
+    float ele_1;
+    float ele_2;
+    float ele_3;
+    float compute_singular;
     //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize 
     #pragma omp parallel shared(R, r_mag, Q, result) private(i,j)
     {
@@ -208,12 +211,12 @@ void einsum_operation(int rows, double r_mag[rows], double Q[rows], double R[row
 }
 
 
-void einsum_ij_i_batch(int batch, int rows, int cols, double A[batch][rows][cols], double ret[batch][rows]){
+void einsum_ij_i_batch(int batch, int rows, int cols, float A[batch][rows][cols], float ret[batch][rows]){
     int i; 
     int j;
     int k;
     int provided = 0;
-    double sum;
+    float sum;
     //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize 
     #pragma omp parallel shared(A, ret) private(i,j,k)
     {
@@ -231,11 +234,11 @@ void einsum_ij_i_batch(int batch, int rows, int cols, double A[batch][rows][cols
 }
 
 
-void einsum_ij_i(int rows, int cols, double A[rows][cols], double ret[rows]){
+void einsum_ij_i(int rows, int cols, float A[rows][cols], float ret[rows]){
     int i; 
     int j;
     int provided = 0;
-    double sum;
+    float sum;
     //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize
     #pragma omp parallel shared(A, ret) private(i,j)
     {
@@ -251,21 +254,21 @@ void einsum_ij_i(int rows, int cols, double A[rows][cols], double ret[rows]){
 }
 
 
-void calc_field(double E[3], double x_init[3], int n_charges, double x[n_charges][3], double Q[n_charges]){
+void calc_field(float E[3], float x_init[3], int n_charges, float x[n_charges][3], float Q[n_charges]){
     // calculate the field
 
     // subtract x_init from x
-    double R[n_charges][3];
-    double r_mag[n_charges];
-    double E_array[3];
-    double r_sq[n_charges][3];
-    double r_mag_sq[n_charges];
+    float R[n_charges][3];
+    float r_mag[n_charges];
+    float E_array[3];
+    float r_sq[n_charges][3];
+    float r_mag_sq[n_charges];
     
     // make R a 2D array
     for (int j = 0; j < 3; j++)
     {
-        double x_init_single = x_init[j];
-        # pragma omp parallel for
+        float x_init_single = x_init[j];
+        //# pragma omp parallel for
         for (int i = 0; i < n_charges; i++)
         {
             R[i][j] = x[i][j] - x_init_single;
@@ -275,7 +278,7 @@ void calc_field(double E[3], double x_init[3], int n_charges, double x[n_charges
     
     einsum_ij_i(n_charges, 3, r_sq, r_mag_sq); // this might be a funky shape
     
-    # pragma omp parallel for
+    //# pragma omp parallel for
     for (int i = 0; i < n_charges; i++)
     {
         // elementwise raise to -3/2
@@ -286,7 +289,7 @@ void calc_field(double E[3], double x_init[3], int n_charges, double x[n_charges
     einsum_operation(n_charges, r_mag, Q, R, E_array);
 
     // trivial step
-    double factor = 14.3996451;
+    float factor = 14.3996451;
     for (int i = 0; i < 3; i++)
     {
         E[i] = E_array[i] * factor;
@@ -296,36 +299,36 @@ void calc_field(double E[3], double x_init[3], int n_charges, double x[n_charges
 }
 
 
-void propagate_topo(double result[3], double x_init[3], int n_charges, double x[n_charges][3], double Q[n_charges], double step_size){
+void propagate_topo(float result[3], float x_init[3], int n_charges, float x[n_charges][3], float Q[n_charges], float step_size){
     // propagate the topology
-    double epsilon = 10e-7;
-    double E[3];
-    double E_norm;
+    float E[3];
+    float E_norm;
+    //printf("propagating!!");
 
     calc_field(E, x_init, n_charges, x, Q);
     norm(E, &E_norm);
     for (int i = 0; i < 3; i++)
     {
-        result[i] = x_init[i] + step_size * E[i] / (E_norm + epsilon);
+        result[i] = x_init[i] + step_size * E[i] / (E_norm);
     }
 }
 
 
-void thread_operation(int n_charges, int n_iter, double step_size, double x_0[3], double dimensions[3], double x[n_charges][3], double Q[n_charges], double ret[2]){
+void thread_operation(int n_charges, int n_iter, float step_size, float x_0[3], float dimensions[3], float x[n_charges][3], float Q[n_charges], float ret[2]){
     bool bool_inside = true;
-    int count = 0; 
-    double x_init[3] = {x_0[0], x_0[1], x_0[2]};
-    double x_overwrite[3] = {x_0[0], x_0[1], x_0[2]};
+    float x_init[3] = {x_0[0], x_0[1], x_0[2]};
+    float x_overwrite[3] = {x_0[0], x_0[1], x_0[2]};
+    // print x_init
+    // printf("x_init %f %f %f\n", x_init[0], x_init[1], x_init[2]);
+    int i; 
+    float half_length = dimensions[0];
+    float half_width = dimensions[1];
+    float half_height = dimensions[2];
     
-    for (int i = 0; i < n_iter; i++) {
+    for (i = 0; i < n_iter; i++) {
 
         propagate_topo(x_overwrite, x_overwrite, n_charges, x, Q, step_size);
         // overwrite x_init with x_overwrite
-
-        double half_length = dimensions[0];
-        double half_width = dimensions[1];
-        double half_height = dimensions[2];
-        
 
         if (
             x_overwrite[0] < -half_length || 
@@ -340,26 +343,28 @@ void thread_operation(int n_charges, int n_iter, double step_size, double x_0[3]
         // printf("%f %f %f\n", x_overwrite[0], x_overwrite[1], x_overwrite[2]);
 
         if (!bool_inside){
-            count += 1;
-            //printf("Breaking out of loop\n");
+            // printf("Breaking out of loop at iteration: %i\n", i);
             break;
         }
+        // printf("x_final @ iter %i out of %i %f %f %f\n", i, n_iter, x_overwrite[0], x_overwrite[1], x_overwrite[2]);
+        
     }
-
-    double x_init_plus[3];
-    double x_init_plus_plus[3];
-    double x_0_plus[3];
-    double x_0_plus_plus[3];    
+        
+    
+    float x_init_plus[3];
+    float x_init_plus_plus[3];
+    float x_0_plus[3];
+    float x_0_plus_plus[3];    
 
     propagate_topo(x_init_plus, x_init, n_charges, x, Q, step_size);
     propagate_topo(x_init_plus_plus, x_init_plus, n_charges, x, Q, step_size);
     propagate_topo(x_0_plus, x_overwrite, n_charges, x, Q, step_size);
     propagate_topo(x_0_plus_plus, x_0_plus, n_charges, x, Q, step_size);
 
-    double curve_arg_1[3];
-    double curve_arg_2[3];
-    double curve_arg_3[3];
-    double curve_arg_4[3];
+    float curve_arg_1[3];
+    float curve_arg_2[3];
+    float curve_arg_3[3];
+    float curve_arg_4[3];
     
     for (int i = 0; i < 3; i++) {
         curve_arg_1[i] = x_init_plus[i] - x_init[i];
@@ -368,18 +373,16 @@ void thread_operation(int n_charges, int n_iter, double step_size, double x_0[3]
         curve_arg_4[i] = x_0_plus_plus[i] - 2* x_0_plus[i] + x_overwrite[i];
     }
 
-    double curve_init = curve(curve_arg_1, curve_arg_2);
-    double curve_final = curve(curve_arg_3, curve_arg_4);
-    double curve_mean = (curve_init + curve_final) / 2;
-    double dist = euclidean_dist(x_init, x_overwrite);
+    float curve_init = curve(curve_arg_1, curve_arg_2);
+    float curve_final = curve(curve_arg_3, curve_arg_4);
+    float curve_mean = (curve_init + curve_final) / 2;
+    float dist = euclidean_dist(x_init, x_overwrite);
 
 
     ret[0] = dist;
     ret[1] = curve_mean;
 
 }
-
-
 
 /*
 void vecaddn_gsl(gsl_vector* ret, gsl_vector* A, gsl_vector* B, int lenA){

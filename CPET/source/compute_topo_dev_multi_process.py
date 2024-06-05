@@ -1,10 +1,11 @@
 import numpy as np
 from CPET.source.calculator import calculator
-import warnings 
-warnings.filterwarnings(action='ignore')
+import warnings
+
+warnings.filterwarnings(action="ignore")
+
 
 def main():
-    
     options = {
         "path_to_pqr": "../../tests/test_files/test_large.pqr",
         "center": [104.785, 113.388, 117.966],
@@ -15,14 +16,13 @@ def main():
         "step_size": 0.01,
         "concur_slip": 16,
         "filter_radius": 100.0,
-        "filter_in_box": True, 
-        #"filter_resids": ["HEM"]
+        "filter_in_box": True,
+        # "filter_resids": ["HEM"]
     }
-
 
     topo = calculator(options)
     hist = topo.compute_topo()
-    #print(hist)
+    # print(hist)
     np.savetxt("hist_cpet.txt", hist)
 
 
