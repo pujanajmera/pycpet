@@ -70,9 +70,6 @@ class Math_ops:
             self.array_2d_float,
         ]
 
-        #batch_size, len(Q), np.array(r_mag), np.array(Q), np.array(R), res
-
-
         self.math.einsum_operation.restype = None
         self.math.einsum_operation.argtypes = [
             ctypes.c_int,
@@ -81,7 +78,18 @@ class Math_ops:
             self.array_2d_float, 
             self.array_1d_float,
         ]
-        # self.math.test_trans.argtypes = None
+        
+        self.math.thread_operation.restype = None
+        self.math.thread_operation.argtypes = [
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_double,
+            self.array_1d_float,
+            self.array_1d_float,
+            self.array_2d_float,
+            self.array_1d_float,
+            self.array_1d_float,
+        ]
 
 
     def sparse_dot(self, A, B):
@@ -152,11 +160,6 @@ class Math_ops:
         r_mag = r_mag.reshape(-1)
         R = R.reshape(r_mag.shape[0], 3)
         Q = Q.reshape(-1)
-        #len_Q = len(Q)
-        #print(r_mag.shape)
-        #print(Q.shape)
-        #print(R.shape)
-        #print(res.shape)
         self.math.einsum_operation.restype = None
         self.math.einsum_operation(len(Q), np.array(r_mag), np.array(Q), np.array(R), res) 
         return res
@@ -169,4 +172,35 @@ class Math_ops:
         self.math.einsum_operation_batch.restype = None
         Q = Q.reshape(-1)
         self.math.einsum_operation_batch(batch_size, len(Q), np.array(r_mag), np.array(Q), np.array(R), res)       
+        return res
+    
+
+    def thread_operation(self, x_0, n_iter, x, Q, step_size, dimensions):
+        """
+        Takes: 
+            x_0(array) - (3, 1) array of box position 
+            n_iter(int) - number of iterations of propagation for this slip
+            x(np array) - positions of charges
+            Q(np array) - charge values 
+            step_size(float) - step size of each step 
+            dimensions(array) - box limits
+        Returns:
+            res(array) - (2, ) array of curvature and distance
+        """
+        res = np.zeros(2, dtype="float64")
+        n_charges = len(Q)
+        self.math.thread_operation.restype = None
+        Q = Q.reshape(-1)
+        self.math.thread_operation(
+            n_charges, 
+            n_iter, 
+            step_size, 
+            x_0, 
+            dimensions, 
+            x, 
+            Q, 
+            res)
+        #print(res)
+        
+        
         return res

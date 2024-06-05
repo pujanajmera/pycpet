@@ -5,14 +5,12 @@
 import numpy as np
 import time
 from multiprocessing import Pool
-from torch.profiler import profile, record_function, ProfilerActivity
+from torch.profiler import profile, ProfilerActivity
 import torch
-import torch.jit as jit
 
 
 from CPET.utils.parser import parse_pdb
-from CPET.utils.c_ops import Math_ops
-from CPET.utils.parallel import task, task_batch, task_base
+from CPET.utils.parallel import task, task_batch, task_base, task_complete_thread
 from CPET.utils.calculator import initialize_box_points_random, initialize_box_points_uniform, compute_field_on_grid, calculate_electric_field_dev_c_shared, compute_ESP_on_grid
 from CPET.utils.parser import parse_pdb, filter_radius, filter_residue, filter_in_box, calculate_center, filter_resnum, filter_resnum_andname
 from CPET.utils.gpu import compute_curv_and_dist_mat_gpu, propagate_topo_matrix_gpu, batched_filter_gpu, initialize_streamline_grid_gpu, batched_filter_gpu_end
@@ -155,12 +153,24 @@ class calculator:
 
         #self.transformation_matrix and self.uniform_transformation_matrix are the same
 
-        self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
+        
         #print(self.random_start_points)
         
         if "batch_size" in options.keys() and options["CPET_method"] == "woohoo": 
-            self.batch_size = options["batch_size"]
+            (
+                self.random_start_points,
+                self.random_max_samples,
+                self.transformation_matrix,
+            ) = initialize_box_points_random(
+                self.center,
+                self.x_vec_pt,
+                self.y_vec_pt,
+                self.dimensions,
+                self.n_samples,
+                self.step_size,
+            )
             # reshape the random_start_points and random_max_samples to be batches of size batch_size
+            self.batch_size = options["batch_size"]
             self.random_start_points_batched = np.array(self.random_start_points).reshape(int(self.n_samples/self.batch_size), self.batch_size, 3)
             self.random_max_samples_batched = np.array(self.random_max_samples).reshape(int(self.n_samples/self.batch_size), self.batch_size)
             
@@ -168,7 +178,8 @@ class calculator:
             #self.random_max_samples_batched.append(self.n_samples%self.batch_size)
             #self.random_start_points_batched = [i*self.batch_size for i in range(self.n_samples//self.batch_size)]
             #self.random_start_points_batched.append((self.n_samples//self.batch_size)*self.batch_size)
-
+        
+        self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
         print("... > Initialized Calculator!")
 
 
@@ -229,6 +240,37 @@ class calculator:
         )
         return hist
 
+    def compute_topo_complete_c_shared(self):
+        print("... > Computing Topo!")
+        print(f"Number of samples: {self.n_samples}")
+        print(f"Number of charges: {len(self.Q)}")
+        print(f"Step size: {self.step_size}")
+        start_time = time.time()
+        #print("starting pooling")
+        with Pool(self.concur_slip) as pool:
+            args = [
+                (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
+                for i, n_iter in zip(self.random_start_points, self.random_max_samples)
+            ]
+            #raw = pool.starmap(task, args)
+            
+            result = pool.starmap_async(task_complete_thread, args)
+            raw = []
+            for result in result.get():
+                raw.append(result)
+            
+            dist = [i[0] for i in raw]
+            curve = [i[1] for i in raw]
+            hist=[dist, curve]
+            
+        end_time = time.time()
+        self.hist = hist
+
+        print(
+            f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
+        )
+        return hist
+
 
     def compute_topo_batched(self):
         print("... > Computing Topo in Batches!")
@@ -246,13 +288,6 @@ class calculator:
 
             ]
             raw = pool.starmap(task_batch, args)
-
-            '''result = pool.starmap_async(task_batch, args)
-            raw = []
-            for result in result.get():
-                raw.append(result)'''
-            # reshape 
-            # print(raw)
             hist = np.array(raw).reshape(self.n_samples, 2)
             dist = hist[0, :]
             curv = hist[1, :]
@@ -276,6 +311,7 @@ class calculator:
         field_box = compute_field_on_grid(self.mesh, self.x, self.Q)
         return field_box
 
+
     def compute_box_ESP(self):
         print("... > Computing Box!")
         print(f"Number of charges: {len(self.Q)}")
@@ -286,7 +322,8 @@ class calculator:
         print("Center: {}".format(self.center))
         field_box = compute_ESP_on_grid(self.mesh, self.x, self.Q)
         return field_box
-    
+
+
     def compute_point_mag(self):
         print("... > Computing Point Magnitude!")
         print(f"Number of charges: {len(self.Q)}")

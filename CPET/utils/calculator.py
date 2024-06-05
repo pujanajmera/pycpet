@@ -49,11 +49,12 @@ def propagate_topo_dev(x_0, x, Q, step_size, debug=False):
     """
     # Compute field
     epsilon = 10e-7
-    E = calculate_electric_field_dev_c_shared(x_0, x, Q, debug)
+    E = calculate_electric_field_dev_c_shared(x_0, x, Q)
     #if np.linalg.norm(E) > epsilon: 
     E = E / (np.linalg.norm(E) + epsilon)
     x_0 = x_0 + step_size * E
     return x_0
+
 
 
 def propagate_topo_dev_batch(x_0_list, x, Q, step_size, mask_list=None):
@@ -231,7 +232,7 @@ def calculate_electric_field_dev_python(x_0, x, Q):
     return E
 
 
-def calculate_electric_field_dev_c_shared(x_0, x, Q, debug=False):
+def calculate_electric_field_dev_c_shared(x_0, x, Q):
     """
     Computes electric field at a point given positions of charges
     Takes
@@ -263,6 +264,17 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q, debug=False):
     # print("-")
     #print("end efield calc")
     return E
+
+
+def calculate_thread_c_shared(x_0, n_iter, x, Q, step_size, dimensions):
+    result = Math.thread_operation(
+        x_0=x_0,
+        n_iter=n_iter, 
+        x=x, 
+        Q=Q, 
+        step_size=step_size, 
+        dimensions=dimensions)
+    return result
 
 
 def calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q):
@@ -324,30 +336,6 @@ def calculate_electric_field_gpu_torch(x_0, x, Q, device="cuda", filter=True):
     return E.cpu().numpy()
 
 
-"""
-def calculate_electric_field_cupy(x_0, x, Q):
-    #Computes electric field at a point given positions of charges
-    #Takes
-    #    x_0(array) - position to compute field at of shape (N,3)
-    #    x(array) - positions of charges of shape (N,3)
-    #    Q(array) - magnitude and sign of charges of shape (N,1)
-    #Returns
-    #    E(array) - electric field at the point of shape (1,3)
-    
-    x_0 = torch.tensor(x_0)
-    x = torch.tensor(x)
-    Q = torch.tensor(Q)
-
-    R = x_0 - x
-    R_sq = R**2
-    r_mag_sq = cp.einsum("ij->i", R_sq).reshape(-1, 1)
-    r_mag_cube = power(r_mag_sq, 3 / 2)
-    E = cp.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
-    # now combine all of the above operations into one
-    return E.cpu().numpy()
-"""
-
-
 def calculate_electric_field_cupy(x_0, x, Q):
     """
     Computes electric field at a point given positions of charges
@@ -402,6 +390,7 @@ def compute_field_on_grid(grid_coords, x, Q):
 
     return point_field_concat.astype(np.half)
 
+
 def compute_ESP_on_grid(grid_coords, x, Q):
     """
     Computes electrostatic potential at each point in a meshgrid given positions of charges.
@@ -429,6 +418,7 @@ def compute_ESP_on_grid(grid_coords, x, Q):
     point_ESP_concat = np.concatenate((reshaped_meshgrid, ESP), axis=1)
 
     return point_ESP_concat.astype(np.half)
+
 
 def calculate_field_at_point(x, Q, x_0=np.array([0, 0, 0])):
     """
@@ -559,6 +549,7 @@ def distance_numpy(hist1, hist2):
     b = hist1 + hist2
     return np.sum(np.divide(a, b, out=np.zeros_like(a), where=b != 0)) / 2.0
 
+
 def make_histograms(topo_files, plot=False):
     histograms = []
 
@@ -635,6 +626,7 @@ def make_histograms(topo_files, plot=False):
 
     return np.array(histograms)
 
+
 def make_fields(field_files):
     fields = []
     for field_file in field_files:
@@ -648,6 +640,7 @@ def make_fields(field_files):
         fields.append(np.array(field))
     return fields
 
+
 def construct_distance_matrix(histograms):
     matrix = np.diag(np.zeros(len(histograms)))
     for i, hist1 in enumerate(histograms):
@@ -657,6 +650,7 @@ def construct_distance_matrix(histograms):
             matrix[j][i] = matrix[i][j]
     return matrix
 
+
 def construct_distance_matrix_alt(histograms):
     flattened_hists = [hist.flatten() for hist in histograms]
     np.save("flattened_hists.npy", flattened_hists)
@@ -664,6 +658,7 @@ def construct_distance_matrix_alt(histograms):
     flattened_hists_scaled = scaler.fit_transform(flattened_hists)
     matrix = squareform(pdist(flattened_hists_scaled, 'euclidean'))
     return matrix
+
 
 def construct_distance_matrix_alt2(histograms):
     new_histograms = []
@@ -679,6 +674,7 @@ def construct_distance_matrix_alt2(histograms):
             matrix[i][j] = distance_numpy(hist1, hist2)
             matrix[j][i] = matrix[i][j]
     return matrix
+
 
 def construct_distance_matrix_volume(fields):
     '''

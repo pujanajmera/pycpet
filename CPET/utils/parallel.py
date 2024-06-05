@@ -4,7 +4,8 @@ from CPET.utils.calculator import (
     propagate_topo_dev,
     propagate_topo_dev_batch, 
     Inside_Box,
-    compute_curv_and_dist
+    compute_curv_and_dist,
+    calculate_thread_c_shared
 )
 
 def task_base(x_0, n_iter, x, Q, step_size, dimensions):
@@ -79,6 +80,28 @@ def task(x_0, n_iter, x, Q, step_size, dimensions):
     return result
 
 
+def task_complete_thread(x_0, n_iter, x, Q, step_size, dimensions):
+    """
+    Takes: 
+        x_0(array) - (3, 1) array of box position 
+        n_iter(int) - number of iterations of propagation for this slip
+        x(np array) - positions of charges
+        Q(np array) - charge values 
+        step_size(float) - step size of each step 
+        dimensions(array) - box limits
+    """
+    result = calculate_thread_c_shared(
+        x_0=x_0, 
+        n_iter=n_iter, 
+        x=x, 
+        Q=Q, 
+        step_size=step_size, 
+        dimensions=dimensions
+        )
+    #print("result: ", result)
+    return result
+
+
 def task_batch(x_0_list, n_iter, x, Q, step_size, dimensions):
     x_init = x_0_list
     mask_list = None
@@ -120,7 +143,11 @@ def task_batch(x_0_list, n_iter, x, Q, step_size, dimensions):
     # not currently batched
     for ind in range(len(x_0_plus)): 
         result = compute_curv_and_dist(
-            x_init[ind], x_init_plus[ind], x_init_plus_plus[ind], x_0_list[ind], x_0_plus[ind], x_0_plus_plus[ind]
+            x_init[ind], 
+            x_init_plus[ind], 
+            x_init_plus_plus[ind], 
+            x_0_list[ind], x_0_plus[ind], 
+            x_0_plus_plus[ind]
         )
         result_list.append(result)
 
