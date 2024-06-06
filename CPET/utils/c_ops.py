@@ -13,11 +13,14 @@ class Math_ops:
 
         # creates pointers to array data types
         self.array_1d_int = npct.ndpointer(dtype=np.int32, ndim=1, flags="C")
-        self.array_1d_float = npct.ndpointer(dtype=np.double, ndim=1, flags="C")
         self.array_2d_int = npct.ndpointer(dtype=np.int32, ndim=2, flags="C")
-        self.array_2d_float = npct.ndpointer(dtype=np.double, ndim=2, flags="C")
-        self.array_3d_float = npct.ndpointer(dtype=np.double, ndim=3, flags="C")
-        
+        self.array_1d_float = npct.ndpointer(dtype=np.float32, ndim=1, flags="C")
+        self.array_2d_float = npct.ndpointer(dtype=np.float32, ndim=2, flags="C")
+        self.array_3d_float = npct.ndpointer(dtype=np.float32, ndim=3, flags="C")
+
+        self.array_3d_double = npct.ndpointer(dtype=np.double, ndim=3, flags="C")
+        self.array_2d_double = npct.ndpointer(dtype=np.double, ndim=2, flags="C")
+        self.array_1d_double = npct.ndpointer(dtype=np.double, ndim=1, flags="C")
 
         # initial arguement
         self.math.sparse_dot.argtypes = [
@@ -66,28 +69,35 @@ class Math_ops:
             ctypes.c_int,
             self.array_2d_float,
             self.array_1d_float,
-            self.array_3d_float, 
+            self.array_3d_float,
             self.array_2d_float,
         ]
-
-        #batch_size, len(Q), np.array(r_mag), np.array(Q), np.array(R), res
-
 
         self.math.einsum_operation.restype = None
         self.math.einsum_operation.argtypes = [
             ctypes.c_int,
             self.array_1d_float,
             self.array_1d_float,
-            self.array_2d_float, 
+            self.array_2d_float,
             self.array_1d_float,
         ]
-        # self.math.test_trans.argtypes = None
 
+        self.math.thread_operation.restype = None
+        self.math.thread_operation.argtypes = [
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_float,
+            self.array_1d_float,
+            self.array_1d_float,
+            self.array_2d_float,
+            self.array_1d_float,
+            self.array_1d_float,
+        ]
 
     def sparse_dot(self, A, B):
         # b is just a single vector, not a sparse matrix
         # a is a full sparse matrix
-        res = np.zeros(len(A.data), dtype="float64")
+        res = np.zeros(len(A.data), dtype="float32")
         self.math.sparse_dot.restype = None
 
         self.math.sparse_dot(
@@ -103,11 +113,10 @@ class Math_ops:
         )
         return res
 
-
     def dot(self, A, B):
         # b is just a single vector, not a sparse matrix
         # a is a full sparse matrix
-        res = np.zeros(len(B.data), dtype="float64")
+        res = np.zeros(len(B.data), dtype="float32")
         self.math.dot.restype = None
 
         self.math.dot(
@@ -119,10 +128,9 @@ class Math_ops:
         )
         return res
 
-
     def vecaddn(self, A, B):
         # simply two vectors
-        res = np.zeros(len(A), dtype="float64")
+        res = np.zeros(len(A), dtype="float32")
         self.math.vecaddn.restype = None
         # self.math.vecaddn.restype = npct.ndpointer(
         #    dtype=self.array_1d_float, shape=len(A)
@@ -130,43 +138,70 @@ class Math_ops:
         self.math.vecaddn(res, A, B, len(A))
         return res
 
-
     def einsum_ij_i(self, A):
-        res = np.zeros((A.shape[0]), dtype="float64")
+        res = np.zeros((A.shape[0]), dtype="float32")
         self.math.einsum_ij_i.restype = None
         self.math.einsum_ij_i(A.shape[0], A.shape[1], A, res)
         return res
 
-
     def einsum_ij_i_batch(self, A):
         # simply two vectors
-        res = np.zeros((len(A), A[0].shape[0]), dtype="float64")
+        res = np.zeros((len(A), A[0].shape[0]), dtype="float32")
         self.math.einsum_ij_i_batch.restype = None
         self.math.einsum_ij_i_batch(len(A), A[0].shape[0], A[0].shape[1], A, res)
         res = res.reshape(res.shape[1], res.shape[0])
         return res
 
-
     def einsum_operation(self, R, r_mag, Q):
-        res = np.zeros(3, dtype="float64")
+        res = np.zeros(3, dtype="float32")
         r_mag = r_mag.reshape(-1)
         R = R.reshape(r_mag.shape[0], 3)
         Q = Q.reshape(-1)
-        #len_Q = len(Q)
-        #print(r_mag.shape)
-        #print(Q.shape)
-        #print(R.shape)
-        #print(res.shape)
         self.math.einsum_operation.restype = None
-        self.math.einsum_operation(len(Q), np.array(r_mag), np.array(Q), np.array(R), res) 
+        self.math.einsum_operation(
+            len(Q),
+            np.array(r_mag, dtype="float32"),
+            np.array(Q, dtype="float32"),
+            np.array(R, dtype="float32"),
+            res,
+        )
         return res
 
-
     def einsum_operation_batch(self, R, r_mag, Q, batch_size):
-        # res = np.ascontiguousarray(np.zeros(3, dtype="float64"))
-        #print("einsum in")
-        res = np.zeros((batch_size, 3), dtype="float64")
+        # res = np.ascontiguousarray(np.zeros(3, dtype="float32"))
+        # print("einsum in")
+        res = np.zeros((batch_size, 3), dtype="float32")
         self.math.einsum_operation_batch.restype = None
         Q = Q.reshape(-1)
-        self.math.einsum_operation_batch(batch_size, len(Q), np.array(r_mag), np.array(Q), np.array(R), res)       
+        self.math.einsum_operation_batch(
+            batch_size,
+            len(Q),
+            np.array(r_mag, dtype="float32"),
+            np.array(Q, dtype="float32"),
+            np.array(R, dtype="float32"),
+            res,
+        )
+        return res
+
+    def thread_operation(self, x_0, n_iter, x, Q, step_size, dimensions):
+        """
+        Takes:
+            x_0(array) - (3, 1) array of box position
+            n_iter(int) - number of iterations of propagation for this slip
+            x(np array) - positions of charges
+            Q(np array) - charge values
+            step_size(float) - step size of each step
+            dimensions(array) - box limits
+        Returns:
+            res(array) - (2, ) array of curvature and distance
+        """
+        res = np.zeros(2, dtype="float32")
+        n_charges = len(Q)
+        self.math.thread_operation.restype = None
+        Q = Q.reshape(-1)
+        self.math.thread_operation(
+            n_charges, n_iter, step_size, x_0, dimensions, x, Q, res
+        )
+        # print(res)
+
         return res

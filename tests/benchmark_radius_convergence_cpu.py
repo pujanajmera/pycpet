@@ -21,22 +21,28 @@ def main():
 
     topo_file_list = []
 
-    iter = 3
+    iter = 3 # Number of replicates
 
     current_dir_files = os.listdir()
 
-    for radius in [None,90,80,70,60,50,40,30,20]:
+    for radius in [None, 30, 20, 10]:
         print(f"Running for radius: {radius}")
         if radius is not None:
             options["filter_radius"] = radius
         for i in range(iter):
             filestring = f"rad_conv_{radius}_{i}.top"
             if filestring in current_dir_files:
-                print(filestring+" already exists. Skipping...")
+                print(filestring + " already exists. Skipping...")
                 topo_file_list.append(filestring)
                 continue
             topo = calculator(options, path_to_pdb = file)
-            ret = topo.compute_topo_GPU_batch_filter()
+            #print("center: {}".format(topo.center))
+            #ret = topo.compute_topo_GPU_batch_filter_alt()
+            #ret = topo.compute_topo_GPU_batch_filter()
+            
+            #ret = topo.compute_topo_batched()
+            #ret = topo.compute_topo()
+            ret = topo.compute_topo_complete_c_shared()
             np.savetxt(filestring, ret)
             topo_file_list.append(filestring)
     
@@ -53,8 +59,8 @@ def main():
     # Map each label to its group
     group_map = {label: label.split('_')[0] for label in labels}
     grouped_labels = [group_map[label] for label in labels]
-    print(group_map)
-    print(grouped_labels)
+    #print(group_map)
+    #print(grouped_labels)
     # Apply the new labels to the DataFrame
     distances.columns = grouped_labels
     distances.index = grouped_labels

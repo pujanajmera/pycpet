@@ -13,6 +13,7 @@ package_path = package.location
 
 from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
 from CPET.utils.c_ops import Math_ops
+
 Math = Math_ops(shared_loc=package_path + "/CPET/utils/math_module.so")
 
 
@@ -28,10 +29,9 @@ def propagate_topo(x_0, x, Q, step_size, debug=False):
         x_0 - new position on streamline after propagation via electric field
     """
     # Compute field
-    epsilon = 10e-7
-    E = calculate_electric_field(x_0, x, Q)
-    #if np.linalg.norm(E) > epsilon: 
-    E = E / (np.linalg.norm(E) + epsilon)
+    E = calculate_electric_field_base(x_0, x, Q)
+    # if np.linalg.norm(E) > epsilon:
+    E = E / (np.linalg.norm(E))
     x_0 = x_0 + step_size * E
     return x_0
 
@@ -48,10 +48,9 @@ def propagate_topo_dev(x_0, x, Q, step_size, debug=False):
         x_0 - new position on streamline after propagation via electric field
     """
     # Compute field
-    epsilon = 10e-7
-    E = calculate_electric_field_dev_c_shared(x_0, x, Q, debug)
-    #if np.linalg.norm(E) > epsilon: 
-    E = E / (np.linalg.norm(E) + epsilon)
+    E = calculate_electric_field_dev_c_shared(x_0, x, Q)
+    # if np.linalg.norm(E) > epsilon:
+    E = E / (np.linalg.norm(E))
     x_0 = x_0 + step_size * E
     return x_0
 
@@ -68,41 +67,42 @@ def propagate_topo_dev_batch(x_0_list, x, Q, step_size, mask_list=None):
     Returns
         x_0 - new position on streamline after propagation via electric field
     """
-    epsilon = 10e-6
 
     if mask_list is None:
         E_full = calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q)
-        #print("passed first iter")
-    else: 
+        # print("passed first iter")
+    else:
         # if theres a mask, only calculate the field for the points that are inside the box
         # filter x_0_list on the mask
-        
+
         x_0_list_filtered = [x_0 for x_0, mask in zip(x_0_list, mask_list) if not mask]
         E = calculate_electric_field_dev_c_shared_batch(x_0_list_filtered, x, Q)
         # expand E to the original size E is 0 for masked points
-        #print("mask list: {}".format(mask_list))
-        #print("E: {}".format(E))
+        # print("mask list: {}".format(mask_list))
+        # print("E: {}".format(E))
         E_full = []
-        #print("E: {}".format(E))
-        #print("type {}".format(type(E[0])))
-        ind_filtered = 0 
-        for ind, x in enumerate(x_0_list): 
-            if mask_list[ind] == False: 
+        # print("E: {}".format(E))
+        # print("type {}".format(type(E[0])))
+        ind_filtered = 0
+        for ind, x in enumerate(x_0_list):
+            if mask_list[ind] == False:
                 E_full.append(E[ind_filtered])
                 ind_filtered += 1
-            else: 
+            else:
                 E_full.append([0.0, 0.0, 0.0])
-                
+
     assert len(E_full) == len(x_0_list), "efull len is funky"
-    
-    #print("efull: {}".format(E_full))
-    E_list = [e / (np.linalg.norm(e) + epsilon) for e in E_full]
+
+    # print("efull: {}".format(E_full))
+    E_list = [e / (np.linalg.norm(e)) for e in E_full]
     x_0_list = [x_0 + step_size * e for x_0, e in zip(x_0_list, E_list)]
-    #print(x_0_list)
+    # print(x_0_list)
     return x_0_list
 
 
-def initialize_box_points_random(center, x, y, dimensions, n_samples, step_size):
+def initialize_box_points_random(
+    center, x, y, dimensions, n_samples, max_steps=10, dtype="float32"
+):
     """
     Initializes random points in box centered at the origin
     Takes
@@ -117,6 +117,7 @@ def initialize_box_points_random(center, x, y, dimensions, n_samples, step_size)
         random_max_samples(array) - array of maximum sample number for each streamline of shape (n_samples, 1)
         transformation_matrix(array) - matrix that contains the basis vectors for the box of shape (3,3)
     """
+    print("... initializing box points randomly")
     # Convert lists to numpy arrays
     x = x - center  # Translate to origin
     y = y - center  # Translate to origin
@@ -136,18 +137,18 @@ def initialize_box_points_random(center, x, y, dimensions, n_samples, step_size)
     random_z = np.random.uniform(-half_height, half_height, n_samples)
     # Each row in random_points_local corresponds to x, y, and z coordinates of a point in the box's coordinate system
     random_points_local = np.column_stack([random_x, random_y, random_z])
+    if dtype == "float32":
+        random_points_local = random_points_local.astype(np.float32)
     # Convert these points back to the global coordinate system
     transformation_matrix = np.column_stack(
         [x_unit, y_unit, z_unit]
     ).T  # Each column is a unit vector
-    max_distance = 2 * np.linalg.norm(
-        np.array(dimensions)
-    )  # Define maximum sample limit as 2 times the diagonal
-    random_max_samples = np.random.randint(1, max_distance / step_size, n_samples)
+
+    random_max_samples = np.random.randint(1, max_steps, n_samples)
     return random_points_local, random_max_samples, transformation_matrix
 
 
-def initialize_box_points_uniform(center, x, y, step_size, dimensions):
+def initialize_box_points_uniform(center, x, y, step_size, dimensions, dtype="float32", max_steps=10, ret_rand_max=False, inclusive=True):
     """
     Initializes random points in box centered at the origin
     Takes
@@ -162,6 +163,8 @@ def initialize_box_points_uniform(center, x, y, step_size, dimensions):
         transformation_matrix(array) - matrix that contains the basis vectors for the box of shape (3,3)
     """
     # Convert lists to numpy arrays
+    print("... initializing box points uniformly")
+    
     x = x - center  # Translate to origin
     y = y - center  # Translate to origin
     half_length, half_width, half_height = dimensions
@@ -180,12 +183,26 @@ def initialize_box_points_uniform(center, x, y, step_size, dimensions):
     ).T  # Each column is a unit vector
 
     # construct a grid of points in the box - lengths are floats
-    x_coords = np.arange(-half_length, half_length+step_size, step_size)
-    y_coords = np.arange(-half_width, half_width+step_size, step_size)
-    z_coords = np.arange(-half_height, half_height+step_size, step_size)
+    if inclusive:
+        x_coords = np.arange(-half_length, half_length + step_size, step_size)
+        y_coords = np.arange(-half_width, half_width + step_size, step_size)
+        z_coords = np.arange(-half_height, half_height + step_size, step_size)
+    else: 
+        x_coords = np.arange(-half_length + step_size, half_length-step_size, step_size)
+        y_coords = np.arange(-half_width + step_size, half_width-step_size, step_size)
+        z_coords = np.arange(-half_height + step_size, half_height-step_size, step_size)    
 
     x_mesh, y_mesh, z_mesh = np.meshgrid(x_coords, y_coords, z_coords)
-    local_coords = np.stack([x_mesh, y_mesh, z_mesh], axis=-1)
+    local_coords = np.stack([x_mesh, y_mesh, z_mesh], axis=-1, dtype=dtype)
+    
+    if ret_rand_max:
+        n_samples = local_coords.shape[0] * local_coords.shape[1] * local_coords.shape[2]
+        #print(f"max distance: {max_distance}")
+        #print(f"step size: {step_size}")
+        #max_steps = round(max_distance / step_size)
+        #print(f"max steps: {max_steps}")
+        random_max_samples = np.random.randint(1, max_steps, n_samples)
+        return local_coords, random_max_samples, transformation_matrix
     
     return local_coords, transformation_matrix
 
@@ -207,6 +224,23 @@ def calculate_electric_field(x_0, x, Q):
     r_mag_cube = np.power(r_mag_sq, 3 / 2)
     E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
     return E
+
+def calculate_electric_field_base(x_0, x, Q):
+    """
+    Computes electric field at a point given positions of charges
+    Takes
+        x_0(array) - position to compute field at of shape (1,3)
+        x(array) - positions of charges of shape (N,3)
+        Q(array) - magnitude and sign of charges of shape (N,1)
+    Returns
+        E(array) - electric field at the point of shape (1,3)
+    """
+    # Create matrix R
+    R = nb_subtract(x_0, x)
+    denom = np.linalg.norm(R, axis=1) ** 3
+    E_vec = R * (1 / denom).reshape(-1, 1) * Q * 14.3996451    
+    E_vec = np.sum(E_vec, axis=0)
+    return E_vec
 
 
 def calculate_electric_field_dev_python(x_0, x, Q):
@@ -231,7 +265,7 @@ def calculate_electric_field_dev_python(x_0, x, Q):
     return E
 
 
-def calculate_electric_field_dev_c_shared(x_0, x, Q, debug=False):
+def calculate_electric_field_dev_c_shared(x_0, x, Q):
     """
     Computes electric field at a point given positions of charges
     Takes
@@ -244,25 +278,35 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q, debug=False):
     # if Math is None:
     #    Math = Math_ops(shared_loc="../utils/math_module.so")
     # Create matrix R
-    #print("subtract")
+    # print("subtract")
 
     R = nb_subtract(x_0, x)
 
     R_sq = R**2
     # r_mag_sq = np.einsum("ij->i", R_sq).reshape(-1, 1)
-    #print("rsq shape: {}".format(R_sq.shape))
+    # print("rsq shape: {}".format(R_sq.shape))
     # print(R_sq.dtype)
-    #print("einsum 1")
+    # print("einsum 1")
+    # convert to float32
+    R_sq = R_sq.astype(np.float32)
     r_mag_sq = Math.einsum_ij_i(R_sq).reshape(-1, 1)
-    #print("rmag sq size: {}".format(r_mag_sq.shape))
-    #print("power op")
+    # print("rmag sq size: {}".format(r_mag_sq.shape))
+    # print("power op")
     r_mag_cube = np.power(r_mag_sq, 3 / 2)
-    #print("einsum 2")
+    # print("einsum 2")
+    # R = R.astype(np.float32)
     E = Math.einsum_operation(R, 1 / r_mag_cube, Q) * 14.3996451
-    #print(E.shape)
+    # print(E.shape)
     # print("-")
-    #print("end efield calc")
+    # print("end efield calc")
     return E
+
+
+def calculate_thread_c_shared(x_0, n_iter, x, Q, step_size, dimensions):
+    result = Math.thread_operation(
+        x_0=x_0, n_iter=n_iter, x=x, Q=Q, step_size=step_size, dimensions=dimensions
+    )
+    return result
 
 
 def calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q):
@@ -277,19 +321,23 @@ def calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q):
     """
     R_list = [nb_subtract(x_0, x) for x_0 in x_0_list]
     batch_size = len(R_list)
-    R_sq_list = np.array([R**2 for R in R_list])
-    r_mag_sq_list = Math.einsum_ij_i_batch(R_sq_list)#.reshape(-1, 1)
-    #print("rmag: {}".format(r_mag_sq_list))
-    #print("rmag len: {}".format(len(r_mag_sq_list)))
-    #print("rmag 1 size: {}".format(r_mag_sq_list[0].shape))
+    R_list = np.array(R_list, dtype="float32")
+    R_sq_list = np.array([R**2 for R in R_list], dtype="float32")
+    r_mag_sq_list = Math.einsum_ij_i_batch(R_sq_list)  # .reshape(-1, 1)
+    # print("rmag: {}".format(r_mag_sq_list))
+    # print("rmag len: {}".format(len(r_mag_sq_list)))
+    # print("rmag 1 size: {}".format(r_mag_sq_list[0].shape))
     r_mag_cube_list = np.power(r_mag_sq_list, 3 / 2)
-    recip_r_mag_list = [1/val for val in r_mag_cube_list]
-    #print("recip r {}".format(recip_r_mag_list))
-    E_list = Math.einsum_operation_batch(R_list, recip_r_mag_list, Q, batch_size) * 14.3996451
-    #print("passed einsum op")
+    recip_r_mag_list = [1 / val for val in r_mag_cube_list]
+    # print("recip r {}".format(recip_r_mag_list))
+    E_list = (
+        Math.einsum_operation_batch(R_list, recip_r_mag_list, Q, batch_size)
+        * 14.3996451
+    )
+    # print("passed einsum op")
     # print(E.shape)
-    #print("-")
-    #print("Elist: {}".format(E_list))
+    # print("-")
+    # print("Elist: {}".format(E_list))
     return E_list
 
 
@@ -322,30 +370,6 @@ def calculate_electric_field_gpu_torch(x_0, x, Q, device="cuda", filter=True):
     E = torch.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
     # now combine all of the above operations into one
     return E.cpu().numpy()
-
-
-"""
-def calculate_electric_field_cupy(x_0, x, Q):
-    #Computes electric field at a point given positions of charges
-    #Takes
-    #    x_0(array) - position to compute field at of shape (N,3)
-    #    x(array) - positions of charges of shape (N,3)
-    #    Q(array) - magnitude and sign of charges of shape (N,1)
-    #Returns
-    #    E(array) - electric field at the point of shape (1,3)
-    
-    x_0 = torch.tensor(x_0)
-    x = torch.tensor(x)
-    Q = torch.tensor(Q)
-
-    R = x_0 - x
-    R_sq = R**2
-    r_mag_sq = cp.einsum("ij->i", R_sq).reshape(-1, 1)
-    r_mag_cube = power(r_mag_sq, 3 / 2)
-    E = cp.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
-    # now combine all of the above operations into one
-    return E.cpu().numpy()
-"""
 
 
 def calculate_electric_field_cupy(x_0, x, Q):
@@ -393,14 +417,15 @@ def compute_field_on_grid(grid_coords, x, Q):
         R_sq = R**2
         r_mag_sq = np.einsum("ij->i", R_sq).reshape(-1, 1)
         r_mag_cube = 1 / np.power(r_mag_sq, 3 / 2)
-        # compute field using einsum 
+        # compute field using einsum
         E[i] = np.einsum("ij,ij,ij->j", R, r_mag_cube, Q) * 14.3996451
         # compute without einsum
-        #E[i] = np.sum(R * r_mag_cube * Q, axis=0) * 14.3996451
+        # E[i] = np.sum(R * r_mag_cube * Q, axis=0) * 14.3996451
 
     point_field_concat = np.concatenate((reshaped_meshgrid, E), axis=1)
 
     return point_field_concat.astype(np.half)
+
 
 def compute_ESP_on_grid(grid_coords, x, Q):
     """
@@ -416,19 +441,20 @@ def compute_ESP_on_grid(grid_coords, x, Q):
     # Reshape meshgrid to a 2D array of shape (M*M*M, 3)
     reshaped_meshgrid = grid_coords.reshape(-1, 3)
     # Initialize an array to hold the electric field values
-    ESP = np.zeros((reshaped_meshgrid.shape[0],1), dtype=float)
+    ESP = np.zeros((reshaped_meshgrid.shape[0], 1), dtype=float)
     print(ESP.shape)
 
     # Calculate the electric field at each point in the meshgrid
     for i, x_0 in enumerate(reshaped_meshgrid):
         # Create matrix R
         R = nb_subtract(x_0, x)
-        r_mag = np.sqrt(np.einsum("ij,ij->i", R, R)).reshape(-1, 1) #Has shape (N,1)
+        r_mag = np.sqrt(np.einsum("ij,ij->i", R, R)).reshape(-1, 1)  # Has shape (N,1)
         ESP[i] = np.sum(Q / r_mag) * 14.3996451
 
     point_ESP_concat = np.concatenate((reshaped_meshgrid, ESP), axis=1)
 
     return point_ESP_concat.astype(np.half)
+
 
 def calculate_field_at_point(x, Q, x_0=np.array([0, 0, 0])):
     """
@@ -462,11 +488,19 @@ def curv(v_prime, v_prime_prime, eps=10e-6):
     Returns
         curvature(float) - the curvature
     """
-    curvature = np.linalg.norm(np.cross(v_prime, v_prime_prime)) / (
-        eps + (np.linalg.norm(v_prime) ** 3)
-    )
-    return curvature
-
+    #if np.linalg.norm(v_prime) ** 3 < eps:
+    #    denominator = eps
+    #else:
+    #    denominator = np.linalg.norm(v_prime) ** 3
+    
+    denominator = np.linalg.norm(v_prime, axis=0) ** 3
+    curvature = np.linalg.norm(np.cross(v_prime, v_prime_prime), axis=0) 
+    
+    if denominator == 0: 
+        return curvature / eps
+    else:
+        return curvature / denominator
+    
 
 def curv_dev(v_prime, v_prime_prime):
     """
@@ -504,32 +538,7 @@ def compute_curv_and_dist(
     curv_init = curv(x_init_plus - x_init, x_init_plus_plus - 2 * x_init_plus + x_init)
     curv_final = curv(x_0_plus - x_0, x_0_plus_plus - 2 * x_0_plus + x_0)
     curv_mean = (curv_init + curv_final) / 2
-    dist = np.linalg.norm(x_init - x_0)
-    return [dist, curv_mean]
-
-
-def compute_curv_and_dist_dev(
-    x_init, x_init_plus, x_init_plus_plus, x_0, x_0_plus, x_0_plus_plus
-):
-    """
-    Computes mean curvature at beginning and end of streamline and the Euclidian distance between beginning and end of streamline
-    Takes
-        x_init(array) - initial point of streamline of shape (1,3)
-        x_init_plus(array) - initial point of streamline with one propagation of shape (1,3)
-        x_init_plus_plus(array) - initial point of streamline with two propagations of shape (1,3)
-        x_0(array) - final point of streamline of shape (1,3)
-        x_0_plus(array) - final point of streamline with one propagation of shape (1,3)
-        x_0_plus_plus(array) - final point of streamline with two propagations of shape (1,3)
-    Returns
-        dist(float) - Euclidian distance between beginning and end of streamline
-        curv_mean(float) - mean curvature between beginning and end of streamline
-    """
-    curv_init = curv_dev(
-        x_init_plus - x_init, x_init_plus_plus - 2 * x_init_plus + x_init
-    )
-    curv_final = curv_dev(x_0_plus - x_0, x_0_plus_plus - 2 * x_0_plus + x_0)
-    curv_mean = (curv_init + curv_final) / 2
-    dist = nb_norm(x_init - x_0)
+    dist = np.linalg.norm(x_init - x_0, axis=-1)
     return [dist, curv_mean]
 
 
@@ -542,7 +551,7 @@ def Inside_Box(local_point, dimensions):
     Returns
         is_inside(bool) - whether the point is inside the box
     """
-    #print("inside box")
+    # print("inside box")
     # Convert lists to numpy arrays
     half_length, half_width, half_height = dimensions
     # Check if the point lies within the dimensions of the box
@@ -559,14 +568,15 @@ def distance_numpy(hist1, hist2):
     b = hist1 + hist2
     return np.sum(np.divide(a, b, out=np.zeros_like(a), where=b != 0)) / 2.0
 
+
 def make_histograms(topo_files, plot=False):
     histograms = []
 
-    #Calculate reasonable maximum distances and curvatures
+    # Calculate reasonable maximum distances and curvatures
     dist_list = []
     curv_list = []
     for topo_file in topo_files:
-        curvatures, distances = [],[]
+        curvatures, distances = [], []
         print(topo_file)
         with open(topo_file) as topology_data:
             for line in topology_data:
@@ -576,25 +586,27 @@ def make_histograms(topo_files, plot=False):
                 line = line.split()
                 distances.append(float(line[0]))
                 curvatures.append(float(line[1]))
-        #print(max(distances),max(curvatures))
+        # print(max(distances),max(curvatures))
         dist_list.extend(distances)
         curv_list.extend(curvatures)
-    print(len(dist_list))
-    print(len(curv_list))
-
-    #Do 95th percentiles instead to take care of extreme cases for curvature
+    
+    # Do 95th percentiles instead to take care of extreme cases for curvature
     max_distance = max(dist_list)
-    #max_distance = np.percentile(dist_list, 95)
+    min_distance = min(dist_list)
     max_curvature = max(curv_list)
-    #max_curvature = np.percentile(curv_list, 98)
+    min_curvature = min(curv_list)
+
+    # max_curvature = np.percentile(curv_list, 98)
     print(f"Max distance: {max_distance}")
+    print(f"Min distance: {min_distance}")
     print(f"Max curvature: {max_curvature}")
-    #Need 0.02A resolution for max_distance
+    print(f"Min curvature: {min_curvature}")
+    # Need 0.02A resolution for max_distance
     max_distance_nbins = int(max_distance / 0.02)
-    #Need 0.02A resolution for max_curvature
+    # Need 0.02A resolution for max_curvature
     max_curvature_nbins = int(max_curvature / 0.02)
 
-    #Make histograms
+    # Make histograms
     for topo_file in topo_files:
         curvatures, distances = [], []
 
@@ -612,7 +624,7 @@ def make_histograms(topo_files, plot=False):
         a, b, c, q = plt.hist2d(
             distances,
             curvatures,
-            bins=(max_distance_nbins, max_curvature_nbins) ,  
+            bins=(max_distance_nbins, max_curvature_nbins),
             range=[[0, max_distance], [0, max_curvature]],
             norm=matplotlib.colors.LogNorm(),
             density=True,
@@ -635,6 +647,7 @@ def make_histograms(topo_files, plot=False):
 
     return np.array(histograms)
 
+
 def make_fields(field_files):
     fields = []
     for field_file in field_files:
@@ -648,6 +661,7 @@ def make_fields(field_files):
         fields.append(np.array(field))
     return fields
 
+
 def construct_distance_matrix(histograms):
     matrix = np.diag(np.zeros(len(histograms)))
     for i, hist1 in enumerate(histograms):
@@ -657,20 +671,22 @@ def construct_distance_matrix(histograms):
             matrix[j][i] = matrix[i][j]
     return matrix
 
+
 def construct_distance_matrix_alt(histograms):
     flattened_hists = [hist.flatten() for hist in histograms]
     np.save("flattened_hists.npy", flattened_hists)
     scaler = StandardScaler()
     flattened_hists_scaled = scaler.fit_transform(flattened_hists)
-    matrix = squareform(pdist(flattened_hists_scaled, 'euclidean'))
+    matrix = squareform(pdist(flattened_hists_scaled, "euclidean"))
     return matrix
+
 
 def construct_distance_matrix_alt2(histograms):
     new_histograms = []
     for h in histograms:
         h_copy = np.copy(h)  # Make a copy of the histogram
-        h_copy[h_copy < 0.001] = 0  # Set values less than 0.001 to zero in the 
-        h_copy = h_copy/np.sum(h_copy)  # Normalize the histogram
+        h_copy[h_copy < 0.001] = 0  # Set values less than 0.001 to zero in the
+        h_copy = h_copy / np.sum(h_copy)  # Normalize the histogram
         new_histograms.append(h_copy)  # Append the modified copy to the new list
     matrix = np.diag(np.zeros(len(new_histograms)))
     for i, hist1 in enumerate(new_histograms):
@@ -680,14 +696,15 @@ def construct_distance_matrix_alt2(histograms):
             matrix[j][i] = matrix[i][j]
     return matrix
 
+
 def construct_distance_matrix_volume(fields):
-    '''
+    """
     Computes the distance matrix between vector fields using the cosine similarity
     Takes
         fields(list of arrays) - vector fields of shape (N,3)
     Returns
         matrix(array) - distance matrix between vector fields
-    '''
+    """
     matrix = np.diag(np.zeros(len(fields)))
     for i, field1 in enumerate(fields):
         for j, field2 in enumerate(fields[i + 1 :]):
@@ -700,7 +717,3 @@ def construct_distance_matrix_volume(fields):
             matrix[i][j] = np.mean(cosine_similarity)
             matrix[j][i] = matrix[i][j]
     return matrix
-
-
-
-
