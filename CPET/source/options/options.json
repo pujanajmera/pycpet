@@ -34,7 +34,7 @@
         ],
         "step_size": 0.01,
         "batch_size": 100,
-        "concur_slip": 12,
+        "concur_slip": 14,
         "filter_resname": [
                 {
                         "126": "RU"

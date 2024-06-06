@@ -67,7 +67,6 @@ def propagate_topo_dev_batch(x_0_list, x, Q, step_size, mask_list=None):
     Returns
         x_0 - new position on streamline after propagation via electric field
     """
-    epsilon = 1
 
     if mask_list is None:
         E_full = calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q)

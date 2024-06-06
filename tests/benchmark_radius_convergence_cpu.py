@@ -37,12 +37,12 @@ def main():
                 continue
             topo = calculator(options, path_to_pdb = file)
             #print("center: {}".format(topo.center))
-            ret = topo.compute_topo_GPU_batch_filter_alt()
+            #ret = topo.compute_topo_GPU_batch_filter_alt()
             #ret = topo.compute_topo_GPU_batch_filter()
             
             #ret = topo.compute_topo_batched()
             #ret = topo.compute_topo()
-            #ret = topo.compute_topo_complete_c_shared()
+            ret = topo.compute_topo_complete_c_shared()
             np.savetxt(filestring, ret)
             topo_file_list.append(filestring)
     

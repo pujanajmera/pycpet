@@ -98,11 +98,8 @@ void norm(float *u, float *norm_val)
 double euclidean_dist(float* x_0, float* x_1){
     float sum = 0;
     for(int i = 0; i < 3; i++){
-        sum += pow(abs(x_0[i] - x_1[i]), 2);
+        sum += pow(fabsf(x_0[i] - x_1[i]), 2);
     }
-    //printf("u %f %f %f\n", x_0[0], x_0[1], x_0[2]);
-    //printf("v %f %f %f\n", x_1[0], x_1[1], x_1[2]);
-    //printf("euclidean dist %f\n", sqrt(sum));
     return sqrt(sum);
 }
 
@@ -298,14 +295,48 @@ void calc_field(float E[3], float x_init[3], int n_charges, float x[n_charges][3
 
 }
 
+void calc_field_base(float E[3], float x_init[3], int n_charges, float x[n_charges][3], float Q[n_charges]){
+    // calculate the field
+
+    // subtract x_init from x
+    float R[n_charges][3];
+    float r_mag[n_charges];
+    float r_sq[n_charges][3];
+    float r_mag_sq[n_charges];
+    float factor = 14.3996451;
+    float r_norm[n_charges];
+    
+    //# pragma omp parallel for
+    
+    # pragma omp parallel for
+    for (int i = 0; i < n_charges; i++)
+    {
+        R[i][0] = x[i][0] - x_init[0];
+        R[i][1] = x[i][1] - x_init[1];
+        R[i][2] = x[i][2] - x_init[2];
+        r_norm[i] = sqrt(pow(R[i][0], 2) + pow(R[i][1], 2) + pow(R[i][2], 2));
+        r_mag[i] = pow(r_norm[i], -3);
+
+        E[0] += factor * r_mag[i] * Q[i] * R[i][0];
+        E[1] += factor * r_mag[i] * Q[i] * R[i][1];
+        E[2] += factor * r_mag[i] * Q[i] * R[i][2];
+
+    }
+
+
+
+}
+
 
 void propagate_topo(float result[3], float x_init[3], int n_charges, float x[n_charges][3], float Q[n_charges], float step_size){
     // propagate the topology
-    float E[3];
+    float E[3] = {0.0, 0.0, 0.0};
     float E_norm;
     //printf("propagating!!");
 
-    calc_field(E, x_init, n_charges, x, Q);
+    //calc_field(E, x_init, n_charges, x, Q);
+    calc_field_base(E, x_init, n_charges, x, Q);
+    
     norm(E, &E_norm);
     for (int i = 0; i < 3; i++)
     {
@@ -376,8 +407,8 @@ void thread_operation(int n_charges, int n_iter, float step_size, float x_0[3], 
     float curve_init = curve(curve_arg_1, curve_arg_2);
     float curve_final = curve(curve_arg_3, curve_arg_4);
     float curve_mean = (curve_init + curve_final) / 2;
-    float dist = euclidean_dist(x_init, x_overwrite);
-
+    float dist = euclidean_dist(x_0, x_overwrite);
+    
 
     ret[0] = dist;
     ret[1] = curve_mean;

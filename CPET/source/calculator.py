@@ -351,8 +351,8 @@ class calculator:
         print(f"Step size: {self.step_size}")
         start_time = time.time()
         # print("starting pooling")
-        print("random start points")
-        print(self.random_max_samples)
+        #print("random start points")
+        #print(self.random_max_samples)
         with Pool(self.concur_slip) as pool:
             args = [
                 (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
@@ -394,8 +394,14 @@ class calculator:
                 )
             ]
             raw = pool.starmap(task_batch, args)
-            hist = np.array(raw).reshape(self.n_samples, 2)
-            hist = np.column_stack((hist[:, 0], hist[:, 1]))
+            raw_flat = [item for sublist in raw for item in sublist]
+            dist = []
+            curve = []
+            for result in raw_flat:
+                dist.append(result[0])
+                curve.append(result[1])
+            hist = np.column_stack((dist, curve)) 
+            
 
         end_time = time.time()
         # self.hist = hist
