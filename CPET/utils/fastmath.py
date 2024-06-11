@@ -26,7 +26,7 @@ def power(a, b):
 
 
 @nb.njit
-def nb_subtract(a, b): # this throws warning in some numpy versions
+def nb_subtract(a, b):  # this throws warning in some numpy versions
     """
     Computes subtraction
     Takes
@@ -55,6 +55,7 @@ def nb_cross(a, b):
         np.cross(a,b) - cross product between a and b - jitted!
     """
     return np.cross(a, b)
+
 
 @nb.njit(parallel=True)
 def custom_norm_3d(data):

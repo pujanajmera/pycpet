@@ -1,9 +1,11 @@
 {
-        "CPET_method": "topo",
+        "CPET_method": "woohoo",
         "inputpath": "/jet/home/ajmera/che230029p/PyCPET/tests/test_benchmarking/pdb",
         "outputpath": "/jet/home/ajmera/che230029p/PyCPET/tests/test_benchmarking/cpet",
         "GPU_batch_freq": 100,
-        "profile": true,
+        "profile": false,
+        "initializer": "uniform",
+        "dtype": "float32",
         "center": {
                 "method": "first",
                 "atoms": {
@@ -24,20 +26,21 @@
                         "CB": 3
                 }
         },
-        "n_samples": 1000,
+        "n_samples": 10000,
         "dimensions": [
-                1.5,
-                1.5,
-                1.5
+                2.0,
+                2.0,
+                2.0
         ],
         "step_size": 0.01,
-	"batch_size": 10,
-        "concur_slip": 32,
+        "batch_size": 100,
+        "concur_slip": 14,
         "filter_resname": [
-
-                {"126": "RU"}
+                {
+                        "126": "RU"
+                }
         ],
-	"_filter_radius": 30,
+        "_filter_radius": 10.0,
         "cluster_method": "kmeds",
         "benchmark": {
                 "threshold": 0.1,

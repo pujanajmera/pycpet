@@ -53,7 +53,7 @@ class Test_topos:
             "center": [104.785, 113.388, 117.966],
             "x": [105.785, 113.388, 117.966],
             "y": [104.785, 114.388, 117.966],
-            "n_samples": 100000,
+            "n_samples": 100,
             "dimensions": [1.5, 1.5, 1.5],
             "step_size": 0.01,
             "batch_size": 10,
@@ -64,22 +64,21 @@ class Test_topos:
         }
         self.topo = Topo_calc(self.options)
 
-        #profiler = Profiler()
-        #profiler.start()
         ret = self.topo.compute_topo()
-        #profiler.stop()
-        #profiler.print()
-
         self.dist_c = ret[0] 
         self.curve_c = ret[1]
 
-        #ret2 = self.topo.compute_topo_batched()
-        #self.dist_batched = ret2[0]
-        #self.curve_batched = ret2[1]
+        ret2 = self.topo.compute_topo_batched()
+        self.dist_batched = ret2[0]
+        self.curve_batched = ret2[1]
 
-        #ret3 = self.topo.compute_topo_base()
-        #self.dist_base= ret3[0]
-        #self.curve_base = ret3[1]
+        ret3 = self.topo.compute_topo_base()
+        self.dist_base= ret3[0]
+        self.curve_base = ret3[1]
+
+        ret4 = self.topo.compute_topo_complete_c_shared()
+        self.dist_cshared = ret4[0]
+        self.curve_cshared = ret4[1]
 
     def test_topo_batch(self): 
         hist = mean_and_curve_to_hist(self.dist_c, self.curve_c)

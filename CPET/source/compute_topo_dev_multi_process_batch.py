@@ -1,8 +1,8 @@
 import numpy as np
 from CPET.source.calculator import calculator
 import warnings
-warnings.filterwarnings(action='ignore')
 
+warnings.filterwarnings(action="ignore")
 
 
 def main():
@@ -12,13 +12,13 @@ def main():
         "x": [105.785, 113.388, 117.966],
         "y": [104.785, 114.388, 117.966],
         "n_samples": 1000,
-        #"filter_resids": ["HEM"],
+        # "filter_resids": ["HEM"],
         "batch_size": 100,
         "dimensions": [1.5, 1.5, 1.5],
         "step_size": 0.01,
         "concur_slip": 10,
         "filter_radius": 50.0,
-        "filter_in_box": True, 
+        "filter_in_box": True,
     }
 
     topo = calculator(options)

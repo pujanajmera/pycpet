@@ -1,5 +1,34 @@
 import numpy as np
 
+def default_options_initializer(options): 
+    """
+        Initializes default options for CPET after checking if they are present in the options dictionary
+        Takes
+            options(dict) - dictionary of options
+        Returns
+            options(dict) - dictionary of options with default values
+    """
+    
+    if "concur_slip" not in options.keys():
+        options["concur_slip"] = 4
+
+    if "dtype" not in options.keys():
+        options["dtype"] = "float32"
+
+    if "GPU_batch_freq" not in options.keys():
+        options["GPU_batch_freq"] = 100
+
+    if "step_size" not in options.keys():
+        options["step_size"] = 0.1
+
+    if "n_samples" not in options.keys():
+        options["n_samples"] = 10000
+
+    if "profile" not in options.keys():
+        options["profile"] = False
+
+    return options
+
 def initialize_box_points(center, x, y, dimensions, n_samples, step_size):
     """
     Initializes random points in box centered at the origin
@@ -49,13 +78,13 @@ def filter_radius(x, Q, center, radius=2.0):
     # Filter out points that are inside the box
     x_recentered = x - center
     r = np.linalg.norm(x_recentered, axis=1)
-    #print("radius filtering {}".format(radius))
+    # print("radius filtering {}".format(radius))
     mask = r < radius
     # remove masked points
     x_filtered = x[mask]
     Q_filtered = Q[mask]
     print("radius filter leaves: {}".format(len(Q_filtered)))
-    #print(np.linalg.norm(x_filtered, axis=1))
+    # print(np.linalg.norm(x_filtered, axis=1))
     return x_filtered, Q_filtered
 
 
@@ -63,65 +92,74 @@ def filter_residue(x, Q, resids, filter_list):
     # Filter out points that are inside the box
     x = x
     filter_inds = []
-    for resid in resids: 
+    for resid in resids:
         if resid in filter_list:
             filter_inds.append(False)
-        else: 
+        else:
             filter_inds.append(True)
     x_filtered = x[filter_inds]
     Q_filtered = Q[filter_inds]
 
     return x_filtered, Q_filtered
+
 
 def filter_resnum(x, Q, resnums, filter_list):
     # Filter out points that are inside the box
     x = x
     filter_inds = []
-    for resnum in resnums: 
+    for resnum in resnums:
         if resnum in filter_list:
             filter_inds.append(False)
-        else: 
+        else:
             filter_inds.append(True)
     x_filtered = x[filter_inds]
     Q_filtered = Q[filter_inds]
 
     return x_filtered, Q_filtered
+
 
 def filter_resnum_andname(x, Q, resnums, resnames, filter_list):
     # Filter out points that are inside the box
     x = x
     filter_inds = []
-    for i in range(len(resnums)): 
+    for i in range(len(resnums)):
         if {str(resnums[i]): resnames[i]} in filter_list:
             filter_inds.append(False)
-        else: 
+        else:
             filter_inds.append(True)
     x_filtered = x[filter_inds]
     Q_filtered = Q[filter_inds]
 
     return x_filtered, Q_filtered
 
-def filter_in_box(x, Q, center, dimensions): 
+
+def filter_in_box(x, Q, center, dimensions):
     x_recentered = x - center
     print("Filtering Charges in Sampling Box")
     # Filter out points that are inside the box
     limits = {
         "x": [-dimensions[0], dimensions[0]],
         "y": [-dimensions[1], dimensions[1]],
-        "z": [-dimensions[2], dimensions[2]]
+        "z": [-dimensions[2], dimensions[2]],
     }
-    #print("box dimensions: {}".format(limits))
-    #print(x.shape)
-    mask_x = (x_recentered[:, 0] > limits["x"][0]) & (x_recentered[:, 0] < limits["x"][1]) 
-    mask_y = (x_recentered[:, 1] > limits["y"][0]) & (x_recentered[:, 1] < limits["y"][1]) 
-    mask_z = (x_recentered[:, 2] > limits["z"][0]) & (x_recentered[:, 2] < limits["z"][1])
-    
+    # print("box dimensions: {}".format(limits))
+    # print(x.shape)
+    mask_x = (x_recentered[:, 0] > limits["x"][0]) & (
+        x_recentered[:, 0] < limits["x"][1]
+    )
+    mask_y = (x_recentered[:, 1] > limits["y"][0]) & (
+        x_recentered[:, 1] < limits["y"][1]
+    )
+    mask_z = (x_recentered[:, 2] > limits["z"][0]) & (
+        x_recentered[:, 2] < limits["z"][1]
+    )
+
     mask = mask_x & mask_y & mask_z
 
     # only keep points that are outside the box
     x_filtered = x[~mask]
     Q_filtered = Q[~mask]
-    #print("masked points: {}".format(len(mask)))
+    # print("masked points: {}".format(len(mask)))
     return x_filtered, Q_filtered
 
 
@@ -142,8 +180,8 @@ def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
     Parses pqr file to obtain charges and positions of charges (beta, removes charges that are 0)
     Takes
         path_to_pqr(str) - path to pqr file
-        ret_atom_names(bool) - whether to return atom names 
-        ret_residue_names(bool) - whether to return residue names 
+        ret_atom_names(bool) - whether to return atom names
+        ret_residue_names(bool) - whether to return residue names
     Returns
         np.array(x)(array) - coordinates of charges of shape (N,3)
         np.array(Q).reshape(-1,1) - magnitude and sign of charges of shape (N,1)
@@ -173,7 +211,7 @@ def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
                     ret_atom_num.append(int(line.split()[1]))
 
             if ret_residue_names:
-                if split_tf: 
+                if split_tf:
                     res_name.append(line.split()[2])
                 else:
                     res_name.append(line.split()[3])
@@ -223,15 +261,15 @@ def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
     if ret_atom_names:
         return np.array(x), np.array(Q).reshape(-1, 1), ret_atom_num
 
-    if ret_residue_names: 
+    if ret_residue_names:
         return np.array(x), np.array(Q).reshape(-1, 1), res_name
 
     return np.array(x), np.array(Q).reshape(-1, 1)
 
 
-def parse_pdb(pdb_file_path, get_charges=False):
+def parse_pdb(pdb_file_path, get_charges=False, float32=True):
     """
-    Takes: 
+    Takes:
         pdb_file_path(str) - path to pdb file
         get_charges(bool) - whether to parse/return charges
 
@@ -239,14 +277,18 @@ def parse_pdb(pdb_file_path, get_charges=False):
         atom_info(list of tuples) - containing information about each atom in the pdb file
     """
 
-    xyz = [] 
+    xyz = []
     Q = []
     atom_number = []
-    residue_name = [] 
+    residue_name = []
     residue_number = []
     atom_type = []
+    if float32:
+        dtype = "float32"
+    else:
+        dtype = "float64"
 
-    with open(pdb_file_path, 'r') as file:
+    with open(pdb_file_path, "r") as file:
         for line in file:
             if line.startswith("ATOM") or line.startswith("HETATM"):
                 atom_number_line = int(line[6:11].strip())
@@ -256,8 +298,7 @@ def parse_pdb(pdb_file_path, get_charges=False):
                 x = float(line[30:38].strip())
                 y = float(line[38:46].strip())
                 z = float(line[46:54].strip())
-                #atom_info.append((atom_number, atom_type, residue_name, residue_number, x, y, z))
-                
+                # atom_info.append((atom_number, atom_type, residue_name, residue_number, x, y, z))
 
                 xyz.append([x, y, z])
                 atom_number.append(atom_number_line)
@@ -267,9 +308,23 @@ def parse_pdb(pdb_file_path, get_charges=False):
 
                 if get_charges:
                     Q.append(float(line[55:64].strip()))
+
     if get_charges:
-        return np.array(xyz), np.array(Q).reshape(-1, 1), np.array(atom_number), np.array(residue_name), np.array(residue_number), np.array(atom_type)
-    return np.array(xyz), np.array(atom_number), np.array(residue_name), np.array(residue_number), np.array(atom_type)
+        return (
+            np.array(xyz, dtype=dtype),
+            np.array(Q, dtype=dtype).reshape(-1, 1),
+            np.array(atom_number, dtype=dtype),
+            np.array(residue_name),
+            np.array(residue_number),
+            np.array(atom_type),
+        )
+    return (
+        np.array(xyz, dtype=dtype),
+        np.array(atom_number, dtype=dtype),
+        np.array(residue_name),
+        np.array(residue_number),
+        np.array(atom_type),
+    )
 
 
 def calculate_center(coordinates, method):
@@ -281,7 +336,7 @@ def calculate_center(coordinates, method):
     Returns:
         np.array(center) - center of the atoms
     """
-    
+
     if method == "mean":
         return np.mean(coordinates, axis=0)
     elif method == "first":
