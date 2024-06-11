@@ -58,7 +58,7 @@ def propagate_topo_matrix_gpu_alt(
     x: torch.Tensor,
     Q: torch.Tensor,
     step_size: torch.Tensor,
-    dtype_str: str,
+    dtype_str: str
 ) -> torch.Tensor:
     """
     Propagates position based on normalized electric field at a given point
@@ -107,7 +107,7 @@ def propagate_topo_matrix_gpu_alt(
     path_matrix[i + 1] = path_matrix_prior + step_size * E / torch.norm(
         E, dim=-1, keepdim=True
     )
-
+    
     return path_matrix
 
 

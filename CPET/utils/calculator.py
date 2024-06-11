@@ -225,6 +225,7 @@ def calculate_electric_field(x_0, x, Q):
     E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
     return E
 
+
 def calculate_electric_field_base(x_0, x, Q):
     """
     Computes electric field at a point given positions of charges
@@ -280,25 +281,52 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q):
     # Create matrix R
     # print("subtract")
 
-    R = nb_subtract(x_0, x)
+    R = nb_subtract(x_0, x) # right
 
-    R_sq = R**2
-    # r_mag_sq = np.einsum("ij->i", R_sq).reshape(-1, 1)
-    # print("rsq shape: {}".format(R_sq.shape))
-    # print(R_sq.dtype)
-    # print("einsum 1")
-    # convert to float32
+    R_sq = R**2 # right
     R_sq = R_sq.astype(np.float32)
     r_mag_sq = Math.einsum_ij_i(R_sq).reshape(-1, 1)
-    # print("rmag sq size: {}".format(r_mag_sq.shape))
-    # print("power op")
-    r_mag_cube = np.power(r_mag_sq, 3 / 2)
-    # print("einsum 2")
-    # R = R.astype(np.float32)
-    E = Math.einsum_operation(R, 1 / r_mag_cube, Q) * 14.3996451
+    r_mag_cube = np.power(r_mag_sq, -3 / 2)
+    E = Math.einsum_operation(R, r_mag_cube, Q)
     # print(E.shape)
     # print("-")
     # print("end efield calc")
+    return E
+
+
+def calculate_electric_field_c_shared_full(x_0, x, Q):
+    """
+    Computes electric field at a point given positions of charges
+    Takes
+        x_0(array) - position to compute field at of shape (1,3)
+        x(array) - positions of charges of shape (N,3)
+        Q(array) - magnitude and sign of charges of shape (N,1)
+    Returns
+        E(array) - electric field at the point of shape (1,3)
+    """
+    E = Math.calc_field_base(
+        x_0=x_0, 
+        x=x, 
+        Q=Q
+    )
+    return E
+
+
+def calculate_electric_field_c_shared_full_alt(x_0, x, Q):
+    """
+    Computes electric field at a point given positions of charges
+    Takes
+        x_0(array) - position to compute field at of shape (1,3)
+        x(array) - positions of charges of shape (N,3)
+        Q(array) - magnitude and sign of charges of shape (N,1)
+    Returns
+        E(array) - electric field at the point of shape (1,3)
+    """
+    E = Math.calc_field(
+        x_0=x_0, 
+        x=x, 
+        Q=Q
+    )
     return E
 
 
@@ -364,33 +392,14 @@ def calculate_electric_field_gpu_torch(x_0, x, Q, device="cuda", filter=True):
     Q = torch.tensor(Q, dtype=torch.float32, device=device)
 
     R = x_0 - x
-    R_sq = R**2
-    r_mag_sq = torch.einsum("ij->i", R_sq).reshape(-1, 1)
-    r_mag_cube = power(r_mag_sq, 3 / 2)
-    E = torch.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
+    #R_sq = R**2
+    r_mag_cube = torch.norm(R, dim=-1, keepdim=True).pow(-3)
+    #print("r dim: {}".format(R.shape))
+    #print("r mag cube: {}".format(r_mag_cube.shape))
+    #print("Q shape: {}".format(Q.shape))
+    E = (R * r_mag_cube * Q).sum(dim=0) * 14.3996451
     # now combine all of the above operations into one
     return E.cpu().numpy()
-
-
-def calculate_electric_field_cupy(x_0, x, Q):
-    """
-    Computes electric field at a point given positions of charges
-    Takes
-        x_0(array) - position to compute field at of shape (N,3)
-        x(array) - positions of charges of shape (N,3)
-        Q(array) - magnitude and sign of charges of shape (N,1)
-    Returns
-        E(array) - electric field at the point of shape (1,3)
-    """
-    x_0 = cp.array(x_0)
-    x = cp.array(x)
-    Q = cp.array(Q)
-    R = x_0 - x
-    R_sq = R**2
-    r_mag_sq = cp.einsum("ij->i", R_sq).reshape(-1, 1)
-    r_mag_cube = r_mag_sq ** (3 / 2)
-    E = cp.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
-    return cp.asnumpy(E)
 
 
 def compute_field_on_grid(grid_coords, x, Q):
@@ -465,7 +474,7 @@ def calculate_field_at_point(x, Q, x_0=np.array([0, 0, 0])):
         Q(array): Magnitude and sign of charges of shape (N, 1).
         point(array): Point at which to calculate the field of shape (1, 3).
     Returns:
-        E(array): Electric field at each point in the meshgrid of shape (M, M, M, 3).
+        E(array): Electric field at each point in the meshgrid of shape (1, 3).
     """
 
     # Initialize an array to hold the electric field values

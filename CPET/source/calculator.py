@@ -26,23 +26,24 @@ from CPET.utils.parser import (
     calculate_center,
     filter_resnum,
     filter_resnum_andname,
+    default_options_initializer
 )
 from CPET.utils.gpu import (
-    compute_curv_and_dist_mat_gpu,
     propagate_topo_matrix_gpu,
+    compute_curv_and_dist_mat_gpu,
     batched_filter_gpu,
     initialize_streamline_grid_gpu,
     batched_filter_gpu_end,
 )
 from CPET.utils.gridcpu import (
-    compute_curv_and_dist_mat_gridcpu,
     propagate_topo_matrix_gridcpu,
+    compute_curv_and_dist_mat_gridcpu,
     batched_filter_gridcpu,
     initialize_streamline_grid_gridcpu,
 )
 from CPET.utils.gpu_alt import (
-    compute_curv_and_dist_mat_gpu_alt,
     propagate_topo_matrix_gpu_alt,
+    compute_curv_and_dist_mat_gpu_alt,
     batched_filter_gpu_alt,
     batched_filter_gpu_end_alt,
     initialize_streamline_grid_gpu_alt,
@@ -52,24 +53,17 @@ from CPET.utils.gpu_alt import (
 class calculator:
     def __init__(self, options, path_to_pdb=None):
         # self.efield_calc = calculator(math_loc=math_loc)
-        self.options = options
-        self.dimensions = np.array(options["dimensions"])
-        self.step_size = options["step_size"]
-        self.n_samples = options["n_samples"]
-        self.concur_slip = options["concur_slip"]
+        self.options = default_options_initializer(options)
+        
         self.profile = options["profile"]
         self.path_to_pdb = path_to_pdb
-
-        if "GPU_batch_freq" in options.keys():
-            self.GPU_batch_freq = options["GPU_batch_freq"]
-        else:
-            self.GPU_batch_freq = 100
-
-        if "dtype" in options.keys():
-            self.dtype = options["dtype"]
-        else:
-            self.dtype = "float32"
-
+        self.step_size = options["step_size"]
+        self.n_samples = options["n_samples"]
+        self.dimensions = np.array(options["dimensions"])
+        self.concur_slip = options["concur_slip"]
+        self.GPU_batch_freq = options["GPU_batch_freq"]
+        self.dtype = options["dtype"]
+        
         (
             self.x,
             self.Q,
@@ -144,7 +138,7 @@ class calculator:
         else:
             raise ValueError("y must be a list or dict")
 
-        print(len(self.Q))
+        
         if "filter_resids" in options.keys():
             # print("filtering residues: {}".format(options["filter_resids"]))
             self.x, self.Q = filter_residue(
@@ -194,6 +188,7 @@ class calculator:
                     x=self.x, Q=self.Q, center=self.center, dimensions=self.dimensions
                 )
 
+        assert "CPET_method" in options.keys(), "CPET_method must be specified"
 
         if (
             options["CPET_method"] == "volume" or options["CPET_method"] == "volume_ESP"
@@ -209,7 +204,7 @@ class calculator:
 
         # self.transformation_matrix and self.uniform_transformation_matrix are the same
         max_steps = round(2 * np.linalg.norm(self.dimensions) / self.step_size)
-        print("max steps: ", max_steps)
+        #print("max steps: ", max_steps)
         if (
             options["initializer"] == "random"
         ):            
