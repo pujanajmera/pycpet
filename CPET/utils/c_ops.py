@@ -94,6 +94,25 @@ class Math_ops:
             self.array_1d_float,
         ]
 
+        self.math.calc_field.restype = None
+        self.math.calc_field.argtypes = [
+            self.array_1d_float,
+            self.array_1d_float,
+            ctypes.c_int,
+            self.array_2d_float,
+            self.array_1d_float,
+        ]
+
+        self.math.calc_field_base.restype = None
+        self.math.calc_field_base.argtypes = [
+            self.array_1d_float,
+            self.array_1d_float,
+            ctypes.c_int,
+            self.array_2d_float,
+            self.array_1d_float,
+        ]
+
+
     def sparse_dot(self, A, B):
         # b is just a single vector, not a sparse matrix
         # a is a full sparse matrix
@@ -183,6 +202,7 @@ class Math_ops:
         )
         return res
 
+
     def thread_operation(self, x_0, n_iter, x, Q, step_size, dimensions):
         """
         Takes:
@@ -204,4 +224,54 @@ class Math_ops:
         )
         # print(res)
 
+        return res
+
+
+    def calc_field_base(self, x_0, x, Q):
+        """
+        Takes:
+            x_0(array) - (3, 1) array of box position
+            x(np array) - positions of charges
+            Q(np array) - charge values
+        Returns:
+            res(array) - (3, 1) array of electric field
+        """
+        res = np.zeros(3, dtype="float32")
+        #self.math.efield.restype = None
+        #Q = Q.reshape(-1)
+
+
+        self.math.calc_field_base(
+            res, 
+            x_0,
+            len(Q),
+            x, 
+            Q.reshape(len(Q))
+        )
+        
+        return res
+    
+
+    def calc_field(self, x_0, x, Q):
+        """
+        Takes:
+            x_0(array) - (3, 1) array of box position
+            x(np array) - positions of charges
+            Q(np array) - charge values
+        Returns:
+            res(array) - (3, 1) array of electric field
+        """
+        res = np.zeros(3, dtype="float32")
+        #self.math.efield.restype = None
+        #Q = Q.reshape(-1)
+
+
+        self.math.calc_field(
+            res, 
+            x_0,
+            len(Q),
+            x, 
+            Q.reshape(len(Q))
+        )
+        
         return res

@@ -146,7 +146,7 @@ void einsum_operation_batch(int batch, int rows, float r_mag[batch][rows], float
     float ele_3;
     float compute_singular;
     //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize 
-    #pragma omp parallel shared(R, r_mag, Q, result) private(i,j,k)
+    //#pragma omp parallel shared(R, r_mag, Q, result) private(i,j,k)
     {
         for(k=0; k < batch; k++){
             for(i=0; i < rows; i++){
@@ -156,7 +156,7 @@ void einsum_operation_batch(int batch, int rows, float r_mag[batch][rows], float
                 ele_1 = r_mag[k][i];
                 ele_2 = Q[i];
                 ele_3 = r_mag[k][i];
-                compute_singular = factor * ele_1 * ele_2 * ele_3;
+                compute_singular = factor * ele_2 * ele_3;
                 sum[0] += compute_singular * r_0;
                 sum[1] += compute_singular * r_1;
                 sum[2] += compute_singular * r_2;
@@ -184,17 +184,17 @@ void einsum_operation(int rows, float r_mag[rows], float Q[rows], float R[rows][
     float ele_2;
     float ele_3;
     float compute_singular;
-    //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize 
-    #pragma omp parallel shared(R, r_mag, Q, result) private(i,j)
+    // compute "ij,ij,ij->j" einsum
     {
         for(i=0; i < rows; i++){
+            
             r_0 = R[i][0];
             r_1 = R[i][1];
             r_2 = R[i][2];
-            ele_1 = r_mag[i];
             ele_2 = Q[i];
-            ele_3 = r_mag[i];
-            compute_singular = factor * ele_1 * ele_2 * ele_3;
+            ele_3 = r_mag[i]; 
+            
+            compute_singular = factor * ele_2 * ele_3;
             sum[0] += compute_singular * r_0;
             sum[1] += compute_singular * r_1;
             sum[2] += compute_singular * r_2;
@@ -215,7 +215,7 @@ void einsum_ij_i_batch(int batch, int rows, int cols, float A[batch][rows][cols]
     int provided = 0;
     float sum;
     //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize 
-    #pragma omp parallel shared(A, ret) private(i,j,k)
+    //#pragma omp parallel shared(A, ret) private(i,j,k)
     {
         for(k=0; k < batch; k++){
             for(i=0; i < rows; i++){
@@ -237,7 +237,7 @@ void einsum_ij_i(int rows, int cols, float A[rows][cols], float ret[rows]){
     int provided = 0;
     float sum;
     //MPI_Init_thread(NULL,NULL,  MPI_THREAD_MULTIPLE, &provided); // Initialize
-    #pragma omp parallel shared(A, ret) private(i,j)
+    //#pragma omp parallel shared(A, ret) private(i,j)
     {
     
         for(i=0; i < rows; i++){
@@ -268,12 +268,12 @@ void calc_field(float E[3], float x_init[3], int n_charges, float x[n_charges][3
         //# pragma omp parallel for
         for (int i = 0; i < n_charges; i++)
         {
-            R[i][j] = x[i][j] - x_init_single;
+            R[i][j] = x_init_single - x[i][j];
             r_sq[i][j] = pow(R[i][j], 2);
         }
     }
     
-    einsum_ij_i(n_charges, 3, r_sq, r_mag_sq); // this might be a funky shape
+    einsum_ij_i(n_charges, 3, r_sq, r_mag_sq); // r_mag_sq might be wrong shape here
     
     //# pragma omp parallel for
     for (int i = 0; i < n_charges; i++)
@@ -283,48 +283,52 @@ void calc_field(float E[3], float x_init[3], int n_charges, float x[n_charges][3
     }
     
     // compute einsum operation
-    einsum_operation(n_charges, r_mag, Q, R, E_array);
+    einsum_operation(n_charges, r_mag, Q, R, E_array); //
 
-    // trivial step
-    float factor = 14.3996451;
-    for (int i = 0; i < 3; i++)
-    {
-        E[i] = E_array[i] * factor;
-    }
-
+    E[0] = E_array[0] ;
+    E[1] = E_array[1] ;
+    E[2] = E_array[2] ;
 
 }
+
 
 void calc_field_base(float E[3], float x_init[3], int n_charges, float x[n_charges][3], float Q[n_charges]){
     // calculate the field
 
     // subtract x_init from x
-    float R[n_charges][3];
+    float R[3];
     float r_mag[n_charges];
-    float r_sq[n_charges][3];
-    float r_mag_sq[n_charges];
+    //float r_sq[n_charges][3];
+    //float r_mag_sq[n_charges];
+    float r_mag_cube;
     float factor = 14.3996451;
-    float r_norm[n_charges];
-    
-    //# pragma omp parallel for
-    
+    float r_norm;
+    float E_temp[n_charges][3];
+
+    //# pragma omp parallel for shared(E, x_init, n_charges, x, Q) private(r_mag_cube, r_norm, R)
     # pragma omp parallel for
     for (int i = 0; i < n_charges; i++)
     {
-        R[i][0] = x[i][0] - x_init[0];
-        R[i][1] = x[i][1] - x_init[1];
-        R[i][2] = x[i][2] - x_init[2];
-        r_norm[i] = sqrt(pow(R[i][0], 2) + pow(R[i][1], 2) + pow(R[i][2], 2));
-        r_mag[i] = pow(r_norm[i], -3);
+        //get difference of x and x_init
+        R[0] = x_init[0] - x[i][0];
+        R[1] = x_init[1] - x[i][1];
+        R[2] = x_init[2] - x[i][2]; 
 
-        E[0] += factor * r_mag[i] * Q[i] * R[i][0];
-        E[1] += factor * r_mag[i] * Q[i] * R[i][1];
-        E[2] += factor * r_mag[i] * Q[i] * R[i][2];
+        r_norm = sqrt(pow(R[0], 2) + pow(R[1], 2) + pow(R[2], 2));
+        r_mag_cube = pow(r_norm, -3);
+        //r_mag[i] = pow(r_norm, -3);
 
+        E_temp[i][0] = factor * r_mag_cube * Q[i] * R[0];
+        E_temp[i][1] = factor * r_mag_cube * Q[i] * R[1];
+        E_temp[i][2] = factor * r_mag_cube * Q[i] * R[2];
     }
 
-
-
+    for (int i = 0; i < n_charges; i++)
+    {
+        E[0] += E_temp[i][0];
+        E[1] += E_temp[i][1];
+        E[2] += E_temp[i][2];
+    }
 }
 
 
@@ -415,68 +419,4 @@ void thread_operation(int n_charges, int n_iter, float step_size, float x_0[3], 
 
 }
 
-/*
-void vecaddn_gsl(gsl_vector* ret, gsl_vector* A, gsl_vector* B, int lenA){
-    int i; 
-    #pragma omp parallel shared(A, B, ret) private(i)
-    {
-    for (i = 0; i < lenA; i++) {
-                gsl_vector_set(ret, i, gsl_vector_get(A, i) + gsl_vector_get(B, i));
-            }
-    }   
-}
 
-
-
-
-void cross_product_gsl(const gsl_vector *u, const gsl_vector *v, gsl_vector *product)
-{
-        double p1 = gsl_vector_get(u, 1)*gsl_vector_get(v, 2)
-                - gsl_vector_get(u, 2)*gsl_vector_get(v, 1);
-
-        double p2 = gsl_vector_get(u, 2)*gsl_vector_get(v, 0)
-                - gsl_vector_get(u, 0)*gsl_vector_get(v, 2);
-
-        double p3 = gsl_vector_get(u, 0)*gsl_vector_get(v, 1)
-                - gsl_vector_get(u, 1)*gsl_vector_get(v, 0);
-
-        gsl_vector_set(product, 0, p1);
-        gsl_vector_set(product, 1, p2);
-        gsl_vector_set(product, 2, p3);
-}
-
-void norm_gsl(const gsl_vector *u, double *norm_val)
-{
-    *norm_val = sqrt(
-        pow(gsl_vector_get(u, 0), 2) + 
-        pow(gsl_vector_get(u, 1), 2) + 
-        pow(gsl_vector_get(u, 2), 2)
-    );
-}
-
-double euclidean_dist_gsl(gsl_vector* x_0, gsl_vector* x_1){
-    double sum = 0;
-    for(int i = 0; i < 3; i++){
-        sum += pow(gsl_vector_get(x_0, i) - gsl_vector_get(x_1, i), 2);
-    }
-    return sqrt(sum);
-}
-
-double curve_gsl(gsl_vector* x_0, gsl_vector* x_1){
-    // compute cross of x_0 and x_1
-    gsl_vector* cross_prod = gsl_vector_alloc(3);
-    double norm_cross_prod;
-    double norm_denom;
-
-    cross_product(x_0, x_1, cross_prod);
-    norm(cross_prod, &norm_cross_prod);
-    norm(x_0, &norm_denom);
-    double curve_ret = norm_cross_prod / pow(norm_denom, 3);
-
-    // free memory
-    gsl_vector_free(cross_prod);
-    return curve_ret;
-
-}
-
-*/

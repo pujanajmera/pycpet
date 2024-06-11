@@ -1,5 +1,33 @@
 import numpy as np
 
+def default_options_initializer(options): 
+    """
+        Initializes default options for CPET after checking if they are present in the options dictionary
+        Takes
+            options(dict) - dictionary of options
+        Returns
+            options(dict) - dictionary of options with default values
+    """
+    
+    if "concur_slip" not in options.keys():
+        options["concur_slip"] = 4
+
+    if "dtype" not in options.keys():
+        options["dtype"] = "float32"
+
+    if "GPU_batch_freq" not in options.keys():
+        options["GPU_batch_freq"] = 100
+
+    if "step_size" not in options.keys():
+        options["step_size"] = 0.1
+
+    if "n_samples" not in options.keys():
+        options["n_samples"] = 10000
+
+    if "profile" not in options.keys():
+        options["profile"] = False
+
+    return options
 
 def initialize_box_points(center, x, y, dimensions, n_samples, step_size):
     """
