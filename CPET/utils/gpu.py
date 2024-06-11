@@ -202,7 +202,7 @@ def initialize_streamline_grid_gpu(center, x, y, dimensions, num_per_dim, step_s
         np.array(dimensions)
     )  # Define maximum sample limit as 2 times the diagonal
     M = round(max_distance/step_size)
-    np.random.seed(42)
+    #np.random.seed(42)
     random_max_samples = torch.tensor(np.random.randint(1, M, N_cr**3)).cuda()
     print(random_max_samples)
     np.savetxt("points.txt", points)

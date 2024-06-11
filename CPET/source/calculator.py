@@ -407,18 +407,18 @@ class calculator:
             self.n_samples
             self.GPU_batch_freq
 
-            Q_gpu = torch.tensor(self.Q, dtype=torch.float64).cuda()
+            Q_gpu = torch.tensor(self.Q, dtype=torch.float32).cuda()
             Q_gpu = Q_gpu.unsqueeze(0)
-            x_gpu = torch.tensor(self.x, dtype=torch.float64).cuda()
-            dim_gpu = torch.tensor(self.dimensions, dtype=torch.float64).cuda()
-            step_size_gpu = torch.tensor([self.step_size], dtype=torch.float64).cuda()
+            x_gpu = torch.tensor(self.x, dtype=torch.float32).cuda()
+            dim_gpu = torch.tensor(self.dimensions, dtype=torch.float32).cuda()
+            step_size_gpu = torch.tensor([self.step_size], dtype=torch.float32).cuda()
             
             
             path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gpu(self.center, self.x_vec_pt, self.y_vec_pt, self.dimensions, num_per_dim, self.step_size)
 
-            path_matrix_torch=torch.tensor(path_matrix, dtype=torch.float64).cuda()
+            path_matrix_torch=torch.tensor(path_matrix, dtype=torch.float32).cuda()
             path_filter=torch.tensor(path_filter, dtype=torch.bool).cuda()
-            dumped_values=torch.tensor(np.empty((6,0,3)), dtype=torch.float64).cuda()
+            dumped_values=torch.tensor(np.empty((6,0,3)), dtype=torch.float32).cuda()
             
 
             start_time = time.time()
@@ -609,7 +609,7 @@ class calculator:
 
             #path_matrix_torch=torch.tensor(path_matrix, dtype=torch.float32).cuda() #Of shape (GPU_batch_freq, n_samples, 3)
             #path_filter=torch.tensor(path_filter, dtype=torch.float32).cuda() #Of shape (GPU_batch_freq, n_samples, 1)
-            dumped_values=torch.tensor(np.empty((6,0,3)), dtype=torch.float64).cuda() #Of shape (6,0,3)
+            dumped_values=torch.tensor(np.empty((6,0,3)), dtype=torch.float32).cuda() #Of shape (6,0,3)
 
             max_num_batch = int((M+2-2)/(self.GPU_batch_freq-2)) #+2 since M+2 points need to be computed, and -2 since first two initial points are already computed, and propagations of 98 steps
             remainder = (M+2-2)%(self.GPU_batch_freq-2)

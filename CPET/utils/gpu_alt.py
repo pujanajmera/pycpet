@@ -68,7 +68,7 @@ def propagate_topo_matrix_gpu_alt(path_matrix: torch.Tensor,i: torch.Tensor, x: 
     #check_tensor(path_matrix_prior, "Path Matrix Prior")
     N = path_matrix_prior.size(0)
     #E = torch.zeros(N, 3, device=path_matrix_prior.device, dtype=torch.float16)
-    E = torch.zeros(N, 3, device=path_matrix_prior.device, dtype=torch.float64)
+    E = torch.zeros(N, 3, device=path_matrix_prior.device, dtype=torch.float32)
 
     for start in range(0, N, 100):
         end = min(start + 100, N)
@@ -208,14 +208,14 @@ def initialize_streamline_grid_gpu_alt(center, x, y, dimensions, num_per_dim, st
     print(random_max_samples)
     np.savetxt("points.txt", points)
 
-    Q_gpu = torch.tensor(self.Q, dtype=torch.float64).cuda()
+    Q_gpu = torch.tensor(self.Q, dtype=torch.float32).cuda()
     Q_gpu = Q_gpu.unsqueeze(0)
-    x_gpu = torch.tensor(self.x, dtype=torch.float64).cuda()
-    dim_gpu = torch.tensor(dimensions, dtype=torch.float64).cuda()
-    step_size_gpu = torch.tensor([step_size], dtype=torch.float64).cuda()
+    x_gpu = torch.tensor(self.x, dtype=torch.float32).cuda()
+    dim_gpu = torch.tensor(dimensions, dtype=torch.float32).cuda()
+    step_size_gpu = torch.tensor([step_size], dtype=torch.float32).cuda()
 
     path_matrix = np.zeros((GPU_batch_freq,N_cr**3,3))
-    path_matrix=torch.tensor(path_matrix, dtype=torch.float64).cuda()
+    path_matrix=torch.tensor(path_matrix, dtype=torch.float32).cuda()
     path_matrix[0] = torch.tensor(points)
     path_matrix = propagate_topo_matrix_gpu_alt(path_matrix, torch.tensor([0]).cuda(), x_gpu, Q_gpu, step_size_gpu)
     path_filter = generate_path_filter_gpu_alt(random_max_samples,torch.tensor([M+2], dtype=torch.int16).cuda())
@@ -390,7 +390,7 @@ def batched_filter_gpu_alt(path_matrix: torch.Tensor, dumped_values: torch.Tenso
     path_filt = t_delete_alt(path_filter, new_filter_indices)
     init_points_new = t_delete_alt(init_points, new_filter_indices)
     #print("4.", path_mat.shape)
-    path_mat_new = torch.zeros(GPU_batch_freq, path_mat.shape[1], 3, device=path_mat.device, dtype=torch.float64)
+    path_mat_new = torch.zeros(GPU_batch_freq, path_mat.shape[1], 3, device=path_mat.device, dtype=torch.float32)
     path_mat_new[0:2,...] = path_mat[-2:,...]
     #return torch.tensor(path_mat).cuda(), torch.tensor(dumped_values).cuda(), torch.tensor(path_filt).cuda()
     return path_mat_new, dumped_values, path_filt, init_points_new

@@ -48,7 +48,7 @@ def main():
         topo_file_protein = [x for x in topo_files if file.split("/")[-1].split(".")[0] in x]
         if len(topo_file_protein) != num*len(benchmark_samples)*len(benchmark_step_sizes):
             raise ValueError("Incorrect number of output topologies for requested benchmark parameters")
-        histograms = make_histograms(topo_file_protein, plot=True)
+        histograms = make_histograms(topo_file_protein, plot=False)
         distance_matrix = construct_distance_matrix(histograms)
         avg_dist = gen_param_dist_mat(distance_matrix, topo_file_protein)
 
