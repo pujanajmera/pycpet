@@ -1,5 +1,5 @@
 import numpy as np
-from CPET.source.calculator import Topo_calc
+from CPET.source.calculator import calculator
 import warnings 
 warnings.filterwarnings(action='ignore')
 from scipy.stats import chisquare
@@ -7,7 +7,6 @@ from scipy.stats import entropy
 import matplotlib.pyplot as plt 
 import matplotlib
 #from pyinstrument import Profiler
-
 
 def mean_and_curve_to_hist(mean_dist, curve): 
     #Calculate reasonable maximum distances and curvatures
@@ -49,10 +48,26 @@ def distance_numpy(hist1, hist2):
 class Test_topos:
     def __init__(self):
         self.options = {
-            "path_to_pqr": "./test_files/test_large.pqr",
-            "center": [104.785, 113.388, 117.966],
-            "x": [105.785, 113.388, 117.966],
-            "y": [104.785, 114.388, 117.966],
+            "center": {
+                    "method": "first",
+                    "atoms": {
+                            "CD": 2
+                    }
+            },
+            "x": {
+                    "method": "mean",
+                    "atoms": {
+                            "CG": 1,
+                            "CB": 1
+                    }
+            },
+            "y": {
+                    "method": "inverse",
+                    "atoms": {
+                            "CA": 3,
+                            "CB": 3
+                    }
+            },
             "n_samples": 100,
             "dimensions": [1.5, 1.5, 1.5],
             "step_size": 0.01,
@@ -60,47 +75,45 @@ class Test_topos:
             "concur_slip": 12,
             "filter_radius": 40.0,
             "filter_in_box": True, 
+            "initializer": "uniform",
+            "CPET_method": "topology"
             #"filter_resids": ["HEM"]
         }
-        self.topo = Topo_calc(self.options)
+        self.topo = calculator(self.options, path_to_pdb="./test_files/test_large.pdb")
+        max_step_constant = 100
+        max_array = np.zeros(len(self.topo.random_max_samples)) + max_step_constant
+        # change max_array to int 
+        max_array = max_array.astype(int)
+        self.topo.random_max_samples = max_array
+        self.compute_topo_base()
 
-        ret = self.topo.compute_topo()
-        self.dist_c = ret[0] 
-        self.curve_c = ret[1]
+    def compute_topo_base(self):
+        hist = self.topo.compute_topo_single()
+        self.hist_base = hist
 
-        ret2 = self.topo.compute_topo_batched()
-        self.dist_batched = ret2[0]
-        self.curve_batched = ret2[1]
-
-        ret3 = self.topo.compute_topo_base()
-        self.dist_base= ret3[0]
-        self.curve_base = ret3[1]
-
-        ret4 = self.topo.compute_topo_complete_c_shared()
-        self.dist_cshared = ret4[0]
-        self.curve_cshared = ret4[1]
-
-    def test_topo_batch(self): 
-        hist = mean_and_curve_to_hist(self.dist_c, self.curve_c)
-        hist2 = mean_and_curve_to_hist(self.dist_batched, self.curve_batched)
-        print(distance_numpy(hist, hist2))
-
-
-    def test_topo_cshared(self): 
-        hist = mean_and_curve_to_hist(self.dist_c, self.curve_c)
-        hist2 = mean_and_curve_to_hist(self.dist_base, self.curve_base)
-        print(distance_numpy(hist, hist2))
-
-
-    def test_topo_batch_base(self): 
-        hist = mean_and_curve_to_hist(self.dist_batched, self.curve_batched)
-        hist2 = mean_and_curve_to_hist(self.dist_base, self.curve_base)
+    def topo_equality(self, test_topos):
+        np.testing.assert_allclose(
+            self.hist_base, 
+            test_topos, rtol=1e-2, atol=1e-2)
         
-        print(distance_numpy(hist, hist2))
+
+    def test_topo_methods(self):
+        topo_function_list = [
+            self.topo.compute_topo,
+            self.topo.compute_topo_complete_c_shared
+        
+        ]
+        
+        for topo_function in topo_function_list:
+            print("----"*15)
+            hist = topo_function()
+            self.topo_equality(hist)
 
 
+        # TODO: pujan add the topo for gpu - will need to batch the start points
 
-test = Test_topos()
+#test = Test_topos()
+#test.test_topo_methods()
 #test.test_topo_batch()
 #test.test_topo_cshared()
 #test.test_topo_batch_base()

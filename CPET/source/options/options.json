@@ -26,7 +26,7 @@
                         "CB": 3
                 }
         },
-        "n_samples": 10000,
+        "n_samples": 100000,
         "dimensions": [
                 2.0,
                 2.0,
@@ -41,6 +41,7 @@
                 }
         ],
         "_filter_radius": 10.0,
+        "filter_in_box": true,
         "cluster_method": "kmeds",
         "benchmark": {
                 "threshold": 0.1,

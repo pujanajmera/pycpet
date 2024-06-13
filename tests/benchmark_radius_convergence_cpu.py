@@ -13,7 +13,7 @@ import os
 def main():
     parser = argparse.ArgumentParser(description='CPET: A tool for computing and analyzing electric fields in proteins')
     parser.add_argument('-o', type=str, help='Options for CPET', default="./options/options.json")
-    parser.add_argument('-pdb', type=str, help='Path to pdb file', default="./tests/1a0m.pdb")
+    parser.add_argument('-pdb', type=str, help='Path to pdb file', default="./test_files/test_large.pdb")
     args = parser.parse_args()
     options = args.o
     options = json.load(open(options))
@@ -25,7 +25,7 @@ def main():
 
     current_dir_files = os.listdir()
 
-    for radius in [None, 30, 20, 10]:
+    for radius in [30, 20, 10]:
         print(f"Running for radius: {radius}")
         if radius is not None:
             options["filter_radius"] = radius
@@ -71,12 +71,13 @@ def main():
 
     # Ensure the matrix is symmetric
     averaged_distances = (averaged_distances + averaged_distances.T) / 2
-
+    print(averaged_distances)
     # (Optional) Plot the distance matrix
     plt.figure(figsize=(10,8))
     sns.heatmap(averaged_distances, cmap="Greens_r", annot=True,linewidths=0.1)
     plt.title("Averaged Distance Matrix")
-    plt.show()
-    plt.imsave("averaged_distance_matrix.png",averaged_distances)
+    #plt.show()
+    #plt.imsave("averaged_distance_matrix.png",averaged_distances)
+    plt.savefig("averaged_distance_matrix.png")
     
 main()
