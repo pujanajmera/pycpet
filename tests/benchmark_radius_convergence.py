@@ -83,6 +83,6 @@ def main():
         sns.heatmap(averaged_distances, cmap="Greens_r", annot=True,linewidths=0.1)
         plt.title("Averaged Distance Matrix")
         plt.show()
-        plt.imsave("averaged_distance_matrix.png",averaged_distances)
+        plt.imsave(f"averaged_distance_matrix_{file.split("/")[-1].split(".")[0]}.png",averaged_distances)
     
 main()
