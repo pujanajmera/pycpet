@@ -118,9 +118,6 @@ class test_efield_calcs:
 
 
     def field_equality(self, test_field):
-        # print max difference between the two fields
-        #print("max diff: {}".format(np.max(np.abs(self.utility_field - self.reference_field))))
-        #np.testing.assert_allclose(self.reference_field, self.point_utility_field, rtol=1e-2, atol=1e-2)
         np.testing.assert_allclose(self.reference_field, test_field, rtol=1e-2, atol=1e-2)
         np.testing.assert_allclose(self.point_utility_field, test_field, rtol=1e-2, atol=1e-2)
 
