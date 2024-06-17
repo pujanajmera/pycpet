@@ -45,51 +45,48 @@ def distance_numpy(hist1, hist2):
     return np.sum(np.divide(a, b, out=np.zeros_like(a), where=b != 0)) / 2.0
 
 
-class Test_topos:
-    def __init__(self):
-        self.options = {
-            "center": {
-                    "method": "first",
-                    "atoms": {
-                            "CD": 2
-                    }
-            },
-            "x": {
-                    "method": "mean",
-                    "atoms": {
-                            "CG": 1,
-                            "CB": 1
-                    }
-            },
-            "y": {
-                    "method": "inverse",
-                    "atoms": {
-                            "CA": 3,
-                            "CB": 3
-                    }
-            },
-            "n_samples": 100,
-            "dimensions": [1.5, 1.5, 1.5],
-            "step_size": 0.01,
-            "batch_size": 10,
-            "concur_slip": 12,
-            "filter_radius": 40.0,
-            "filter_in_box": True, 
-            "initializer": "uniform",
-            "CPET_method": "topology"
-            #"filter_resids": ["HEM"]
-        }
-        self.topo = calculator(self.options, path_to_pdb="./test_files/test_large.pdb")
-        max_step_constant = 100
-        max_array = np.zeros(len(self.topo.random_max_samples)) + max_step_constant
-        # change max_array to int 
-        max_array = max_array.astype(int)
-        self.topo.random_max_samples = max_array
-        self.compute_topo_base()
+def gather_reference_simplest_implementation_topo(topo):
+    hist = topo.compute_topo_single()
+    return hist
 
-    def compute_topo_base(self):
-        hist = self.topo.compute_topo_single()
-        self.hist_base = hist
+class Test_topos:
+    options = {
+        "center": {
+                "method": "first",
+                "atoms": {
+                        "CD": 2
+                }
+        },
+        "x": {
+                "method": "mean",
+                "atoms": {
+                        "CG": 1,
+                        "CB": 1
+                }
+        },
+        "y": {
+                "method": "inverse",
+                "atoms": {
+                        "CA": 3,
+                        "CB": 3
+                }
+        },
+        "n_samples": 1000,
+        "dimensions": [1.5, 1.5, 1.5],
+        "step_size": 0.01,
+        "batch_size": 10,
+        "concur_slip": 12,
+        "filter_radius": 40.0,
+        "filter_in_box": True, 
+        "initializer": "uniform",
+        "CPET_method": "topology",
+        "max_streamline_init": "fixed_rand"
+        #"filter_resids": ["HEM"]
+    }
+    topo = calculator(options, path_to_pdb="./test_files/test_large.pdb")
+    # change max_array to int 
+    reference_hist = gather_reference_simplest_implementation_topo(topo)
+
 
     def topo_equality(self, test_topos):
         np.testing.assert_allclose(

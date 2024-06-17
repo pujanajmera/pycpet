@@ -35,8 +35,8 @@ def calculate_electric_field_torch_batch_gpu(
 
     for start in range(0, N, 100):
         end = min(start + 100, N)
-        print(x_0[start:end].unsqueeze(1).shape)
-        print(x.unsqueeze(0).shape)
+        #print(x_0[start:end].unsqueeze(1).shape)
+        #print(x.unsqueeze(0).shape)
         R = x_0[start:end].unsqueeze(1) - x.unsqueeze(0)
         r_mag_cube = torch.norm(R, dim=-1, keepdim=True).pow(-3)
         # E[start:end] = torch.einsum("ijk,ijk,ijk->ik", R, 1/r_mag_cube, Q) * 14.3996451
@@ -52,7 +52,7 @@ def propagate_topo_matrix_gpu(
     x: torch.Tensor,
     Q: torch.Tensor,
     step_size: torch.Tensor,
-    dtype_str: str
+    #dtype_str: str
 ) -> torch.Tensor:
     """
     Propagates position based on normalized electric field at a set of points
@@ -67,14 +67,15 @@ def propagate_topo_matrix_gpu(
     """
     path_matrix_prior = path_matrix[int(i)]
     N = path_matrix_prior.size(0)
+    '''
     if dtype_str == "float32":
         dtype = torch.float32
     else:
         dtype = torch.float64
+    '''
     E = calculate_electric_field_torch_batch_gpu(path_matrix_prior, 
                                                  x, 
-                                                 Q,
-                                                 dtype)
+                                                 Q)
     path_matrix[i + 1] = path_matrix_prior + step_size * E / torch.norm(
         E, dim=-1, keepdim=True
     )
@@ -150,79 +151,6 @@ def Inside_Box_gpu(local_points, dimensions):
         & (local_points[..., 2] <= half_height)
     )
     return is_inside
-
-
-def initialize_streamline_grid_gpu(
-    center, x, y, dimensions, num_per_dim, step_size, dtype_str="float64"
-):
-    """
-    Initializes random points in box centered at the origin
-    Takes
-        center(array) - center of box of shape (1,3)
-        x(array) - point to create x axis from center of shape (1,3)
-        y(array) - point to create x axis from center of shape (1,3)
-        dimensions(array) - L, W, H of box of shape (1,3)
-        n_samples(int) - number of samples to compute
-        step_size(float) - step_size of box
-        dtype_str(str) - data type of the points
-    Returns
-        random_points_local(array) - array of random starting points in the box of shape (n_samples,3)
-        random_max_samples(array) - array of maximum sample number for each streamline of shape (n_samples, 1)
-        transformation_matrix(array) - matrix that contains the basis vectors for the box of shape (3,3)
-    """
-
-    N_cr = num_per_dim
-    # Convert lists to numpy arrays
-    x = x - center  # Translate to origin
-    y = y - center  # Translate to origin
-    half_length, half_width, half_height = dimensions
-    # Normalize the vectors
-    x_unit = x / np.linalg.norm(x)
-    y_unit = y / np.linalg.norm(y)
-    # Calculate the z unit vector by taking the cross product of x and y
-    z_unit = np.cross(x_unit, y_unit)
-    z_unit = z_unit / np.linalg.norm(z_unit)
-    # Recalculate the y unit vector
-    y_unit = np.cross(z_unit, x_unit)
-    y_unit = y_unit / np.linalg.norm(y_unit)
-    """
-    # Generate random samples in the local coordinate system of the box
-    random_x = np.random.uniform(-half_length, half_length, N)
-    random_y = np.random.uniform(-half_width, half_width, N)
-    random_z = np.random.uniform(-half_height, half_height, N)
-    # Each row in random_points_local corresponds to x, y, and z coordinates of a point in the box's coordinate system
-    random_points_local = np.column_stack([random_x, random_y, random_z])
-    """
-    # Calculate the number of points along each dimension
-
-    x_coords = np.linspace(-half_length, half_length, N_cr + 1, endpoint=False)[1:]
-    y_coords = np.linspace(-half_width, half_width, N_cr + 1, endpoint=False)[1:]
-    z_coords = np.linspace(-half_height, half_height, N_cr + 1, endpoint=False)[
-        1:
-    ]  # Use meshgrid to create coordinates
-    x_grid, y_grid, z_grid = np.meshgrid(x_coords, y_coords, z_coords, indexing="ij")
-    points = np.stack([x_grid.ravel(), y_grid.ravel(), z_grid.ravel()], axis=-1)
-
-    # Convert these points back to the global coordinate system
-    transformation_matrix = np.column_stack(
-        [x_unit, y_unit, z_unit]
-    ).T  # Each column is a unit vector
-    max_distance = 2 * np.linalg.norm(
-        np.array(dimensions)
-    )  # Define maximum sample limit as 2 times the diagonal
-    M = round(max_distance / step_size)
-    np.random.seed(42)
-    random_max_samples = torch.tensor(np.random.randint(1, M, N_cr**3)).cuda()
-    print(random_max_samples)
-    np.savetxt("points.txt", points)
-    path_matrix = np.zeros((M + 2, N_cr**3, 3))
-    path_matrix[0] = torch.tensor(points)
-    path_filter = generate_path_filter_gpu(
-        random_max_samples, torch.tensor([M + 2], dtype=torch.int64).cuda()
-    )
-    print(M, N_cr**3)
-    return path_matrix, transformation_matrix, M, path_filter, random_max_samples
-
 
 # @torch.jit.script
 def generate_path_filter_gpu(arr, M):

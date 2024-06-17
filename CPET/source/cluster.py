@@ -13,7 +13,6 @@ from glob import glob
 from CPET.utils.calculator import (
     make_histograms,
     construct_distance_matrix,
-    construct_distance_matrix_alt,
     construct_distance_matrix_alt2,
     construct_distance_matrix_volume,
     make_fields,

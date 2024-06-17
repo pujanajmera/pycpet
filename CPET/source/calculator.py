@@ -32,8 +32,8 @@ from CPET.utils.gpu import (
     propagate_topo_matrix_gpu,
     compute_curv_and_dist_mat_gpu,
     batched_filter_gpu,
-    initialize_streamline_grid_gpu,
     batched_filter_gpu_end,
+    generate_path_filter_gpu,
 )
 from CPET.utils.gridcpu import (
     propagate_topo_matrix_gridcpu,
@@ -45,6 +45,7 @@ from CPET.utils.gpu_alt import (
     batched_filter_gpu_alt,
     batched_filter_gpu_end_alt,
     initialize_streamline_grid_gpu_alt,
+    generate_path_filter_gpu_alt,
 )
 
 
@@ -61,6 +62,7 @@ class calculator:
         self.concur_slip = options["concur_slip"]
         self.GPU_batch_freq = options["GPU_batch_freq"]
         self.dtype = options["dtype"]
+        self.max_streamline_init = options["max_streamline_init"] if "max_streamline_init" in options.keys() else "true_rand"
 
         #Be very careful with the box_shift option. The box needs to be centered at the origin and therefore, the code will shift protein in the opposite direction of the provided box vector 
         self.box_shift = options["box_shift"] if "box_shift" in options.keys() else [0,0,0]
@@ -223,6 +225,7 @@ class calculator:
                     self.random_start_points,
                     self.random_max_samples,
                     self.transformation_matrix,
+                    self.max_streamline_len,
                 ) = initialize_box_points_random(
                     self.center,
                     self.x_vec_pt,
@@ -236,23 +239,30 @@ class calculator:
             num_per_dim = round(self.n_samples ** (1 / 3))
             if num_per_dim**3 < self.n_samples:
                 num_per_dim += 1
+            self.n_samples = num_per_dim**3
             #print("num_per_dim: ", num_per_dim)
-            step_size = 2 * self.dimensions[0] / (num_per_dim + 1)
-            print("step_size: ", step_size)
+            grid_density = 2 * self.dimensions / (num_per_dim + 1)
+            print("grid_density: ", grid_density)
+            seed=None
+            if self.max_streamline_init == "fixed_rand":
+                print("Fixing max steps with Random seed 42")
+                seed=42
             (
                 self.random_start_points, 
                 self.random_max_samples, 
-                self.transformation_matrix
+                self.transformation_matrix,
+                self.max_streamline_len,
             ) = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,
                 dimensions=self.dimensions,
-                step_size=step_size,
+                N_cr = num_per_dim,
                 dtype=self.dtype,
                 max_steps=max_steps, 
                 ret_rand_max=True, 
-                inclusive=False
+                inclusive=False,
+                seed=seed
             ) 
             # convert mesh to list of x, y, z points
             #print(self.random_start_points)
@@ -619,29 +629,24 @@ class calculator:
             )  # Optional: Export trace to view it in Chrome's trace viewer
 
         else:
-            num_per_dim = round(self.n_samples ** (1 / 3))
-            if num_per_dim**3 < self.n_samples:
-                num_per_dim += 1
-            self.n_samples = num_per_dim**3
+            #ONE TRUE VERSION I AM UPDATING ATM
             print("... > Computing Topo in Batches on a GPU!")
             print(f"Number of samples: {self.n_samples}")
             print(f"Number of charges: {len(self.Q)}")
             print(f"Step size: {self.step_size}")
-
 
             Q_gpu = torch.tensor(self.Q, dtype=torch.float32).cuda()
             Q_gpu = Q_gpu.unsqueeze(0)
             x_gpu = torch.tensor(self.x, dtype=torch.float32).cuda()
             dim_gpu = torch.tensor(self.dimensions, dtype=torch.float32).cuda()
             step_size_gpu = torch.tensor([self.step_size], dtype=torch.float32).cuda()
+            random_max_samples = torch.tensor(self.random_max_samples).cuda()
 
-            path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gpu(
-                self.center,
-                self.x_vec_pt,
-                self.y_vec_pt,
-                self.dimensions,
-                num_per_dim,
-                self.step_size,
+            M = self.max_streamline_len
+            path_matrix = np.zeros((M + 2, self.n_samples, 3))
+            path_matrix[0] = torch.tensor(self.random_start_points)
+            path_filter = generate_path_filter_gpu(
+            random_max_samples, torch.tensor([M + 2], dtype=torch.int64).cuda()
             )
 
             path_matrix_torch = torch.tensor(path_matrix, dtype=torch.float32).cuda()
@@ -729,8 +734,6 @@ class calculator:
             topology = np.column_stack(
                 (distances.cpu().numpy(), curvatures.cpu().numpy())
             )
-            # remove first row from topology
-            topology = topology[1:]
             print(topology.shape)
         return topology
 

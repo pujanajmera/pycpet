@@ -118,7 +118,6 @@ class TestEField:
     # ground truth can be our compute_field_on_grid or the simplest cpu implementation we have
 
 
-    
     def field_equality(self, test_field):
         np.testing.assert_allclose(self.reference_field, test_field, rtol=1e-2, atol=1e-2)
         np.testing.assert_allclose(self.point_utility_field, test_field, rtol=1e-2, atol=1e-2)

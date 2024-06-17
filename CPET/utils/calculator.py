@@ -146,10 +146,10 @@ def initialize_box_points_random(
     ).T  # Each column is a unit vector
 
     random_max_samples = np.random.randint(1, max_steps, n_samples)
-    return random_points_local, random_max_samples, transformation_matrix
+    return random_points_local, random_max_samples, transformation_matrix, max_steps
 
 
-def initialize_box_points_uniform(center, x, y, step_size, dimensions, dtype="float32", max_steps=10, ret_rand_max=False, inclusive=True):
+def initialize_box_points_uniform(center, x, y, N_cr, dimensions, dtype="float32", max_steps=10, ret_rand_max=False, inclusive=True, seed=None):
     """
     Initializes random points in box centered at the origin
     Takes
@@ -185,17 +185,20 @@ def initialize_box_points_uniform(center, x, y, step_size, dimensions, dtype="fl
 
     # construct a grid of points in the box - lengths are floats
     if inclusive:
-        x_coords = np.arange(-half_length, half_length + step_size, step_size)
-        y_coords = np.arange(-half_width, half_width + step_size, step_size)
-        z_coords = np.arange(-half_height, half_height + step_size, step_size)
+        x_coords = np.linspace(-half_length, half_length, N_cr + 1)[1:]
+        y_coords = np.linspace(-half_width, half_width, N_cr + 1)[1:]
+        z_coords = np.linspace(-half_height, half_height, N_cr + 1)[1:]
     else: 
-        x_coords = np.arange(-half_length + step_size, half_length-step_size, step_size)
-        y_coords = np.arange(-half_width + step_size, half_width-step_size, step_size)
-        z_coords = np.arange(-half_height + step_size, half_height-step_size, step_size)    
+        x_coords = np.linspace(-half_length, half_length, N_cr + 1, endpoint=False)[1:]
+        y_coords = np.linspace(-half_width, half_width, N_cr + 1, endpoint=False)[1:]
+        z_coords = np.linspace(-half_height, half_height, N_cr + 1, endpoint=False)[1:] 
 
     x_mesh, y_mesh, z_mesh = np.meshgrid(x_coords, y_coords, z_coords)
     local_coords = np.stack([x_mesh, y_mesh, z_mesh], axis=-1, dtype=dtype)
     
+    if not seed == None:
+        np.random.seed(seed)
+
     if ret_rand_max:
         n_samples = local_coords.shape[0] * local_coords.shape[1] * local_coords.shape[2]
         #print(f"max distance: {max_distance}")
@@ -203,9 +206,9 @@ def initialize_box_points_uniform(center, x, y, step_size, dimensions, dtype="fl
         #max_steps = round(max_distance / step_size)
         #print(f"max steps: {max_steps}")
         random_max_samples = np.random.randint(1, max_steps, n_samples)
-        return local_coords, random_max_samples, transformation_matrix
+        return local_coords, random_max_samples, transformation_matrix, max_steps
     
-    return local_coords, transformation_matrix
+    return local_coords, transformation_matrix, max_steps
 
 
 def calculate_electric_field(x_0, x, Q):
