@@ -346,6 +346,28 @@ class calculator:
         )
         return hist
 
+    def compute_topo_single(self):
+        print("... > Computing Topo(baseline)!")
+        print(f"Number of samples: {self.n_samples}")
+        print(f"Number of charges: {len(self.Q)}")
+        print(f"Step size: {self.step_size}")
+        start_time = time.time()
+        dist_list, curve_list = [], []
+        for i, n_iter in zip(self.random_start_points, self.random_max_samples):
+            
+            dist, curve = task_base(i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
+            dist_list.append(dist)
+            curve_list.append(curve)
+            #print(dist, curve)
+        hist = np.column_stack((dist_list, curve_list))
+        end_time = time.time()
+        self.hist = hist
+
+        print(
+            f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
+        )
+        return hist
+
     def compute_topo_complete_c_shared(self):
         print("... > Computing Topo!")
         print(f"Number of samples: {self.n_samples}")
