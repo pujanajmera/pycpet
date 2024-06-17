@@ -63,6 +63,9 @@ class calculator:
         self.concur_slip = options["concur_slip"]
         self.GPU_batch_freq = options["GPU_batch_freq"]
         self.dtype = options["dtype"]
+
+        #Be very careful with the box_shift option. The box needs to be centered at the origin and therefore, the code will shift protein in the opposite direction of the provided box vector 
+        self.box_shift = options["box_shift"] if "box_shift" in options.keys() else [0,0,0]
         
         (
             self.x,
@@ -275,6 +278,10 @@ class calculator:
             # self.random_start_points_batched.append((self.n_samples//self.batch_size)*self.batch_size)
 
         self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
+
+        if self.box_shift != [0,0,0]:
+            print("Shifting box by: ", self.box_shift)
+            self.x = self.x - np.array(self.box_shift)
 
         if self.dtype == "float32":
             self.x = self.x.astype(np.float32)
@@ -501,11 +508,6 @@ class calculator:
                     dtype_str=self.dtype,
                 )
 
-                """
-                path_matrix_torch=torch.tensor(path_matrix, dtype=torch.float16).cuda()
-                path_filter=torch.tensor(path_filter, dtype=torch.float16).cuda()
-                dumped_values=torch.tensor(np.empty((6,0,3)), dtype=torch.float16).cuda()
-                """
                 path_matrix_torch = torch.tensor(
                     path_matrix, dtype=torch.float32
                 ).cuda()

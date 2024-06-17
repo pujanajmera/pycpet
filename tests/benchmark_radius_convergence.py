@@ -1,47 +1,59 @@
 import numpy as np
 from CPET.source.calculator import calculator
 from CPET.utils.calculator import make_histograms, construct_distance_matrix_alt2, construct_distance_matrix
+from CPET.source.CPET import CPET
 import warnings 
 warnings.filterwarnings(action='ignore')
 import json
 import argparse
+from random import choice
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
+from glob import glob
 
 def main():
     parser = argparse.ArgumentParser(description='CPET: A tool for computing and analyzing electric fields in proteins')
-    parser.add_argument('-o', type=str, help='Options for CPET', default="./options/options.json")
-    parser.add_argument('-pdb', type=str, help='Path to pdb file', default="./tests/1a0m.pdb")
+    parser.add_argument('-o', type=json.loads, help='Options for CPET', default=json.load(open("./options/options.json")))
     args = parser.parse_args()
     options = args.o
-    options = json.load(open(options))
-    file = args.pdb
+    cpet = CPET(options)
+    files_input = glob(cpet.inputpath + "/*.pdb")
+    num = 3
+    if len(files_input) < 3:
+        warnings.warn("Less than 3 pdb files found in the input directory, benchmarking on {} files. This may be insufficient sampling".format(len(files_input)))
+        num = len(files_input)
+    if len(files_input) > 3:
+        warnings.warn("More than 3 pdb files found in the input directory, choosing 3 random pdbs to benchmarking on")
+        files_input = [choice(files_input) for i in range(num)]
+    topo_files = []
+    benchmark_radii = [None,90,80,70,60,50,40,30,20] #User customized
 
-    topo_file_list = []
-
-    iter = 3
-
-    current_dir_files = os.listdir()
-
-    for radius in [None,90,80,70,60,50,40,30,20]:
+    for radius in benchmark_radii:
         print(f"Running for radius: {radius}")
-        if radius is not None:
-            options["filter_radius"] = radius
-        for i in range(iter):
-            filestring = f"rad_conv_{radius}_{i}.top"
-            if filestring in current_dir_files:
-                print(filestring+" already exists. Skipping...")
-                topo_file_list.append(filestring)
-                continue
-            topo = calculator(options, path_to_pdb = file)
-            ret = topo.compute_topo_GPU_batch_filter()
-            np.savetxt(filestring, ret)
-            topo_file_list.append(filestring)
+        for i in range(3):
+            for file in files_input:
+                files_done = [x for x in os.listdir(cpet.outputpath) if x.split(".")[-1]=="top"]
+                protein = file.split("/")[-1].split(".")[0]
+                outstring = "{}_{}_{}.top".format(protein, radius, i)
+                if outstring in files_done:
+                    topo_files.append(cpet.outputpath + "/" + outstring)
+                    continue
+                cpet.calculator = calculator(cpet.options, path_to_pdb = file)
+                if radius is not None:
+                    cpet.calulator.options["filter_radius"] = radius
+                hist = cpet.calculator.compute_topo_GPU_batch_filter()
+                np.savetxt(cpet.outputpath + "/" + outstring, hist)
+                topo_files.append(cpet.outputpath + "/" + outstring)
     
-    histograms = make_histograms(topo_file_list,plot=False)
-    distance_matrix = construct_distance_matrix(histograms)
+    for file in files_input:
+        topo_file_protein = [x for x in topo_files if file.split("/")[-1].split(".")[0] in x]
+        if len(topo_file_protein) != num*len(benchmark_radii):
+            raise ValueError("Incorrect number of output topologies for requested benchmark parameters")
+
+        histograms = make_histograms(topo_file_list,plot=False)
+        distance_matrix = construct_distance_matrix(histograms)
 
     distances = pd.DataFrame(distance_matrix)
 

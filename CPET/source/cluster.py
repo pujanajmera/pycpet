@@ -1,10 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import networkx as nx
+import seaborn as sns
+
 from sklearn.cluster import AffinityPropagation, HDBSCAN
+from sklearn_extra.cluster import KMedoids
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
-import networkx as nx
-from sklearn_extra.cluster import KMedoids
+from sklearn.manifold import MDS
+from mpl_toolkits.mplot3d import Axes3D
 from glob import glob
 from CPET.utils.calculator import (
     make_histograms,
@@ -18,7 +22,11 @@ from CPET.utils.calculator import (
 
 class cluster:
     def __init__(self, options):
-        self.cluster_method = options["cluster_method"]
+        if not options["cluster_method"]:
+            print("No cluster method specified, defaulting to K-Medoids")
+            self.cluster_method = "kmeds"
+        else:
+            self.cluster_method = options["cluster_method"]
         self.cluster_reload = (
             options["cluster_reload"] if "cluster_reload" in options else False
         )
@@ -61,26 +69,37 @@ class cluster:
                 np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
 
     def Cluster(self):
-        if self.cluster_method == "affinity":
-            self.cluster_results = self.affinity()
-        elif self.cluster_method == "kmeds":
+        if self.cluster_method == "kmeds":
             self.cluster_results = self.kmeds()
+        elif self.cluster_method == "affinity":
+            self.cluster_results = self.affinity()
         elif self.cluster_method == "hdbscan":
             self.cluster_results = self.hdbscan()
-
-        self.compress()
+        else:
+            print("Invalid cluster method specified, defaulting to K-Medoids")
+            self.cluster_method = "kmeds"
+            self.cluster_results = self.kmeds()
+        self.cluster_analyze()
 
     def kmeds(self):
-        self.cluster_results = {}
+        cluster_results = {}
         distance_matrix = self.distance_matrix
+        distance_matrix = distance_matrix**2
         silhouette_list = []
-        for i in range(6):
+        for i in range(10):
             kmeds = KMedoids(
-                n_clusters=i + 2, random_state=0, metric="precomputed", method="pam"
+                n_clusters = i + 2, 
+                random_state = 0, 
+                metric = "precomputed", 
+                method = "pam",
+                init = "k-medoids++"
             )
             kmeds.fit(distance_matrix)
             labels = list(kmeds.labels_)
-            score = silhouette_score(distance_matrix, labels, metric="precomputed")
+            score = silhouette_score(distance_matrix, 
+                                     labels, 
+                                     metric = "precomputed"
+            )
             print(i + 2, score)
             silhouette_list.append(score)
         max_index = silhouette_list.index(max(silhouette_list))
@@ -88,12 +107,22 @@ class cluster:
             f"Using {max_index+2} number of clusters with Partitioning around Medoids (PAM)"
         )
         kmeds = KMedoids(
-            n_clusters=max_index + 2, random_state=0, metric="precomputed", method="pam"
+            n_clusters = max_index + 2, 
+            random_state = 0, 
+            metric = "precomputed", 
+            method = "pam", 
+            init = "k-medoids++"
         )
         kmeds.fit(distance_matrix)
-        self.cluster_results["labels"] = list(kmeds.labels_)
-        self.cluster_results["n_clusters"] = max_index + 2
-        self.cluster_results["cluster_centers_indices"] = kmeds.medoid_indices_
+        cluster_results["labels"] = list(kmeds.labels_)
+        cluster_results["silhouette_score"] = silhouette_score(distance_matrix, 
+                                                               cluster_results["labels"], 
+                                                               metric = "precomputed")
+        cluster_results["n_clusters"] = max_index + 2
+        cluster_results["cluster_centers_indices"] = kmeds.medoid_indices_
+        
+        return cluster_results
+    
 
     def affinity(self):
         affinity = AffinityPropagation(
@@ -107,6 +136,7 @@ class cluster:
         self.cluster_results.n_clusters_ = len(
             self.cluster_results.cluster_centers_indices
         )
+
 
     def hdbscan(self):
         performance_list = []
@@ -174,53 +204,35 @@ class cluster:
             f"Best performance with {best_performance[4]}% cutoff and silhouette score of {best_silhouette}"
         )
 
-    def compress(self):
+
+    def cluster_analyze(self):
         """
-        Method to compress the distance matrix using affinity propagation
+        Method to analyze, format, and plot clustering results
         Takes:
-            distance_matrix: distance matrix
-            damping: damping parameter for affinity propagation
-            max_iter: maximum number of iterations for affinity propagation
-            names: list of names of files in distance matrix
-            return_inds_to_filter_boundary: boolean to add key to filter boundaries
+            self: information about clustering and topology files
         Returns:
             compressed_dictionary: dictionary with information about the clusters
         """
         compressed_dictionary = {}
-
-        print(f"Estimated number of clusters: {self.cluster_results['n_clusters_']}")
         # get count of a value in a list
-        temp_dict = dict(
-            zip(
-                sorted(list(self.cluster_results["best_performance"][0].keys())),
-                self.cluster_results["cluster_centers_indices"],
-            )
-        )
-        for k, v in temp_dict.items():
-            compressed_dictionary[str(k)] = {
-                "count": str(list(self.cluster_results.labels).count(k)),
-                "index_center": str(v),
-            }
-            total_count = len(self.cluster_results.labels)
-            if self.cluster_results.names != None:
-                compressed_dictionary[str(i)]["name"] = self.cluster_results["names"][
-                    self.cluster_results["cluster_centers_indices"][i]
-                ]
-        # compute percentage of each cluster
-        for key in compressed_dictionary.keys():
-            if type(key) == int:
-                compressed_dictionary[key]["percentage"] = str(
-                    float(compressed_dictionary[key]["count"])
-                    / float(total_count)
-                    * 100
-                )
-            else:
-                if key.isnumeric():
-                    compressed_dictionary[key]["percentage"] = str(
-                        float(compressed_dictionary[key]["count"])
-                        / float(total_count)
-                        * 100
-                    )
+        for i in range(self.n_clusters):
+            temp_dict = {}
+            temp_dict["count"] = list(self.cluster_results["labels"]).count(i)
+            temp_dict["index_center"] = self.cluster_results.cluster_centers_indices[i]
+            temp_dict["name_center"] = self.topo_file_list[temp_dict["index_center"]]
+            temp_dict["percentage"] = float(temp_dict["count"]) / float(
+                len(self.cluster_results["labels"])
+            ) * 100
+            cluster_indices = [y for y, x in enumerate(self.cluster_results["labels"]) if x == i]
+            temp_dict["mean_distance"] = np.mean(self.distance_matrix[temp_dict["index_center"]][cluster_indices])
+            temp_dict["max_distance"] = np.max(self.distance_matrix[temp_dict["index_center"]][cluster_indices])
+            temp_zip = zip(
+                            self.topo_file_list[cluster_indices], 
+                            list(self.distance_matrix[temp_dict["index_center"]][cluster_indices])
+                       )
+            sorted_temp_zip = sorted(temp_zip, key = lambda x: x[1])
+            temp_dict["files"], temp_dict["distances"] = zip(*sorted_temp_zip)
+            compressed_dictionary[str(i)] = temp_dict
 
         # resort by count
         compressed_dictionary = dict(
@@ -242,19 +254,39 @@ class cluster:
                     print(
                         f"Cluster {key}: {compressed_dictionary[key]['percentage']}% of total"
                     )
-
-        # compute silhouette score
-        """if len(set(labels)) == 1:
-            silhouette_avg = 1.0
-        else:
-            silhouette_avg = silhouette_score(distance_matrix, labels)"""
-        silhouette_avg = self.cluster_results["best_silhouette"]
-        print(f"Silhouette Coefficient: {silhouette_avg}")
+        print(f"Silhouette Score: {self.cluster_results['silhouette_score']}")
         # compressed_dictionary["boundary_inds"] = self.cluster_results["bounary_list_inds"]
-        compressed_dictionary["silhouette"] = float(silhouette_avg)
-        compressed_dictionary["labels"] = [
-            int(i) for i in self.cluster_results["labels"]
-        ]
-        compressed_dictionary["n_clusters"] = int(self.cluster_results["n_clusters"])
-        compressed_dictionary["total_count"] = int(total_count)
+        compressed_dictionary["silhouette"] = self.cluster_results["silhouette_score"]
+        compressed_dictionary["n_clusters"] = self.cluster_results["n_clusters"]
+        compressed_dictionary["total_count"] = len(self.cluster_results["labels"])
+
+        if self.plot_clusters == True:
+            #Plot clusters with Multi-Dimensional Scaling
+            mds = MDS(n_components=3, dissimilarity="precomputed", random_state = 0)
+            projection = mds.fit_transform(self.distance_matrix)  # Directly feed the distance matrix
+            color_palette = sns.color_palette('deep', 12)
+            cluster_colors = [color_palette[label] for label in self.cluster_results.labels_]
+
+            # Define different perspectives
+            perspectives = [
+                (30, 30),   # Elevation=30°, Azimuth=30°
+                (30, 120),  # Elevation=30°, Azimuth=120°
+                (30, 210),  # Elevation=30°, Azimuth=210°
+                (30, 300),  # Elevation=30°, Azimuth=300°
+                (90, 0)     # Top view
+            ]
+
+            # Create a 3D scatter plot from different perspectives
+            for elev, azim in perspectives:
+                fig = plt.figure()
+                ax = fig.add_subplot(111, projection='3d')
+                ax.scatter(projection[:, 0], projection[:, 1], projection[:, 2], s=10, linewidth=0, alpha=0.25, c=cluster_colors)
+                ax.view_init(elev, azim)
+                ax.set_xlabel('Component 1')
+                ax.set_ylabel('Component 2')
+                ax.set_zlabel('Component 3')
+                plt.title(f'View from elevation {elev}°, azimuth {azim}°')
+                plt.show()
+        if self.plot_dwell_times == True:
+            print(0)
         return compressed_dictionary

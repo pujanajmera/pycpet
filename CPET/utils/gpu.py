@@ -14,41 +14,33 @@ def check_tensor(x, name="Tensor"):
     return False
 
 
-'''
 #@profile
 @torch.jit.script
-def calculate_electric_field_torch_batch_gpu(x_0: torch.Tensor, x: torch.Tensor, Q: torch.Tensor) -> torch.Tensor:
-    N = x_0.size(0)
-    E = torch.zeros(N, 3, device=x_0.device)
-
-    for start in range(0, N, 1000):
-        end = min(start + 1000, N)
-        #x_0_batch = x_0[start:end]
-        #R = x_0_batch.unsqueeze(1) - x.unsqueeze(0)
-        R = x_0[start:end].unsqueeze(1) - x.unsqueeze(0)
-        r_mag_cube = torch.norm(R, dim=-1, keepdim=True).pow(3)
-        E[start:end] = torch.einsum("ijk,ijk,ijk->ik", R, 1/r_mag_cube, Q) * 14.3996451
-
-    return E
-
-@torch.jit.script
-def propagate_topo_matrix_gpu(path_matrix: torch.Tensor,i: torch.Tensor, x: torch.Tensor, Q: torch.Tensor, step_size: torch.Tensor) -> torch.Tensor:
-#def propagate_topo_matrix_gpu(path_matrix, i, x, Q, step_size):
+def calculate_electric_field_torch_batch_gpu(
+    x_0: torch.Tensor, 
+    x: torch.Tensor, 
+    Q: torch.Tensor
+) -> torch.Tensor:
     """
-    Propagates position based on normalized electric field at a given point
+    Computes field at a set of points given the charges and their positions
     Takes
-        x_0(array) - position to propagate based on field at that point of shape (1,3)
+        x_0(array) - positions to compute field at of shape (L,3)
         x(array) - positions of charges of shape (N,3)
         Q(array) - magnitude and sign of charges of shape (N,1)
-        step_size(float) - size of streamline step to take when propagating, real and positive
     Returns
-        x_0 - new position on streamline after propagation via electric field
+        E - electric field at x_0 of shape (L,3)
     """
-    path_matrix_prior = path_matrix[int(i)]
-    E = calculate_electric_field_torch_batch_gpu(path_matrix_prior, x, Q)  # Compute field
-    path_matrix[i+1] = path_matrix_prior + step_size* E / torch.norm(E, dim=-1, keepdim=True)
-    return path_matrix
-'''
+    N = x_0.size(0)
+    E = torch.zeros(N, 3, device=x_0.device, dtype=torch.float32)
+
+    for start in range(0, N, 100):
+        end = min(start + 100, N)
+        R = x_0[start:end].unsqueeze(1) - x.unsqueeze(0)
+        r_mag_cube = torch.norm(R, dim=-1, keepdim=True).pow(-3)
+        # E[start:end] = torch.einsum("ijk,ijk,ijk->ik", R, 1/r_mag_cube, Q) * 14.3996451
+        E[start:end] = (R * r_mag_cube * Q).sum(dim=1) * 14.3996451
+
+    return E
 
 
 @torch.jit.script
@@ -60,42 +52,24 @@ def propagate_topo_matrix_gpu(
     step_size: torch.Tensor,
 ) -> torch.Tensor:
     """
-    Propagates position based on normalized electric field at a given point
+    Propagates position based on normalized electric field at a set of points
     Takes
-        x_0(array) - position to propagate based on field at that point of shape (1,3)
+        path_matrix(array) - positions of streamline of shape (M,L,3)
+        i(int) - most recently updated position in streamline
         x(array) - positions of charges of shape (N,3)
         Q(array) - magnitude and sign of charges of shape (N,1)
         step_size(float) - size of streamline step to take when propagating, real and positive
     Returns
         x_0 - new position on streamline after propagation via electric field
     """
-    # torch.autograd.set_detect_anomaly(True)
-
     path_matrix_prior = path_matrix[int(i)]
-
-    # check_tensor(path_matrix_prior, "Path Matrix Prior")
     N = path_matrix_prior.size(0)
-    # E = torch.zeros(N, 3, device=path_matrix_prior.device, dtype=torch.float16)
-    E = torch.zeros(N, 3, device=path_matrix_prior.device, dtype=torch.float32)
-
-    for start in range(0, N, 100):
-        end = min(start + 100, N)
-        # x_0_batch = x_0[start:end]
-        # R = x_0_batch.unsqueeze(1) - x.unsqueeze(0)
-        R = path_matrix_prior[start:end].unsqueeze(1) - x.unsqueeze(0)
-        # R = R.to(torch.float16)
-        # print(R.dtype)
-        # check_tensor(R, "R")
-        r_mag_cube = torch.norm(R, dim=-1, keepdim=True).pow(-3)
-        # check_tensor(r_mag_cube, "R Mag Cube")
-        # E[start:end] = torch.einsum("ijk,ijk,ijk->ik", R, 1/r_mag_cube, Q) * 14.3996451
-        E[start:end] = (R * r_mag_cube * Q).sum(dim=1) * 14.3996451
-        # check_tensor(E, "Electric Field")
-
+    E = calculate_electric_field_torch_batch_gpu(path_matrix_prior, 
+                                                 x, 
+                                                 Q)
     path_matrix[i + 1] = path_matrix_prior + step_size * E / torch.norm(
         E, dim=-1, keepdim=True
     )
-
     return path_matrix
 
 

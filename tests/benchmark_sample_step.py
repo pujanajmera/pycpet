@@ -18,7 +18,7 @@ def main():
     options = args.o
     cpet = CPET(options)
     files_input = glob(cpet.inputpath + "/*.pdb")
-    num=3
+    num = 3
     if len(files_input) < 3:
         warnings.warn("Less than 3 pdb files found in the input directory, benchmarking on {} files. This may be insufficient sampling".format(len(files_input)))
         num = len(files_input)

@@ -681,15 +681,6 @@ def construct_distance_matrix(histograms):
     return matrix
 
 
-def construct_distance_matrix_alt(histograms):
-    flattened_hists = [hist.flatten() for hist in histograms]
-    np.save("flattened_hists.npy", flattened_hists)
-    scaler = StandardScaler()
-    flattened_hists_scaled = scaler.fit_transform(flattened_hists)
-    matrix = squareform(pdist(flattened_hists_scaled, "euclidean"))
-    return matrix
-
-
 def construct_distance_matrix_alt2(histograms):
     new_histograms = []
     for h in histograms:
