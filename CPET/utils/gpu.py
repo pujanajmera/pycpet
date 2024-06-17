@@ -19,8 +19,7 @@ def check_tensor(x, name="Tensor"):
 def calculate_electric_field_torch_batch_gpu(
     x_0: torch.Tensor, 
     x: torch.Tensor, 
-    Q: torch.Tensor,
-    dtype
+    Q: torch.Tensor
 ) -> torch.Tensor:
     """
     Computes field at a set of points given the charges and their positions
@@ -32,10 +31,12 @@ def calculate_electric_field_torch_batch_gpu(
         E - electric field at x_0 of shape (L,3)
     """
     N = x_0.size(0)
-    E = torch.zeros(N, 3, device=x_0.device, dtype=dtype)
+    E = torch.zeros(N, 3, device=x_0.device, dtype=torch.float32)
 
     for start in range(0, N, 100):
         end = min(start + 100, N)
+        print(x_0[start:end].unsqueeze(1).shape)
+        print(x.unsqueeze(0).shape)
         R = x_0[start:end].unsqueeze(1) - x.unsqueeze(0)
         r_mag_cube = torch.norm(R, dim=-1, keepdim=True).pow(-3)
         # E[start:end] = torch.einsum("ijk,ijk,ijk->ik", R, 1/r_mag_cube, Q) * 14.3996451

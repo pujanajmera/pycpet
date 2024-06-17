@@ -190,6 +190,8 @@ def parse_pqr(path_to_pqr):
     Q = []
     ret_atom_num = []
     res_name = []
+    res_num = []
+    atom_type = []
 
     with open(path_to_pqr) as pqr_file:
         lines = pqr_file.readlines()
@@ -197,7 +199,7 @@ def parse_pqr(path_to_pqr):
     for line in lines:
         if line.startswith("ATOM") or line.startswith("HETATM"):
             shift = 0
-            res_ind = 5  # index of residue value
+            res_ind = 5  # index of residue number
             split_tf = False
             if len(line.split()[0]) > 6:
                 res_ind = 4
@@ -207,14 +209,19 @@ def parse_pqr(path_to_pqr):
                 # remove HETATM from split 0
                 ret_atom_num.append(int(line.split()[0][6:]))
                 res_name.append(line.split()[2])
+                atom_type.append(line.split()[1])
+                
             else:
                 ret_atom_num.append(int(line.split()[1]))
-                res_name.append(line.split()[3])          
+                res_name.append(line.split()[3])
+                atom_type.append(line.split()[2])        
 
             if len(line.split()[res_ind]) > 4:
                 res_val = int(line.split()[res_ind - 1][1:])
             else:
                 res_val = int(line.split()[res_ind])
+
+            res_num.append(res_val)
 
             if res_val > 999:
                 shift += int(np.log10(res_val) - 2)
@@ -254,7 +261,7 @@ def parse_pqr(path_to_pqr):
             temp = []
             tempq = []
 
-    return np.array(x), np.array(Q).reshape(-1, 1), ret_atom_num, res_name
+    return np.array(x), np.array(Q).reshape(-1, 1), ret_atom_num, res_name, res_num, atom_type
 
 
 def parse_pdb(pdb_file_path, get_charges=False, float32=True):

@@ -86,16 +86,16 @@ def gather_reference_simplest_implementation(topo):
         
 
 class TestEField:
-    test_file = "./test_files/test_large.pdb"
+    test_file = "./test_files/test_large.pqr"
     options = {
         "dtype": "float32", 
         "center": {
             "method": "first", 
             "atoms": {
-                "CD": 2
+                "CG": 2
             }
         }, 
-        "x":[1, 0, 0],
+        "x": [1, 0, 0],
         "y": [0, 1, 0],
         "filter_radius": 10.0,
         "initializer": "uniform", 
@@ -133,7 +133,7 @@ class TestEField:
             calculate_electric_field_dev_c_shared, # works
             calculate_electric_field_c_shared_full, # works
             calculate_electric_field_c_shared_full_alt, # works
-            calculate_electric_field_gpu_for_test,
+            calculate_electric_field_gpu_for_test, # works
         ]
 
         for calculator_function in calculator_function_list:

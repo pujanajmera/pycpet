@@ -70,7 +70,9 @@ class calculator:
                 self.x,
                 self.Q,
                 self.atom_number,
-                self.resids
+                self.resids,
+                self.residue_number,
+                self.atom_type
             ) = parse_pqr(self.path_to_pdb)
         else:
             (

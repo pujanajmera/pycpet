@@ -393,7 +393,13 @@ def calculate_electric_field_gpu_for_test(x_0, x, Q, device="cuda"):
     x = torch.tensor(x, dtype=torch.float32, device=device)
     Q = torch.tensor(Q, dtype=torch.float32, device=device)
 
+    if x_0.dim() == 1:
+        x_0 = x_0.unsqueeze(0)
+
     E = calculate_electric_field_torch_batch_gpu(x_0, x, Q)
+
+    if E.dim() == 2 and E.size(0) == 1:
+        E = E.squeeze(0)
 
     return E.cpu().numpy()
 

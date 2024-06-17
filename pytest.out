@@ -1,0 +1,21 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.5, pytest-7.4.2, pluggy-1.3.0 -- /jet/home/ajmera/.conda/envs/CPET_ENV/bin/python
+cachedir: .pytest_cache
+rootdir: /jet/home/ajmera/programs/CPET-python
+collecting ... collected 2 items
+
+test_e_field_calcs.py::TestEField::test_two_reference_fields PASSED      [ 50%]
+test_e_field_calcs.py::TestEField::test_calculators PASSED               [100%]
+
+=============================== warnings summary ===============================
+../CPET/utils/calculator.py:3
+  /jet/home/ajmera/programs/CPET-python/CPET/utils/calculator.py:3: DeprecationWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html
+    import pkg_resources
+
+../../../.conda/envs/CPET_ENV/lib/python3.11/site-packages/pkg_resources/__init__.py:2871
+  /jet/home/ajmera/.conda/envs/CPET_ENV/lib/python3.11/site-packages/pkg_resources/__init__.py:2871: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('mpl_toolkits')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(pkg)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 2 passed, 2 warnings in 18.49s ========================
