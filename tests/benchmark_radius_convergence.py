@@ -52,37 +52,37 @@ def main():
         if len(topo_file_protein) != num*len(benchmark_radii):
             raise ValueError("Incorrect number of output topologies for requested benchmark parameters")
 
-        histograms = make_histograms(topo_file_list,plot=False)
+        histograms = make_histograms(topo_file_protein,plot=False)
         distance_matrix = construct_distance_matrix(histograms)
 
-    distances = pd.DataFrame(distance_matrix)
+        distances = pd.DataFrame(distance_matrix)
 
-    #Modify file names
+        #Modify file names
 
-    labels = topo_file_list
-    labels = [label.replace(".top","").split("/")[-1].replace("rad_conv_","") for label in labels]
+        labels = topo_file_protein
+        labels = [label.replace(".top","").split("/")[-1] for label in labels]
 
-    # Map each label to its group
-    group_map = {label: label.split('_')[0] for label in labels}
-    grouped_labels = [group_map[label] for label in labels]
-    print(group_map)
-    print(grouped_labels)
-    # Apply the new labels to the DataFrame
-    distances.columns = grouped_labels
-    distances.index = grouped_labels
+        # Map each label to its group
+        group_map = {label: label.split('_')[0] for label in labels}
+        grouped_labels = [group_map[label] for label in labels]
+        print(group_map)
+        print(grouped_labels)
+        # Apply the new labels to the DataFrame
+        distances.columns = grouped_labels
+        distances.index = grouped_labels
 
-    # Aggregate by taking the mean within each group for both rows and columns
-    grouped = distances.groupby(level=0).mean()
-    averaged_distances = grouped.T.groupby(level=0).mean()
+        # Aggregate by taking the mean within each group for both rows and columns
+        grouped = distances.groupby(level=0).mean()
+        averaged_distances = grouped.T.groupby(level=0).mean()
 
-    # Ensure the matrix is symmetric
-    averaged_distances = (averaged_distances + averaged_distances.T) / 2
+        # Ensure the matrix is symmetric
+        averaged_distances = (averaged_distances + averaged_distances.T) / 2
 
-    # (Optional) Plot the distance matrix
-    plt.figure(figsize=(10,8))
-    sns.heatmap(averaged_distances, cmap="Greens_r", annot=True,linewidths=0.1)
-    plt.title("Averaged Distance Matrix")
-    plt.show()
-    plt.imsave("averaged_distance_matrix.png",averaged_distances)
+        # (Optional) Plot the distance matrix
+        plt.figure(figsize=(10,8))
+        sns.heatmap(averaged_distances, cmap="Greens_r", annot=True,linewidths=0.1)
+        plt.title("Averaged Distance Matrix")
+        plt.show()
+        plt.imsave("averaged_distance_matrix.png",averaged_distances)
     
 main()

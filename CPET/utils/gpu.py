@@ -15,11 +15,12 @@ def check_tensor(x, name="Tensor"):
 
 
 #@profile
-@torch.jit.script
+#@torch.jit.script
 def calculate_electric_field_torch_batch_gpu(
     x_0: torch.Tensor, 
     x: torch.Tensor, 
-    Q: torch.Tensor
+    Q: torch.Tensor,
+    dtype
 ) -> torch.Tensor:
     """
     Computes field at a set of points given the charges and their positions
@@ -31,7 +32,7 @@ def calculate_electric_field_torch_batch_gpu(
         E - electric field at x_0 of shape (L,3)
     """
     N = x_0.size(0)
-    E = torch.zeros(N, 3, device=x_0.device, dtype=torch.float32)
+    E = torch.zeros(N, 3, device=x_0.device, dtype=dtype)
 
     for start in range(0, N, 100):
         end = min(start + 100, N)
@@ -43,13 +44,14 @@ def calculate_electric_field_torch_batch_gpu(
     return E
 
 
-@torch.jit.script
+#@torch.jit.script
 def propagate_topo_matrix_gpu(
     path_matrix: torch.Tensor,
     i: torch.Tensor,
     x: torch.Tensor,
     Q: torch.Tensor,
     step_size: torch.Tensor,
+    dtype_str: str
 ) -> torch.Tensor:
     """
     Propagates position based on normalized electric field at a set of points
@@ -64,9 +66,14 @@ def propagate_topo_matrix_gpu(
     """
     path_matrix_prior = path_matrix[int(i)]
     N = path_matrix_prior.size(0)
+    if dtype_str == "float32":
+        dtype = torch.float32
+    else:
+        dtype = torch.float64
     E = calculate_electric_field_torch_batch_gpu(path_matrix_prior, 
                                                  x, 
-                                                 Q)
+                                                 Q,
+                                                 dtype)
     path_matrix[i + 1] = path_matrix_prior + step_size * E / torch.norm(
         E, dim=-1, keepdim=True
     )
@@ -74,7 +81,9 @@ def propagate_topo_matrix_gpu(
 
 
 @torch.jit.script
-def curv_mat_gpu(v_prime: torch.Tensor, v_prime_prime: torch.Tensor) -> torch.Tensor:
+def curv_mat_gpu(
+    v_prime: torch.Tensor, v_prime_prime: torch.Tensor
+) -> torch.Tensor:
     """
     Computes curvature of the streamline at a given point
     Takes

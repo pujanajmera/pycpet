@@ -9,7 +9,6 @@ from torch.profiler import profile, ProfilerActivity
 import torch
 
 
-from CPET.utils.parser import parse_pdb
 from CPET.utils.parallel import task, task_batch, task_base, task_complete_thread
 from CPET.utils.calculator import (
     initialize_box_points_random,
@@ -20,6 +19,7 @@ from CPET.utils.calculator import (
 )
 from CPET.utils.parser import (
     parse_pdb,
+    parse_pqr,
     filter_radius,
     filter_residue,
     filter_in_box,
@@ -42,8 +42,6 @@ from CPET.utils.gridcpu import (
     initialize_streamline_grid_gridcpu,
 )
 from CPET.utils.gpu_alt import (
-    propagate_topo_matrix_gpu_alt,
-    compute_curv_and_dist_mat_gpu_alt,
     batched_filter_gpu_alt,
     batched_filter_gpu_end_alt,
     initialize_streamline_grid_gpu_alt,
@@ -67,14 +65,22 @@ class calculator:
         #Be very careful with the box_shift option. The box needs to be centered at the origin and therefore, the code will shift protein in the opposite direction of the provided box vector 
         self.box_shift = options["box_shift"] if "box_shift" in options.keys() else [0,0,0]
         
-        (
-            self.x,
-            self.Q,
-            self.atom_number,
-            self.resids,
-            self.residue_number,
-            self.atom_type,
-        ) = parse_pdb(self.path_to_pdb, get_charges=True)
+        if ".pqr" in self.path_to_pdb:
+            (
+                self.x,
+                self.Q,
+                self.atom_number,
+                self.resids
+            ) = parse_pqr(self.path_to_pdb)
+        else:
+            (
+                self.x,
+                self.Q,
+                self.atom_number,
+                self.resids,
+                self.residue_number,
+                self.atom_type,
+            ) = parse_pdb(self.path_to_pdb, get_charges=True)
 
         ##################### define center axis
 
@@ -874,7 +880,7 @@ class calculator:
                 for i in range(max_num_batch):
                     #print(i)
                     for j in range(self.GPU_batch_freq - 2):
-                        path_matrix_torch = propagate_topo_matrix_gpu_alt(
+                        path_matrix_torch = propagate_topo_matrix_gpu(
                             path_matrix_torch,
                             torch.tensor([j + 1]).cuda(),
                             x_gpu,
@@ -916,7 +922,7 @@ class calculator:
                     del path_matrix_torch
                     # For remainder
                     for i in range(remainder - 1):
-                        path_matrix_torch_new = propagate_topo_matrix_gpu_alt(
+                        path_matrix_torch_new = propagate_topo_matrix_gpu(
                             path_matrix_torch_new,
                             torch.tensor([i + 2]).cuda(),
                             x_gpu,
@@ -940,7 +946,7 @@ class calculator:
                 else:
                     del path_matrix_torch
 
-                distances, curvatures = compute_curv_and_dist_mat_gpu_alt(
+                distances, curvatures = compute_curv_and_dist_mat_gpu(
                     init_points[0, :, :],
                     init_points[1, :, :],
                     init_points[2, :, :],
@@ -1016,7 +1022,7 @@ class calculator:
             for i in range(max_num_batch):
                 
                 for j in range(self.GPU_batch_freq - 2):
-                    path_matrix_torch = propagate_topo_matrix_gpu_alt(
+                    path_matrix_torch = propagate_topo_matrix_gpu(
                         path_matrix_torch,
                         torch.tensor([j + 1]).cuda(),
                         x_gpu,
@@ -1059,7 +1065,7 @@ class calculator:
                 del path_matrix_torch
                 # For remainder
                 for i in range(remainder - 1):
-                    path_matrix_torch_new = propagate_topo_matrix_gpu_alt(
+                    path_matrix_torch_new = propagate_topo_matrix_gpu(
                         path_matrix_torch_new,
                         torch.tensor([i + 2]).cuda(),
                         x_gpu,

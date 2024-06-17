@@ -5,6 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import pdist, squareform
+from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
 
 package_name = "CPET-python"
 package = pkg_resources.get_distribution(package_name)
@@ -369,7 +370,7 @@ def calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q):
     return E_list
 
 
-def calculate_electric_field_gpu_torch(x_0, x, Q, device="cuda", filter=True):
+def calculate_electric_field_gpu_for_test(x_0, x, Q, device="cuda"):
     """
     Computes electric field at a point given positions of charges
     Takes
@@ -387,18 +388,13 @@ def calculate_electric_field_gpu_torch(x_0, x, Q, device="cuda", filter=True):
     else:
         device = torch.device("cpu")
 
+    
     x_0 = torch.tensor(x_0, dtype=torch.float32, device=device)
     x = torch.tensor(x, dtype=torch.float32, device=device)
     Q = torch.tensor(Q, dtype=torch.float32, device=device)
 
-    R = x_0 - x
-    #R_sq = R**2
-    r_mag_cube = torch.norm(R, dim=-1, keepdim=True).pow(-3)
-    #print("r dim: {}".format(R.shape))
-    #print("r mag cube: {}".format(r_mag_cube.shape))
-    #print("Q shape: {}".format(Q.shape))
-    E = (R * r_mag_cube * Q).sum(dim=0) * 14.3996451
-    # now combine all of the above operations into one
+    E = calculate_electric_field_torch_batch_gpu(x_0, x, Q)
+
     return E.cpu().numpy()
 
 

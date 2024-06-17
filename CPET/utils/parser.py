@@ -175,7 +175,7 @@ def filter_atom_num(x, Q, atom_num_list, filter_list):
     return x_filtered, Q_filtered
 
 
-def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
+def parse_pqr(path_to_pqr):
     """
     Parses pqr file to obtain charges and positions of charges (beta, removes charges that are 0)
     Takes
@@ -203,18 +203,13 @@ def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
                 res_ind = 4
                 split_tf = True
 
-            if ret_atom_names:
-                if split_tf:
-                    # remove HETATM from split 0
-                    ret_atom_num.append(int(line.split()[0][6:]))
-                else:
-                    ret_atom_num.append(int(line.split()[1]))
-
-            if ret_residue_names:
-                if split_tf:
-                    res_name.append(line.split()[2])
-                else:
-                    res_name.append(line.split()[3])
+            if split_tf:
+                # remove HETATM from split 0
+                ret_atom_num.append(int(line.split()[0][6:]))
+                res_name.append(line.split()[2])
+            else:
+                ret_atom_num.append(int(line.split()[1]))
+                res_name.append(line.split()[3])          
 
             if len(line.split()[res_ind]) > 4:
                 res_val = int(line.split()[res_ind - 1][1:])
@@ -258,13 +253,8 @@ def parse_pqr(path_to_pqr, ret_atom_names=False, ret_residue_names=False):
             # clear temp variables
             temp = []
             tempq = []
-    if ret_atom_names:
-        return np.array(x), np.array(Q).reshape(-1, 1), ret_atom_num
 
-    if ret_residue_names:
-        return np.array(x), np.array(Q).reshape(-1, 1), res_name
-
-    return np.array(x), np.array(Q).reshape(-1, 1)
+    return np.array(x), np.array(Q).reshape(-1, 1), ret_atom_num, res_name
 
 
 def parse_pdb(pdb_file_path, get_charges=False, float32=True):

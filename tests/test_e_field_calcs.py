@@ -18,7 +18,7 @@ from CPET.utils.calculator import (
     calculate_electric_field_dev_c_shared,
     calculate_electric_field_c_shared_full_alt,
     calculate_electric_field_c_shared_full,
-    calculate_electric_field_gpu_torch, 
+    calculate_electric_field_gpu_for_test, 
     )
 
 
@@ -133,8 +133,7 @@ class TestEField:
             calculate_electric_field_dev_c_shared, # works
             calculate_electric_field_c_shared_full, # works
             calculate_electric_field_c_shared_full_alt, # works
-            calculate_electric_field_gpu_torch,
-            # add your functions here
+            calculate_electric_field_gpu_for_test,
         ]
 
         for calculator_function in calculator_function_list:
@@ -158,11 +157,4 @@ class TestEField:
             self.field_equality(field_formatted)
 
         print("All tests passed!")
-    
 
-    # Note: if you create a new calculator, you should add a test here. 
-    # TODO: pujan - add compatability with your gpu calcs
-    # TODO: pujan - make your GPU field calcs either (a) a function (b) reimplement them here 
-    # TODO: the latter is not ideal cause if you ever change those implementations then you have
-    # TODO: to change them here too.
-     
