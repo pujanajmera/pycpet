@@ -33,17 +33,21 @@ def task_base(x_0, n_iter, x, Q, step_size, dimensions):
         x_0 = propagate_topo(x_0, x, Q, step_size)
         if not Inside_Box(x_0, dimensions):
             # count += 1
+            endtype = "box"
             break
+        else:
+            endtype = "path"
 
     x_init_plus = propagate_topo(x_init, x, Q, step_size)
     x_init_plus_plus = propagate_topo(x_init_plus, x, Q, step_size)
     x_0_plus = propagate_topo(x_0, x, Q, step_size)
     x_0_plus_plus = propagate_topo(x_0_plus, x, Q, step_size)
-
+    init_points = np.array([x_init, x_init_plus, x_init_plus_plus])
+    final_points = np.array([x_0, x_0_plus, x_0_plus_plus])
     result = compute_curv_and_dist(
         x_init, x_init_plus, x_init_plus_plus, x_0, x_0_plus, x_0_plus_plus
     )
-    return result
+    return result[0], result[1], init_points, final_points, endtype
 
 
 def task(x_0, n_iter, x, Q, step_size, dimensions):

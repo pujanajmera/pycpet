@@ -47,9 +47,10 @@ def distance_numpy(hist1, hist2):
 
 def gather_reference_simplest_implementation_topo(topo):
     hist = topo.compute_topo_single()
+    print("Base case histogram computed")
     return hist
 
-class Test_topos:
+class Test_topo_ops:
     options = {
         "center": {
                 "method": "first",
@@ -71,7 +72,7 @@ class Test_topos:
                         "CB": 3
                 }
         },
-        "n_samples": 200,
+        "n_samples": 300,
         "dimensions": [1.5, 1.5, 1.5],
         "step_size": 0.01,
         "batch_size": 10,
@@ -81,7 +82,7 @@ class Test_topos:
         "initializer": "uniform",
         "CPET_method": "topology",
         "max_streamline_init": "fixed_rand",
-        "dtype": "float64",
+        "dtype": "float32",
         #"filter_resids": ["HEM"]
     }
     topo = calculator(options, path_to_pdb="./test_files/test_large.pdb")
@@ -104,7 +105,8 @@ class Test_topos:
             #self.topo.compute_topo,
             #self.topo.compute_topo_complete_c_shared,
             #self.topo.compute_topo_base,  - what are we doing with this one?
-            self.topo.compute_topo_GPU_batch_filter
+            self.topo.compute_topo_GPU_batch_filter,
+            #self.topo.compute_topo_GPU_batch_filter_alt,
         ]
         
         for topo_function in topo_function_list:
