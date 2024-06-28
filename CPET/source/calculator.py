@@ -521,17 +521,16 @@ class calculator:
         return point_field
 
     def compute_topo_GPU_batch_filter(self):
-        #ONE TRUE VERSION I AM UPDATING ATM
         print("... > Computing Topo in Batches on a GPU!")
         print(f"Number of samples: {self.n_samples}")
         print(f"Number of charges: {len(self.Q)}")
         print(f"Step size: {self.step_size}")
 
-        Q_gpu = torch.tensor(self.Q, dtype=torch.float64).cuda()
+        Q_gpu = torch.tensor(self.Q, dtype=torch.float32).cuda()
         Q_gpu = Q_gpu.unsqueeze(0)
-        x_gpu = torch.tensor(self.x, dtype=torch.float64).cuda()
-        dim_gpu = torch.tensor(self.dimensions, dtype=torch.float64).cuda()
-        step_size_gpu = torch.tensor([self.step_size], dtype=torch.float64).cuda()
+        x_gpu = torch.tensor(self.x, dtype=torch.float32).cuda()
+        dim_gpu = torch.tensor(self.dimensions, dtype=torch.float32).cuda()
+        step_size_gpu = torch.tensor([self.step_size], dtype=torch.float32).cuda()
         random_max_samples = torch.tensor(self.random_max_samples).cuda()
 
         M = self.max_streamline_len
@@ -539,7 +538,7 @@ class calculator:
             (M + 2 - self.GPU_batch_freq)/(self.GPU_batch_freq - 2)
         ) + 1
         remainder = (M + 2 - self.GPU_batch_freq) % (self.GPU_batch_freq - 2) #Number of remaining propagations
-        path_matrix_torch = torch.tensor(np.zeros((self.GPU_batch_freq, self.n_samples, 3)), dtype=torch.float64).cuda()
+        path_matrix_torch = torch.tensor(np.zeros((self.GPU_batch_freq, self.n_samples, 3)), dtype=torch.float32).cuda()
         path_matrix_torch[0] = torch.tensor(self.random_start_points)
         path_matrix_torch = propagate_topo_matrix_gpu(
             path_matrix_torch,
@@ -550,12 +549,12 @@ class calculator:
         )
         #Using random_max_samples-1 to convert from max samples to indices
         path_filter = generate_path_filter_gpu(
-        random_max_samples-1, torch.tensor([M + 2], dtype=torch.int64).cuda()
+        random_max_samples, torch.tensor([M + 2], dtype=torch.int64).cuda()
         )
 
         path_filter = torch.tensor(path_filter, dtype=torch.bool).cuda()
         dumped_values = torch.tensor(
-            np.empty((6, 0, 3)), dtype=torch.float64
+            np.empty((6, 0, 3)), dtype=torch.float32
         ).cuda()
 
         j = 0
@@ -589,20 +588,20 @@ class calculator:
                 GPU_batch_freq=self.GPU_batch_freq,
                 dtype_str=self.dtype,
             )
-
+            print(dumped_values.shape[1])
             if dumped_values.shape[1] >= self.n_samples:
                 print("Finished streamlines early, breaking!")
                 break
         print(f"Checking dumped values ({dumped_values.shape[1]}) vs number of samples ({self.n_samples})")
         if (
-            not dumped_values.shape[1] >= self.n_samples
+            dumped_values.shape[1] < self.n_samples
         ):  # Still some samples remaining in the remainder
             print("Streamlines remaining")
             print(remainder)
             print(path_matrix_torch.shape)
             path_matrix_torch_new = torch.zeros(
                 (remainder + 2, path_matrix_torch.shape[1], 3),
-                dtype=torch.float64,
+                dtype=torch.float32,
             ).cuda()
             path_matrix_torch_new[0:2, ...] = path_matrix_torch[-2:, ...]
             del path_matrix_torch
@@ -676,84 +675,3 @@ class calculator:
             fmt="%.6f",
         )
         return topology
-
-    def compute_topo_griddev(self):
-        print("... > Computing Grid Topo in Batches! -- IN DEV")
-        print(f"Number of samples: {self.n_samples}")
-        print(f"Number of charges: {len(self.Q)}")
-        print(f"Step size: {self.step_size}")
-
-        self.x_vec_pt
-        self.x
-        self.y_vec_pt
-        self.dimensions
-        self.step_size
-        self.n_samples
-        self.GPU_batch_freq
-
-        path_matrix, _, M, path_filter, _ = initialize_streamline_grid_gridcpu(
-            self.center,
-            self.x_vec_pt,
-            self.y_vec_pt,
-            self.dimensions,
-            self.n_samples,
-            self.step_size,
-        )
-        dumped_values = np.empty((6, 0, 3))
-        start_time = time.time()
-        j = 0
-        start_time = time.time()
-        for i in range(len(path_matrix)):
-            if i % 100 == 0:
-                print(i)
-
-            if j == len(path_matrix) - 1:
-                break
-            # start_time_prop = time.time()
-            path_matrix = propagate_topo_matrix_gridcpu(
-                path_matrix, i, self.x, self.Q, self.step_size
-            )
-            # end_time_prop = time.time()
-            # print(f"Time taken for propagation: {end_time_prop - start_time_prop:.2f} seconds")
-            if i % self.GPU_batch_freq == 0 and i > 5:
-                # start_time_filter = time.time()
-                path_matrix, dumped_values, path_filter = batched_filter_gridcpu(
-                    path_matrix,
-                    dumped_values,
-                    i,
-                    self.dimensions,
-                    M,
-                    path_filter,
-                    current=True,
-                )
-                # end_time_filter = time.time()
-                # print(f"Time taken for filtering: {end_time_filter - start_time_filter:.2f} seconds")
-                # GPU_batch_freq *= 2
-            j += 1
-            if dumped_values.shape[1] >= self.n_samples:
-                break
-        path_matrix, dumped_values, path_filter = batched_filter_gridcpu(
-            path_matrix, dumped_values, i, self.dimensions, M, path_filter, current=True
-        )
-        print(path_matrix.shape)
-        print(dumped_values.shape)
-
-        # start_time_distcurv = time.time()
-        distances, curvatures = compute_curv_and_dist_mat_gridcpu(
-            dumped_values[0, :, :],
-            dumped_values[1, :, :],
-            dumped_values[2, :, :],
-            dumped_values[3, :, :],
-            dumped_values[4, :, :],
-            dumped_values[5, :, :],
-        )
-        # end_time_distcurv = time.time()
-        # print(f"Time taken for distance and curvature calculation: {end_time_distcurv - start_time_distcurv:.2f} seconds")
-
-        end_time = time.time()
-        print(
-            f"Time taken for {self.n_samples} calculations with N~{self.Q.shape}: {end_time - start_time:.2f} seconds"
-        )
-        topology = np.column_stack((distances, curvatures))
-        return topology
-

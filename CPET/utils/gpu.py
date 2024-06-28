@@ -41,7 +41,7 @@ def calculate_electric_field_torch_batch_gpu(
         E - electric field at x_0 of shape (L,3)
     """
     N = x_0.size(0)
-    E = torch.zeros(N, 3, device=x_0.device, dtype=torch.float64)
+    E = torch.zeros(N, 3, device=x_0.device, dtype=torch.float32)
 
     for start in range(0, N, 100):
         end = min(start + 100, N)
@@ -184,7 +184,7 @@ def generate_path_filter_gpu(arr, M):
         # Since value is the index, you need to add 3 to make sure you get the point and 2 additional points
         # For cases where value+2 is greater than the max number of streamline points, the entire streamline would be set to 1
         if value != -1:
-            mat[i, : value + 3] = 1
+            mat[i, : value] = 1
         # If no streamline ends exist, set the entire row to 1 (meaning nothing to filter)
         else:
             mat[i] = 1
@@ -217,7 +217,7 @@ def first_false_index_gpu(arr: torch.Tensor):
     unique_cols = torch.unique(col_indices) #Shape (P_1,), where P_1 is the number of streamlines that have at least one point outside the box
     for col in unique_cols:
         # Find the first place along the streamline where the point is outside the box
-        result[col] = torch.min(row_indices[col_indices == col]) 
+        result[col] = torch.min(row_indices[col_indices == col])
     return result
 
 
@@ -234,10 +234,7 @@ def filter_and_dump_gpu(
     stopping_indices,
     init_points, 
     path_matrix, 
-    ignore_indices, 
-    dumped_values, 
-    filtertype = "box",
-    prev_box_indices = None,
+    dumped_values,
 ):
     """
     Uses either box or path indices to dump values from path matrix or
@@ -248,32 +245,25 @@ def filter_and_dump_gpu(
         stopping_indices(array) - indices of stopping points
         init_points(array) - initial points of all current streamlines of shape (3,L,3)
         path_matrix(array) - positions of streamline of shape (M,L,3)
-        ignore_indices(array) - indices to ignore
         dumped_values(array) - values to dump
-        filtertype(str) - which filter to use, either box or path
     Returns
-        dumped_values(array) - updated values to dump
-        ignore_indices(array) - updated indices to ignore
+        dumped_values(array) - updated dumped streamline values
+        ignore_indices(array) - indices to ignore
     """
-
-    for n in stopping_indices:
-        idx = int(stopping_points[n])
-        if prev_box_indices is not None:
-            if torch.any(prev_box_indices == n):
-                print("Path index found in box indices, continuing")
-                continue
+    ignore_indices = []
+    for i in range(len(stopping_indices)):
+        idx = int(stopping_points[i])
         if idx >= GPU_batch_freq - 2:
-            ignore_indices.append(n)
+            ignore_indices.append(stopping_indices[i])
             continue
         new_data = torch.concat(
-            (init_points[:, n, :], path_matrix[idx : idx + 3, n, :]), dim=0
+            (init_points[:, stopping_indices[i], :], path_matrix[idx : idx + 3, stopping_indices[i], :]), dim=0
         )
-        print(f"Final {filtertype} point: {path_matrix[idx : idx + 3, n, :]}")
         dumped_values = torch.cat(
             (dumped_values, new_data.unsqueeze(1)), dim=1
         )
-        print(f"Final {filtertype} point from dumped_values: {dumped_values[:, -1, :]}")
-    print(f"Now have {dumped_values.shape[1]} number of dumped streamlines after {filtertype} filtering.")
+        #print(f"Final {filtertype} point from dumped_values: {dumped_values[:, -1, :]}")
+    print(f"Now have {dumped_values.shape[1]} number of dumped streamlines after filtering.")
     return dumped_values, ignore_indices
 
 # @torch.jit.script
@@ -291,11 +281,11 @@ def batched_filter_gpu(
     Batch filtering of the path matrix, and dumping streamline values
     that hit their limits, and reinitalizing path matrix and filters
     Takes
-        path_matrix(array) - positions of streamline of shape (M,L,3)
+        path_matrix(array) - positions of streamline of shape (GPU_batch_filter,L,3)
         dumped_values(array) - previous streamline begin+end of shape (F0,6)
         i(int) - current iteration
         dimensions(array) - L, W, H of box of shape (1,3)
-        path_filter(array) - filter to apply to path matrix of shape (L)
+        path_filter(array) - filter to apply to path matrix of shape (M,L,1)
         GPU_batch_freq(int) - frequency of GPU batch, changes if remainder exists
         init_points(array) - initial points of all current streamlines of shape (3,L,3)
         dtype_str(str) - data type of path matrix
@@ -305,7 +295,7 @@ def batched_filter_gpu(
         path_filt(array) - new path filter of shape of shape (L-F1)
         init_points_new(array) - new initial points of shape (3,L-F1,3)
     """
-
+    print("Filtering...")
     inside_box_mat = Inside_Box_gpu(path_matrix, dimensions) #Shape (M,L)
     first_false = first_false_index_gpu(inside_box_mat) #Shape (L,)
     outside_box_filter = generate_path_filter_gpu(first_false, GPU_batch_freq) #Shape (M,L,1)
@@ -315,45 +305,65 @@ def batched_filter_gpu(
         0
     ] #Shape (F1,) --> which streamlines hit the box edge
 
+    box_stopping_points = torch.sum(outside_box_filter, dim=(0, 2)) #Shape (L,)
+
     del diff_matrix_box
-    ignore_indices = []
-    dumped_values, ignore_indices = filter_and_dump_gpu(
-        GPU_batch_freq,
-        first_false,
-        box_indices,
-        init_points,
-        path_matrix,
-        ignore_indices,
-        dumped_values,
-    )
 
     path_filter_temp = path_filter[
         i * (GPU_batch_freq - 2) : GPU_batch_freq + i * (GPU_batch_freq - 2), ...
-    ]
+    ] #Shape (GPU_batch_freq,L,1)
     diff_matrix_path = (
         path_matrix * path_filter_temp - path_matrix
-    )
+    ) #Shape (GPU_batch_freq,L,3)
 
     path_indices = torch.any(diff_matrix_path != 0, dim=(0, 2)).nonzero()[:, 0]
 
     del diff_matrix_path
-    path_stopping_points = torch.sum(path_filter_temp, dim=(0, 2)) - 2
+    path_stopping_points = torch.sum(path_filter_temp, dim=(0, 2))
+
+    filter_indices = torch.unique(torch.concatenate((path_indices, box_indices)))
+
+    stopping_points = []
+
+    for i, index in enumerate(filter_indices):
+        if index in path_indices and index in box_indices:
+            """
+            stopping_points.append(
+                min(
+                    path_stopping_points[index],
+                    box_stopping_points[index],
+                )
+            )
+            """
+            #Slower version for testing:
+            print(f"Streamline detected to hit both path and box at index: {index}, checking now...")
+            if path_stopping_points[index] < box_stopping_points[index]:
+                stopping_points.append(path_stopping_points[index])
+                print("Streamline hit path limit first at index", index)
+            elif path_stopping_points[index] > box_stopping_points[index]:
+                stopping_points.append(box_stopping_points[index])
+                print("Streamline hit box first at index", index)
+            else:
+                stopping_points.append(path_stopping_points[index])
+                print("Path and box indices are equal")
+            
+        elif index in path_indices:
+            stopping_points.append(path_stopping_points[index])
+        elif index in box_indices:
+            stopping_points.append(first_false[index])
+        else:
+            raise ValueError("Index not found in either path or box indices for some reason...")
 
     dumped_values, ignore_indices = filter_and_dump_gpu(
         GPU_batch_freq,
-        path_stopping_points,
-        path_indices,
+        stopping_points,
+        filter_indices,
         init_points,
         path_matrix,
-        ignore_indices,
         dumped_values,
-        "path",
-        box_indices,
     )
 
     torch.cuda.empty_cache()
-
-    filter_indices = torch.unique(torch.concatenate((path_indices, box_indices)))
 
     mask = ~torch.isin(filter_indices, torch.tensor(ignore_indices).cuda())
 

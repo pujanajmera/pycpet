@@ -71,9 +71,9 @@ class Test_topos:
                         "CB": 3
                 }
         },
-        "n_samples": 200,
+        "n_samples": 1000,
         "dimensions": [1.5, 1.5, 1.5],
-        "step_size": 0.01,
+        "step_size": 0.001,
         "batch_size": 10,
         "concur_slip": 12,
         "filter_radius": 40.0,
@@ -81,7 +81,8 @@ class Test_topos:
         "initializer": "uniform",
         "CPET_method": "topology",
         "max_streamline_init": "fixed_rand",
-        "dtype": "float64",
+        "dtype": "float32",
+        "GPU_batch_freq": 100,
         #"filter_resids": ["HEM"]
     }
     topo = calculator(options, path_to_pdb="./test_files/test_large.pdb")
@@ -89,20 +90,21 @@ class Test_topos:
     reference_hist = gather_reference_simplest_implementation_topo(topo)
 
 
-    def topo_equality(self, test_topos):
+    def topo_equality(self, test_topos, topo_function):
         sorted_reference_hist = np.array(sorted(self.reference_hist, key=lambda x: (round(x[0], 3), round(x[1], 3))))
         sorted_test_topos = np.array(sorted(test_topos, key=lambda x: (round(x[0], 3), round(x[1], 3))))
         #print(sorted_reference_hist)
         #print(sorted_test_topos)
         np.testing.assert_allclose(
             sorted_reference_hist, 
-            sorted_test_topos, rtol=1e-2, atol=1e-2)
+            sorted_test_topos, rtol=1e-2, atol=1e-2,
+            err_msg=f"Topo histograms are not equal for {topo_function.__name__}")
         
 
     def test_topo_methods(self):
         topo_function_list = [
-            #self.topo.compute_topo,
-            #self.topo.compute_topo_complete_c_shared,
+            self.topo.compute_topo,
+            self.topo.compute_topo_complete_c_shared,
             #self.topo.compute_topo_base,  - what are we doing with this one?
             self.topo.compute_topo_GPU_batch_filter
         ]
@@ -110,7 +112,7 @@ class Test_topos:
         for topo_function in topo_function_list:
             print("----"*15)
             hist = topo_function()
-            self.topo_equality(hist)
+            self.topo_equality(hist, topo_function)
 
 
         # TODO: pujan add the topo for gpu - will need to batch the start points
