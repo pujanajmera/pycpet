@@ -1,45 +1,6 @@
 import numpy as np 
 
 
-def save_numpy_as_dat(dict_meta_data, average_field, name):
-    """
-    Saves np array in original format from cpet output
-    Takes:
-        dict_meta_data: dictionary with meta data
-        average_field: np array with average field
-        name: name of file to save
-    """
-
-    first_line = dict_meta_data["first_line"]
-    steps_x = dict_meta_data["steps_x"]
-    steps_y = dict_meta_data["steps_y"]
-    steps_z = dict_meta_data["steps_z"]
-    step_size_x = dict_meta_data["step_size_x"]
-    step_size_y = dict_meta_data["step_size_y"]
-    step_size_z = dict_meta_data["step_size_z"]
-    print(dict_meta_data)
-    lines = [first_line]
-    # add six lines starting with #
-    lines = lines + ["#\n"] * 6
-
-    # write as
-    for i in range(steps_x):
-        for j in range(steps_y):
-            for k in range(steps_z):
-                line = "{:.3f} {:.3f} {:.3f} {:.6f} {:.6f} {:.6f}\n".format(
-                    step_size_x * (i - (steps_x - 1) / 2),
-                    step_size_y * (j - (steps_y - 1) / 2),
-                    step_size_z * (k - (steps_z - 1) / 2),
-                    average_field[i, j, k, 0],
-                    average_field[i, j, k, 1],
-                    average_field[i, j, k, 2],
-                )
-                lines.append(line)
-
-    with open(name, "w") as f:
-        f.writelines(lines)
-
-
 def average_fields(mat):
     """Average the fields in the matrix."""
     return np.mean(mat, axis=0)

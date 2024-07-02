@@ -10,7 +10,7 @@ from CPET.utils.calculator import (
     compute_curv_and_dist,
     Inside_Box,
 )
-from CPET.utils.parser import parse_pqr
+from CPET.utils.io import parse_pqr
 from CPET.utils.c_ops import Math_ops
 
 

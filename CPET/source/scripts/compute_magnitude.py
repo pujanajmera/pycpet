@@ -1,11 +1,11 @@
 import numpy as np
 import argparse
 import json
-from CPET.utils.parser import parse_pqr, filter_pqr
+from CPET.utils.io import parse_pqr, filter_pqr
 from CPET.utils.calculator import calculate_field_at_point
-from CPET.utils.writeoutput import write_field_to_file
+from CPET.utils.io import write_field_to_file
 from CPET.utils.transformations import get_transformation
-from CPET.utils.parser import parse_pqr, parse_pdb
+from CPET.utils.io import parse_pqr, parse_pdb
 
 
 def main():

@@ -1,5 +1,143 @@
 import numpy as np
 
+
+def write_field_to_file(grid_points, field_points, filename):
+    """
+    Write grid points and field points to a files
+    Takes:
+        grid_points(array): 3D grid points (shape: (M,M,M 3))
+        field_points(array): Corresponding field values (shape: (M,M,M,3))
+        filename(str): Name of the file to write
+    """
+    # Flatten the grid and field points arrays and stack them along the last axis
+    data = np.column_stack((grid_points.reshape(-1, 3), field_points.reshape(-1, 3)))
+    # Create a format string for writing each line of the file
+    format_str = " ".join(["%f"] * 6)
+    # Open the file for writing
+    with open(filename, "w") as f:
+        # Write 7 lines of hashtags
+        for _ in range(7):
+            f.write("#\n")
+        # Write the data to the file
+        np.savetxt(f, data, fmt=format_str)
+
+
+def save_numpy_as_dat(meta_data, field, name):
+    """
+    Saves np array in original format from cpet output
+    Takes:
+        meta_data: dictionary with meta data
+        field: np array with average field
+        name: name of file to save
+    """
+
+    dimensions = meta_data["dimensions"]
+    step_size_list = meta_data["num_steps"]
+    
+    first_line = "#Sample Density: {} {} {} Volumne: Box: {} {} {} \n".format(
+        int((step_size_list[0] - 1 ) / 2), 
+        int((step_size_list[1] - 1 ) / 2),
+        int((step_size_list[2] - 1 ) / 2),
+        dimensions[0],
+        dimensions[1],
+        dimensions[2]
+    )
+    
+    lines_header = [first_line]
+    # add six lines starting with #
+    lines_header = lines_header + ["#\n"] * 6
+
+    # write as
+    np.savetxt(
+        name,
+        field,
+        fmt="%.3f",
+    )
+
+    # open file and write header
+    with open(name, "r") as f:
+        lines = f.readlines()
+
+    with open(name, "w") as f:
+        f.write("".join(lines_header))
+        f.write("".join(lines))
+
+
+def read_mat(file, meta_data=False, verbose=False):
+    """
+    Pulls the matrix from a cpet file
+    Takes
+        file: cpet file
+        meta_data(Optionally): returns the meta data
+    Returns
+        mat: matrix of xyz coordinates
+        meta_data(Optionally): dictionary of meta data
+    """
+    with open(file) as f:
+        lines = f.readlines()
+
+    steps_x = 2 * int(lines[0].split()[2]) + 1
+    steps_y = 2 * int(lines[0].split()[3]) + 1
+    steps_z = 2 * int(lines[0].split()[4]) + 1
+    x_size = float(lines[0].split()[-3])
+    y_size = float(lines[0].split()[-2])
+    z_size = float(lines[0].split()[-1])
+    step_size_x = np.round(x_size / float(lines[0].split()[2]), 4)
+    step_size_y = np.round(y_size / float(lines[0].split()[3]), 4)
+    step_size_z = np.round(z_size / float(lines[0].split()[4]), 4)
+
+    meta_dict = {
+        "first_line": lines[0],
+        "steps_x": steps_x,
+        "steps_y": steps_y,
+        "steps_z": steps_z,
+        "step_size_x": step_size_x,
+        "step_size_y": step_size_y,
+        "step_size_z": step_size_z,
+        "bounds_x": [-x_size, x_size + step_size_x],
+        "bounds_y": [-y_size, y_size + step_size_y],
+        "bounds_z": [-z_size, z_size + step_size_z],
+    }
+    #print(lines[0].split())
+    #print(meta_dict)
+    if verbose:
+        print(meta_dict)
+
+    if meta_data:
+        return meta_dict
+
+    else:
+        steps_x = 2 * int(lines[0].split()[2]) + 1
+        steps_y = 2 * int(lines[0].split()[3]) + 1
+        steps_z = 2 * int(lines[0].split()[4]) + 1
+        mat = np.zeros((steps_x, steps_y, steps_z, 3))
+        #print(mat.shape)
+        
+        for ind, i in enumerate(lines[7:]):
+            line_split = i.split()
+            # print(i)
+            mat[
+                int(ind / (steps_z * steps_y)),
+                int(ind / steps_z % steps_y),
+                ind % steps_z,
+                0,
+            ] = float(line_split[-3])
+            mat[
+                int(ind / (steps_z * steps_y)),
+                int(ind / steps_z % steps_y),
+                ind % steps_z,
+                1,
+            ] = float(line_split[-2])
+            mat[
+                int(ind / (steps_z * steps_y)),
+                int(ind / steps_z % steps_y),
+                ind % steps_z,
+                2,
+            ] = float(line_split[-1])
+
+        return mat
+
+
 def default_options_initializer(options): 
     """
         Initializes default options for CPET after checking if they are present in the options dictionary
@@ -28,6 +166,7 @@ def default_options_initializer(options):
         options["profile"] = False
 
     return options
+
 
 def initialize_box_points(center, x, y, dimensions, n_samples, step_size):
     """

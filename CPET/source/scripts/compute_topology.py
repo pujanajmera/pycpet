@@ -8,7 +8,7 @@ from CPET.utils.calculator import (
     compute_curv_and_dist,
     Inside_Box,
 )
-from CPET.utils.parser import parse_pdb, calculate_center, initialize_box_points
+from CPET.utils.io import parse_pdb, calculate_center, initialize_box_points
 
 
 def propagate_topo(x_0, x, Q, step_size):

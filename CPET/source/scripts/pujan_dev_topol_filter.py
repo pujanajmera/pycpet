@@ -5,7 +5,7 @@ from CPET.utils.gpu import (
     batched_filter_gpu,
     initialize_streamline_grid_gpu,
 )
-from CPET.utils.parser import parse_pqr
+from CPET.utils.io import parse_pqr
 import torch
 import numpy as np
 import time

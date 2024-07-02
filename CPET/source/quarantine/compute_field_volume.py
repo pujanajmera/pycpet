@@ -1,9 +1,9 @@
 import numpy as np
 import argparse
 import json
-from CPET.utils.parser import parse_pqr
+from CPET.utils.io import parse_pqr
 from CPET.utils.calculator import compute_field_on_grid
-from CPET.utils.writeoutput import write_field_to_file
+from CPET.utils.io import write_field_to_file
 
 
 def initialize_grid(center, x, y, density, dimensions, offset):

@@ -3,7 +3,7 @@ import pandas as pd
 from numba import jit
 import time
 import torch
-from CPET.utils.parser import parse_pqr
+from CPET.utils.io import parse_pqr
 
 #@profile
 def calculate_electric_field_torch(x_0, x, Q):

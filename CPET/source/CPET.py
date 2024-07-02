@@ -1,6 +1,7 @@
 from CPET.source.calculator import calculator
 from CPET.source.cluster import cluster
-from CPET.source.pca import PCA
+from CPET.source.pca import pca_pycpet
+from CPET.utils.io import save_numpy_as_dat
 from glob import glob
 from random import choice
 import os
@@ -14,6 +15,12 @@ class CPET:
         self.m = self.options["CPET_method"]
         self.inputpath = self.options["inputpath"]
         self.outputpath = self.options["outputpath"]
+        
+        if "step_size" in self.options:
+            self.step_size = self.options["step_size"]
+        if "dimensions" in self.options:
+            self.dimesions = self.options["dimensions"]
+        
         if not os.path.exists(self.outputpath):
             os.makedirs(self.outputpath)
         
@@ -23,7 +30,7 @@ class CPET:
         
         if self.m == "pca": 
             # creates a pca object
-            self.pca = PCA(options)
+            self.pca_pycpet = pca_pycpet(options)
 
         self.benchmark_samples = self.options["benchmark"]["n_samples"]
         self.benchmark_step_sizes = self.options["benchmark"]["step_size"]
@@ -213,13 +220,22 @@ class CPET:
             files_done = [
                 x for x in os.listdir(self.outputpath) if x[-11:] == "_efield.dat"
             ]
+            
             if protein + ".top" not in files_done:
-                field_box = self.calculator.compute_box()
-                np.savetxt(
-                    self.outputpath + "/{}_efield.dat".format(protein),
-                    field_box,
-                    fmt="%.3f",
+                field_box, mesh_shape = self.calculator.compute_box()
+                print(field_box.shape)
+                meta_data = {
+                    "dimensions": self.dimesions, 
+                    "step_size": [self.step_size, self.step_size, self.step_size],
+                    "num_steps": [mesh_shape[0], mesh_shape[1], mesh_shape[2]]
+                }
+                
+                save_numpy_as_dat(
+                    name=self.outputpath + "/{}_efield.dat".format(protein),
+                    field=field_box,
+                    meta_data=meta_data
                 )
+
 
     def run_point_field(self):
         files_input = glob(self.inputpath + "/*.pdb")
@@ -280,3 +296,6 @@ class CPET:
 
     def run_cluster(self):
         self.cluster.Cluster()
+
+    def run_pca(self):
+        _, _ = self.pca_pycpet.fit_and_transform()
