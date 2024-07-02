@@ -91,6 +91,8 @@ class cluster:
             n_clusters=max_index + 2, random_state=0, metric="precomputed", method="pam"
         )
         kmeds.fit(distance_matrix)
+
+        
         self.cluster_results["labels"] = list(kmeds.labels_)
         self.cluster_results["n_clusters"] = max_index + 2
         self.cluster_results["cluster_centers_indices"] = kmeds.medoid_indices_

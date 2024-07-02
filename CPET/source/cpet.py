@@ -1,5 +1,6 @@
 from CPET.source.CPET import CPET
 import json
+import os
 import argparse
 
 
@@ -9,12 +10,20 @@ def main():
     )
     parser.add_argument(
         "-o",
-        type=json.loads,
+        type=str,
         help="Options for CPET",
-        default=json.load(open("./options/options.json")),
+        default="./options/options.json",
     )
+    
     args = parser.parse_args()
     options = args.o
+    # check if the options are valid
+    if not os.path.exists(options):
+        raise FileNotFoundError(f"Options File {options} not found!")
+    else: 
+        with open(options, "r") as f:
+            options = json.load(f)
+    
     cpet = CPET(options)
     cpet.run()
 
