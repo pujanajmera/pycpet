@@ -1,6 +1,6 @@
 from CPET.source.calculator import calculator
 from CPET.source.cluster import cluster
-from CPET.source.cluster import cluster
+from CPET.source.pca import PCA
 from glob import glob
 from random import choice
 import os
@@ -16,8 +16,15 @@ class CPET:
         self.outputpath = self.options["outputpath"]
         if not os.path.exists(self.outputpath):
             os.makedirs(self.outputpath)
+        
         if self.m == "cluster" or self.m == "cluster_volume":
+            # creates a cluster object
             self.cluster = cluster(options)
+        
+        if self.m == "pca": 
+            # creates a pca object
+            self.pca = PCA(options)
+
         self.benchmark_samples = self.options["benchmark"]["n_samples"]
         self.benchmark_step_sizes = self.options["benchmark"]["step_size"]
         self.benchmark_replicas = self.options["benchmark"]["replicas"]
