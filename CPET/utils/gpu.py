@@ -25,7 +25,7 @@ def check_tensor(x, name="Tensor"):
 
 
 #@profile
-#@torch.jit.script
+@torch.jit.script
 def calculate_electric_field_torch_batch_gpu(
     x_0: torch.Tensor, 
     x: torch.Tensor, 
@@ -327,15 +327,16 @@ def batched_filter_gpu(
 
     for i, index in enumerate(filter_indices):
         if index in path_indices and index in box_indices:
-            """
+            
             stopping_points.append(
                 min(
                     path_stopping_points[index],
                     box_stopping_points[index],
                 )
             )
-            """
+            
             #Slower version for testing:
+            '''
             print(f"Streamline detected to hit both path and box at index: {index}, checking now...")
             if path_stopping_points[index] < box_stopping_points[index]:
                 stopping_points.append(path_stopping_points[index])
@@ -346,6 +347,7 @@ def batched_filter_gpu(
             else:
                 stopping_points.append(path_stopping_points[index])
                 print("Path and box indices are equal")
+            '''
             
         elif index in path_indices:
             stopping_points.append(path_stopping_points[index])

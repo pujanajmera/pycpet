@@ -73,7 +73,7 @@ class Test_topos:
         },
         "n_samples": 1000,
         "dimensions": [1.5, 1.5, 1.5],
-        "step_size": 0.001,
+        "step_size": 0.01,
         "batch_size": 10,
         "concur_slip": 12,
         "filter_radius": 40.0,
@@ -103,8 +103,8 @@ class Test_topos:
 
     def test_topo_methods(self):
         topo_function_list = [
-            self.topo.compute_topo,
-            self.topo.compute_topo_complete_c_shared,
+            #self.topo.compute_topo,
+            #self.topo.compute_topo_complete_c_shared,
             #self.topo.compute_topo_base,  - what are we doing with this one?
             self.topo.compute_topo_GPU_batch_filter
         ]

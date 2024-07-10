@@ -28,7 +28,7 @@ def main():
         warnings.warn("More than 3 pdb files found in the input directory, choosing 3 random pdbs to benchmarking on")
         files_input = [choice(files_input) for i in range(num)]
     topo_files = []
-    benchmark_radii = [None,90,80,70,60,50,40,30,20] #User customized
+    benchmark_radii = [None,40,30,20] #User customized
 
     for radius in benchmark_radii:
         print(f"Running for radius: {radius}")
@@ -40,9 +40,9 @@ def main():
                 if outstring in files_done:
                     topo_files.append(cpet.outputpath + "/" + outstring)
                     continue
-                cpet.calculator = calculator(cpet.options, path_to_pdb = file)
                 if radius is not None:
-                    cpet.calulator.options["filter_radius"] = radius
+                    cpet.options["filter_radius"] = radius
+                cpet.calculator = calculator(cpet.options, path_to_pdb = file)
                 hist = cpet.calculator.compute_topo_GPU_batch_filter()
                 np.savetxt(cpet.outputpath + "/" + outstring, hist)
                 topo_files.append(cpet.outputpath + "/" + outstring)
@@ -52,15 +52,23 @@ def main():
         if len(topo_file_protein) != num*len(benchmark_radii):
             raise ValueError("Incorrect number of output topologies for requested benchmark parameters")
 
-        histograms = make_histograms(topo_file_protein,plot=False)
+        histograms = make_histograms(topo_file_protein,plot=True)
         distance_matrix = construct_distance_matrix(histograms)
 
         distances = pd.DataFrame(distance_matrix)
 
         #Modify file names
-
+        name = (
+        topo_file_protein[0].split("/")[-1].split("_")[0]
+        + "_"
+        + topo_file_protein[0].split("/")[-1].split("_")[1]
+        + "_"
+        + topo_file_protein[0].split("/")[-1].split("_")[2]
+        + "_"
+    )
         labels = topo_file_protein
-        labels = [label.replace(".top","").split("/")[-1] for label in labels]
+        labels = [label.replace(".top","").split("/")[-1].replace(name, "") for label in labels]
+        print(labels)
 
         # Map each label to its group
         group_map = {label: label.split('_')[0] for label in labels}
@@ -79,10 +87,13 @@ def main():
         averaged_distances = (averaged_distances + averaged_distances.T) / 2
 
         # (Optional) Plot the distance matrix
+        
         plt.figure(figsize=(10,8))
         sns.heatmap(averaged_distances, cmap="Greens_r", annot=True,linewidths=0.1)
         plt.title("Averaged Distance Matrix")
         plt.show()
-        plt.imsave(f"averaged_distance_matrix_{file.split("/")[-1].split(".")[0]}.png",averaged_distances)
+        plt.imsave(f"averaged_distance_matrix_{file.split('/')[-1].split('.')[0]}.png",averaged_distances)
+        
+        
     
 main()

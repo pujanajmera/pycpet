@@ -88,6 +88,54 @@ def filter_radius(x, Q, center, radius=2.0):
     return x_filtered, Q_filtered
 
 
+def filter_radius_whole_residue(x, Q, resids, resnums, center, radius=2.0):
+    """
+    Filters out entire residues that have any points that fall outside of the radius
+    Takes
+        x(array) - coordinates of charges of shape (N,3)
+        Q(array) - magnitude and sign of charges of shape (N,1)
+        resids(array) - residue ids/names of shape (N,)
+        resnums(array) - residue numbers of shape (N,)
+        center(array) - center of box of shape (1,3)
+        radius(float) - radius to filter
+    """
+    x_recentered = x - center
+    is_in_radius = np.linalg.norm(x_recentered, axis=1) < radius
+    resid_current = None
+    resnum_current = None
+    true_res_dict = {}
+    j = 0
+    #Generate dictionary of indices. Accounts for residues that have the same resnum but different resid, as those aren't adjacent
+    for i in range(len(resids)):
+        if resids[i] == resid_current and resnums[i] == resnum_current:
+            current_entry = true_res_dict[j - 1]
+            current_entry["indices"].append(i)
+            if is_in_radius[i]:
+                current_entry["is_in_radius"] = True
+        else:
+            true_res_dict[j] = {
+                "resid": resids[i],
+                "resnum": resnums[i],
+                "indices": [i],
+                "is_in_radius": is_in_radius[i]
+            }
+            resid_current = resids[i]
+            resnum_current = resnums[i]
+            j += 1
+    #Compress true_res_dict into a list of indices to filter out
+    indices_to_filter_out = [
+        k
+        for key in true_res_dict
+        if not true_res_dict[key]["is_in_radius"]
+        for k in true_res_dict[key]["indices"]
+    ]
+    x_filtered = np.delete(x, indices_to_filter_out, axis=0)
+    Q_filtered = np.delete(Q, indices_to_filter_out, axis=0)
+    print("radius filter leaves: {}".format(len(Q_filtered)))
+    # print(np.linalg.norm(x_filtered, axis=1))
+    return x_filtered, Q_filtered
+
+
 def filter_residue(x, Q, resids, filter_list):
     # Filter out points that are inside the box
     x = x
@@ -129,8 +177,10 @@ def filter_resnum_andname(x, Q, resnums, resnames, filter_list):
             filter_inds.append(True)
     x_filtered = x[filter_inds]
     Q_filtered = Q[filter_inds]
+    resnums_filtered = resnums[filter_inds]
+    resnames_filtered = resnames[filter_inds]
 
-    return x_filtered, Q_filtered
+    return x_filtered, Q_filtered, resnums_filtered, resnames_filtered
 
 
 def filter_in_box(x, Q, center, dimensions):

@@ -1,5 +1,6 @@
 from CPET.source.calculator import calculator
 from CPET.source.cluster import cluster
+import CPET.utils.visualize as visualize
 from glob import glob
 from random import choice
 import os
@@ -13,12 +14,14 @@ class CPET:
         self.m = self.options["CPET_method"]
         self.inputpath = self.options["inputpath"]
         self.outputpath = self.options["outputpath"]
-        if self.m == "cluster" or self.m == "cluster_volume":
-            self.cluster = cluster(options)
         self.benchmark_samples = self.options["benchmark"]["n_samples"]
         self.benchmark_step_sizes = self.options["benchmark"]["step_size"]
         self.benchmark_replicas = self.options["benchmark"]["replicas"]
         self.profile = self.options["profile"]
+        if self.m == "cluster" or self.m == "cluster_volume":
+            self.cluster = cluster(options)
+        if self.m == "visualize_field":
+            self.visualize = visualize(options)
 
     def run(self):
         if self.m == "topo":
@@ -39,6 +42,8 @@ class CPET:
             self.run_point_mag()
         elif self.m == "cluster" or self.m == "cluster_volume":
             self.run_cluster()
+        elif self.m == "visualize_field":
+            self.run_visualize_field()
         else:
             print(
                 "You have reached the limit of this package's capabilities at the moment, we do not support the function called as of yet"
@@ -243,3 +248,6 @@ class CPET:
 
     def run_cluster(self):
         self.cluster.Cluster()
+
+    def run_visualize_efield(self):
+        visualize.visualize_fields(self.inputpath, self.outputpath, self.options)

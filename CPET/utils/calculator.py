@@ -3,9 +3,11 @@ import torch
 import pkg_resources
 import matplotlib
 import matplotlib.pyplot as plt
+import warnings
 from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import pdist, squareform
 from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
+from scipy.stats import iqr
 
 package_name = "CPET-python"
 package = pkg_resources.get_distribution(package_name)
@@ -156,6 +158,7 @@ def initialize_box_points_uniform(center, x, y, N_cr, dimensions, dtype="float32
         center(array) - center of box of shape (1,3)
         x(array) - point to create x axis from center of shape (1,3)
         y(array) - point to create x axis from center of shape (1,3)
+        N_cr
         dimensions(array) - L, W, H of box of shape (1,3)
         n_samples(int) - number of samples to compute
         step_size(float) - step_size of box
@@ -203,12 +206,11 @@ def initialize_box_points_uniform(center, x, y, N_cr, dimensions, dtype="float32
         n_samples = local_coords.shape[0] * local_coords.shape[1] * local_coords.shape[2]
         #print(f"max distance: {max_distance}")
         #print(f"step size: {step_size}")
-        #max_steps = round(max_distance / step_size)
         #print(f"max steps: {max_steps}")
         random_max_samples = np.random.randint(1, max_steps, n_samples)
-        return local_coords, random_max_samples, transformation_matrix, max_steps
+        return local_coords, random_max_samples, transformation_matrix
     
-    return local_coords, transformation_matrix, max_steps
+    return local_coords, transformation_matrix
 
 
 def calculate_electric_field(x_0, x, Q):
@@ -589,6 +591,7 @@ def make_histograms(topo_files, plot=False):
     # Calculate reasonable maximum distances and curvatures
     dist_list = []
     curv_list = []
+    len_list = []
     for topo_file in topo_files:
         curvatures, distances = [], []
         print(topo_file)
@@ -601,24 +604,44 @@ def make_histograms(topo_files, plot=False):
                 distances.append(float(line[0]))
                 curvatures.append(float(line[1]))
         # print(max(distances),max(curvatures))
+        if len(distances) != len(curvatures):
+            ValueError(f"Length of distances and curvatures do not match for {topo_file}")
+        else:
+            len_list.append(len(distances))
         dist_list.extend(distances)
         curv_list.extend(curvatures)
+
+    len_list_equality = all(x == len_list[0] for x in len_list) if len_list else True
+    if not len_list_equality:
+        warnings.warn(f"Topologies provided are of different sizes, using the mean value of {np.mean(len_list)} to represent binning for {len_list}")
+        len_dist_curv = np.mean(len_list)
+    else:
+        len_dist_curv = len_list[0]
     
-    # Do 95th percentiles instead to take care of extreme cases for curvature
     max_distance = max(dist_list)
-    min_distance = min(dist_list)
     max_curvature = max(curv_list)
+    min_distance = min(dist_list)
     min_curvature = min(curv_list)
 
-    # max_curvature = np.percentile(curv_list, 98)
+    distance_binres = 2 * iqr(dist_list) / (len_dist_curv ** (1 / 3))
+    curv_binres = 2 * iqr(curv_list) / (len_dist_curv ** (1 / 3))
+
+    #distance_binres = 0.02
+    #curv_binres = 0.02
+
+    print(f"Distance bin resolution: {distance_binres}")
+    print(f"Curvature bin resolution: {curv_binres}")
+
     print(f"Max distance: {max_distance}")
     print(f"Min distance: {min_distance}")
     print(f"Max curvature: {max_curvature}")
     print(f"Min curvature: {min_curvature}")
     # Need 0.02A resolution for max_distance
-    max_distance_nbins = int(max_distance / 0.02)
+    distance_nbins = int((max_distance-min_distance) / distance_binres)
+    #distance_nbins = 200
     # Need 0.02A resolution for max_curvature
-    max_curvature_nbins = int(max_curvature / 0.02)
+    curvature_nbins = int((max_curvature-min_curvature) / curv_binres)
+    #curvature_nbins = 200
 
     # Make histograms
     for topo_file in topo_files:
@@ -633,13 +656,13 @@ def make_histograms(topo_files, plot=False):
                 distances.append(float(line[0]))
                 curvatures.append(float(line[1]))
         print(f"Plotting histo for {topo_file}")
-        # bins is number of histograms bins in x and y direction (so below is 100x100 bins)
+        # bins is number of histograms bins in x and y direction
         # range gives xrange, yrange for the histogram
         a, b, c, q = plt.hist2d(
             distances,
             curvatures,
-            bins=(max_distance_nbins, max_curvature_nbins),
-            range=[[0, max_distance], [0, max_curvature]],
+            bins=(distance_nbins, curvature_nbins),
+            range=[[min_distance, max_distance], [min_curvature, max_curvature]],
             norm=matplotlib.colors.LogNorm(),
             density=True,
             cmap="jet",
@@ -649,7 +672,7 @@ def make_histograms(topo_files, plot=False):
         for j in a:
             for m in j:
                 NormConstant += m
-
+        print(NormConstant)
         actual = []
         for j in a:
             actual.append([m / NormConstant for m in j])

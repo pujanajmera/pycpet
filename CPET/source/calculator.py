@@ -21,6 +21,7 @@ from CPET.utils.parser import (
     parse_pdb,
     parse_pqr,
     filter_radius,
+    filter_radius_whole_residue,
     filter_residue,
     filter_in_box,
     calculate_center,
@@ -162,7 +163,7 @@ class calculator:
 
         if "filter_resnum_andname" in options.keys():
             # print("filtering residues: {}".format(options["filter_resids"]))
-            self.x, self.Q = filter_resnum_andname(
+            self.x, self.Q, self.residue_number, self.resids = filter_resnum_andname(
                 self.x,
                 self.Q,
                 self.residue_number,
@@ -176,9 +177,12 @@ class calculator:
             r = np.linalg.norm(self.x, axis=1)
             # print("r {}".format(r))
 
-            self.x, self.Q = filter_radius(
+            #Default is whole residue-inclusive filtering to ensure proper topology convergence
+            self.x, self.Q = filter_radius_whole_residue(
                 x=self.x,
                 Q=self.Q,
+                resids=self.resids,
+                resnums=self.residue_number,
                 center=self.center,
                 radius=float(options["filter_radius"]),
             )
@@ -199,17 +203,17 @@ class calculator:
         if (
             options["CPET_method"] == "volume" or options["CPET_method"] == "volume_ESP"
         ):
-            (self.mesh, self.transformation_matrix) = initialize_box_points_uniform(
+            (self.mesh, self.transformation_matrix, _) = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,
+                N_cr=20,
                 dimensions=self.dimensions,
-                step_size=self.step_size,
                 dtype=self.dtype,
             )
 
         # self.transformation_matrix and self.uniform_transformation_matrix are the same
-        max_steps = round(2 * np.linalg.norm(self.dimensions) / self.step_size)
+        self.max_steps = round(2 * np.linalg.norm(self.dimensions) / self.step_size)
         #print("max steps: ", max_steps)
         if (
             options["initializer"] == "random"
@@ -226,7 +230,7 @@ class calculator:
                     self.dimensions,
                     self.n_samples,
                     dtype=self.dtype,
-                    max_steps=max_steps,
+                    max_steps=self.max_steps,
                 )
         else:
             num_per_dim = round(self.n_samples ** (1 / 3))
@@ -244,7 +248,6 @@ class calculator:
                 self.random_start_points, 
                 self.random_max_samples, 
                 self.transformation_matrix,
-                self.max_streamline_len,
             ) = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
@@ -252,7 +255,7 @@ class calculator:
                 dimensions=self.dimensions,
                 N_cr = num_per_dim,
                 dtype=self.dtype,
-                max_steps=max_steps, 
+                max_steps=self.max_steps, 
                 ret_rand_max=True, 
                 inclusive=False,
                 seed=seed
@@ -533,7 +536,7 @@ class calculator:
         step_size_gpu = torch.tensor([self.step_size], dtype=torch.float32).cuda()
         random_max_samples = torch.tensor(self.random_max_samples).cuda()
 
-        M = self.max_streamline_len
+        M = self.max_steps
         max_num_batch = int(
             (M + 2 - self.GPU_batch_freq)/(self.GPU_batch_freq - 2)
         ) + 1
@@ -552,7 +555,17 @@ class calculator:
         random_max_samples, torch.tensor([M + 2], dtype=torch.int64).cuda()
         )
 
+        #Need to augment random_max_samples for smaller streamlines than the batching frequency
+        if M+2 < self.GPU_batch_freq:
+            path_filter_temp = torch.ones((self.GPU_batch_freq, self.n_samples,1), dtype=torch.bool).cuda()
+            path_filter_temp[0:M+2] = path_filter
+            path_filter = path_filter_temp
+
         path_filter = torch.tensor(path_filter, dtype=torch.bool).cuda()
+        print(path_matrix_torch.shape)
+        print(path_filter.shape)
+        print(M+2)
+
         dumped_values = torch.tensor(
             np.empty((6, 0, 3)), dtype=torch.float32
         ).cuda()

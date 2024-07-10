@@ -5,7 +5,7 @@ from glob import glob
 from random import choice
 from CPET.source.calculator import calculator
 from CPET.utils.calculator import make_histograms, construct_distance_matrix
-from CPET.source.benchmark import gen_param_dist_mat, analyze_param_dist_mat
+from CPET.source.benchmark import gen_param_dist_mat
 import json
 import argparse
 from CPET.source.CPET import CPET
@@ -38,9 +38,9 @@ def main():
                     if outstring in files_done:
                         topo_files.append(cpet.outputpath + "/" + outstring)
                         continue
+                    cpet.options["n_samples"] = n_samples
+                    cpet.options["step_size"] = step_size
                     cpet.calculator = calculator(cpet.options, path_to_pdb = file)
-                    cpet.calculator.n_samples = n_samples
-                    cpet.calculator.step_size = step_size
                     hist = cpet.calculator.compute_topo_GPU_batch_filter()
                     np.savetxt(cpet.outputpath + "/" + outstring, hist)
                     topo_files.append(cpet.outputpath + "/" + outstring)
