@@ -41,7 +41,7 @@ def main():
                     cpet.options["n_samples"] = n_samples
                     cpet.options["step_size"] = step_size
                     cpet.calculator = calculator(cpet.options, path_to_pdb = file)
-                    if cpet.options["m"] == "topo_GPU":
+                    if cpet.m == "topo_GPU":
                         hist = cpet.calculator.compute_topo_GPU_batch_filter()
                     else:
                         hist = cpet.calculator.compute_topo_complete_c_shared()
