@@ -9,6 +9,7 @@ from torch.profiler import profile, ProfilerActivity
 import torch
 
 
+from CPET.utils.io import parse_pdb
 from CPET.utils.parallel import task, task_batch, task_base, task_complete_thread
 from CPET.utils.calculator import (
     initialize_box_points_random,
@@ -17,7 +18,7 @@ from CPET.utils.calculator import (
     calculate_electric_field_dev_c_shared,
     compute_ESP_on_grid,
 )
-from CPET.utils.parser import (
+from CPET.utils.io import (
     parse_pdb,
     parse_pqr,
     filter_radius,
@@ -484,7 +485,7 @@ class calculator:
         print("x shape: {}".format(self.x.shape))
         print("Q shape: {}".format(self.Q.shape))
         field_box = compute_field_on_grid(self.mesh, self.x, self.Q)
-        return field_box
+        return field_box, self.mesh.shape
 
     def compute_box_ESP(self):
         print("... > Computing Box!")

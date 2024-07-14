@@ -3,7 +3,7 @@ import time
 import torch
 import torch.jit as jit
 from typing import Tuple
-from CPET.utils.parser import parse_pqr
+from CPET.utils.io import parse_pqr
 from torch.profiler import profile, record_function, ProfilerActivity
 
 """
