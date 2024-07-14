@@ -66,7 +66,7 @@ class CPET:
                 x for x in os.listdir(self.outputpath) if x.split(".")[-1] == "top"
             ]
             if protein + ".top" not in files_done:
-                hist = self.calculator.compute_topo()
+                hist = self.calculator.compute_topo_complete_c_shared()
                 if not benchmarking:
                     np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
                 if benchmarking:

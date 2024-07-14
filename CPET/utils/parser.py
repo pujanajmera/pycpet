@@ -104,6 +104,10 @@ def filter_radius_whole_residue(x, Q, resids, resnums, center, radius=2.0):
     resid_current = None
     resnum_current = None
     true_res_dict = {}
+    print(x_recentered.shape)
+    print(Q.shape)
+    print(resids.shape)
+    print(resnums.shape)
     j = 0
     #Generate dictionary of indices. Accounts for residues that have the same resnum but different resid, as those aren't adjacent
     for i in range(len(resids)):

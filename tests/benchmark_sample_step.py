@@ -8,6 +8,7 @@ from CPET.utils.calculator import make_histograms, construct_distance_matrix
 from CPET.source.benchmark import gen_param_dist_mat
 import json
 import argparse
+import matplotlib.pyplot as plt
 from CPET.source.CPET import CPET
 
 
@@ -52,6 +53,7 @@ def main():
         if len(topo_file_protein) != num*len(benchmark_samples)*len(benchmark_step_sizes):
             raise ValueError("Incorrect number of output topologies for requested benchmark parameters")
         histograms = make_histograms(topo_file_protein, plot=False)
+        plt.close()
         distance_matrix = construct_distance_matrix(histograms)
         avg_dist = gen_param_dist_mat(distance_matrix, topo_file_protein)
 

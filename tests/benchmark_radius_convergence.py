@@ -55,7 +55,7 @@ def main():
         if len(topo_file_protein) != num*len(benchmark_radii):
             raise ValueError("Incorrect number of output topologies for requested benchmark parameters")
 
-        histograms = make_histograms(topo_file_protein,plot=True)
+        histograms = make_histograms(topo_file_protein,plot=False)
         distance_matrix = construct_distance_matrix(histograms)
 
         distances = pd.DataFrame(distance_matrix)
@@ -90,7 +90,8 @@ def main():
         averaged_distances = (averaged_distances + averaged_distances.T) / 2
 
         # (Optional) Plot the distance matrix
-        
+        #First, close any open plots
+        plt.close()
         plt.figure(figsize=(10,8))
         sns.heatmap(averaged_distances, cmap="Greens_r", annot=True,linewidths=0.1)
         plt.title("Averaged Distance Matrix")
