@@ -204,7 +204,7 @@ class calculator:
         if (
             options["CPET_method"] == "volume" or options["CPET_method"] == "volume_ESP"
         ):
-            (self.mesh, self.transformation_matrix, _) = initialize_box_points_uniform(
+            (self.mesh, self.transformation_matrix) = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,

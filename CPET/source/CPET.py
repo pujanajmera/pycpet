@@ -61,7 +61,7 @@ class CPET:
         elif self.m == "cluster" or self.m == "cluster_volume":
             self.run_cluster()
         elif self.m == "visualize_field":
-            self.run_visualize_field()
+            self.run_visualize_efield()
         elif self.m == "pca": 
             self.run_pca()
 
