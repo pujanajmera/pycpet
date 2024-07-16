@@ -33,8 +33,10 @@ def save_numpy_as_dat(meta_data, field, name):
 
     dimensions = meta_data["dimensions"]
     step_size_list = meta_data["num_steps"]
-    
-    first_line = "#Sample Density: {} {} {} Volumne: Box: {} {} {} \n".format(
+    trans_mat = meta_data["transformation_matrix"]
+    center = meta_data["center"]
+
+    first_line = "#Sample Density: {} {} {}; Volume: Box: {} {} {}\n".format(
         int((step_size_list[0] - 1 ) / 2), 
         int((step_size_list[1] - 1 ) / 2),
         int((step_size_list[2] - 1 ) / 2),
@@ -42,10 +44,25 @@ def save_numpy_as_dat(meta_data, field, name):
         dimensions[1],
         dimensions[2]
     )
+    second_line = "#Frame 0"
+    third_line = "#Center: {} {} {}\n".format(
+        center[0],
+        center[1],
+        center[2]
+    )
+    basis_matrix_lines = "#Basis Matrix:\n# {} {} {}\n# {} {} {}\n# {} {} {}\n".format(
+        trans_mat[0][0],
+        trans_mat[0][1],
+        trans_mat[0][2],
+        trans_mat[1][0],
+        trans_mat[1][1],
+        trans_mat[1][2],
+        trans_mat[2][0],
+        trans_mat[2][1],
+        trans_mat[2][2]
+    )
     
-    lines_header = [first_line]
-    # add six lines starting with #
-    lines_header = lines_header + ["#\n"] * 6
+    lines_header = [first_line] + [second_line] + [third_line] + [basis_matrix_lines]
 
     # write as
     np.savetxt(

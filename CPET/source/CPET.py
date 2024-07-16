@@ -231,7 +231,9 @@ class CPET:
                 meta_data = {
                     "dimensions": self.dimesions, 
                     "step_size": [self.step_size, self.step_size, self.step_size],
-                    "num_steps": [mesh_shape[0], mesh_shape[1], mesh_shape[2]]
+                    "num_steps": [mesh_shape[0], mesh_shape[1], mesh_shape[2]],
+                    "transformation matrix": self.calculator.transformation_matrix,
+                    "center": self.calculator.center,
                 }
                 
                 save_numpy_as_dat(

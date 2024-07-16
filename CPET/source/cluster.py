@@ -47,7 +47,7 @@ class cluster:
                 print("Loading distance matrix from file!")
                 self.distance_matrix = np.load(self.outputpath + "/distance_matrix.dat")
             else:
-                self.distance_matrix = construct_distance_matrix_alt2(self.hists)
+                self.distance_matrix = construct_distance_matrix(self.hists)
                 np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
         elif options["CPET_method"] == "cluster_volume":
             self.field_file_list = []
