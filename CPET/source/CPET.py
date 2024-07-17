@@ -38,8 +38,6 @@ class CPET:
         self.benchmark_replicas = self.options["benchmark"]["replicas"]
         self.profile = self.options["profile"]
 
-        if self.m == "visualize_field":
-            self.visualize = visualize(options)
 
     def run(self):
         if self.m == "topo":
@@ -232,7 +230,7 @@ class CPET:
                     "dimensions": self.dimesions, 
                     "step_size": [self.step_size, self.step_size, self.step_size],
                     "num_steps": [mesh_shape[0], mesh_shape[1], mesh_shape[2]],
-                    "transformation matrix": self.calculator.transformation_matrix,
+                    "transformation_matrix": self.calculator.transformation_matrix,
                     "center": self.calculator.center,
                 }
                 

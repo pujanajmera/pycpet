@@ -149,16 +149,21 @@ class calculator:
         
         if "filter_resids" in options.keys():
             # print("filtering residues: {}".format(options["filter_resids"]))
-            self.x, self.Q = filter_residue(
-                self.x, self.Q, self.resids, filter_list=options["filter_resids"]
+            self.x, self.Q, self.residue_number, self.resids = filter_residue(
+                self.x, 
+                self.Q,
+                self.residue_number, 
+                self.resids, 
+                filter_list=options["filter_resids"]
             )
 
         if "filter_resnum" in options.keys():
             # print("filtering residues: {}".format(options["filter_resids"]))
-            self.x, self.Q = filter_resnum(
+            self.x, self.Q, self.residue_number, self.resids = filter_resnum(
                 self.x,
                 self.Q,
                 self.residue_number,
+                self.resids,
                 filter_list=options["filter_resnum"],
             )
 
@@ -211,6 +216,7 @@ class calculator:
                 N_cr=20,
                 dimensions=self.dimensions,
                 dtype=self.dtype,
+                inclusive=True
             )
 
         # self.transformation_matrix and self.uniform_transformation_matrix are the same

@@ -33,7 +33,7 @@ def save_numpy_as_dat(meta_data, field, name):
 
     dimensions = meta_data["dimensions"]
     step_size_list = meta_data["num_steps"]
-    trans_mat = meta_data["transformation_matrix"]
+    trans_mat = meta_data["transformation_matrix"].transpose()
     center = meta_data["center"]
 
     first_line = "#Sample Density: {} {} {}; Volume: Box: {} {} {}\n".format(
@@ -44,7 +44,7 @@ def save_numpy_as_dat(meta_data, field, name):
         dimensions[1],
         dimensions[2]
     )
-    second_line = "#Frame 0"
+    second_line = "#Frame 0\n"
     third_line = "#Center: {} {} {}\n".format(
         center[0],
         center[1],
@@ -296,7 +296,7 @@ def filter_radius_whole_residue(x, Q, resids, resnums, center, radius=2.0):
     return x_filtered, Q_filtered
 
 
-def filter_residue(x, Q, resids, filter_list):
+def filter_residue(x, Q, resnums, resids, filter_list):
     # Filter out points that are inside the box
     x = x
     filter_inds = []
@@ -307,11 +307,13 @@ def filter_residue(x, Q, resids, filter_list):
             filter_inds.append(True)
     x_filtered = x[filter_inds]
     Q_filtered = Q[filter_inds]
+    resnums_filtered = resnums[filter_inds]
+    resids_filtered = resids[filter_inds]
 
-    return x_filtered, Q_filtered
+    return x_filtered, Q_filtered, resnums_filtered, resids_filtered
 
 
-def filter_resnum(x, Q, resnums, filter_list):
+def filter_resnum(x, Q, resnums, resids, filter_list):
     # Filter out points that are inside the box
     x = x
     filter_inds = []
@@ -322,8 +324,10 @@ def filter_resnum(x, Q, resnums, filter_list):
             filter_inds.append(True)
     x_filtered = x[filter_inds]
     Q_filtered = Q[filter_inds]
+    resnums_filtered = resnums[filter_inds]
+    resids_filtered = resids[filter_inds]
 
-    return x_filtered, Q_filtered
+    return x_filtered, Q_filtered, resnums_filtered, resids_filtered
 
 
 def filter_resnum_andname(x, Q, resnums, resnames, filter_list):

@@ -214,7 +214,7 @@ class cluster:
         """
         compressed_dictionary = {}
         # get count of a value in a list
-        for i in range(self.n_clusters):
+        for i in range(self.cluster_results["n_clusters"]):
             temp_dict = {}
             temp_dict["count"] = list(self.cluster_results["labels"]).count(i)
             temp_dict["index_center"] = self.cluster_results.cluster_centers_indices[i]
