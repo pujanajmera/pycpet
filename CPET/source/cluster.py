@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
 import seaborn as sns
+import json
 
 from sklearn.cluster import AffinityPropagation, HDBSCAN
 from sklearn_extra.cluster import KMedoids
@@ -18,6 +19,15 @@ from CPET.utils.calculator import (
     make_fields,
 )
 
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)
 
 class cluster:
     def __init__(self, options):
@@ -26,6 +36,12 @@ class cluster:
             self.cluster_method = "kmeds"
         else:
             self.cluster_method = options["cluster_method"]
+        self.plot_clusters = (
+            options["plot_clusters"] if "plot_clusters" in options else False
+        )
+        self.plot_dwell_times = (
+            options["plot_dwell_times"] if "plot_dwell_times" in options else False
+        )
         self.cluster_reload = (
             options["cluster_reload"] if "cluster_reload" in options else False
         )
@@ -33,20 +49,25 @@ class cluster:
         self.outputpath = options["outputpath"]
 
         if options["CPET_method"] == "cluster":
-            self.topo_file_list = []
-            for file in glob(self.inputpath + "/*.top"):
-                self.topo_file_list.append(file)
-            self.topo_file_list.sort()
-            topo_file_name = self.outputpath + "/topo_file_list.txt"
-            with open(topo_file_name, "w") as file_list:
-                for i in self.topo_file_list:
-                    file_list.write(f"{i} \n")
-            print("{} files found for clustering".format(len(self.topo_file_list)))
-            self.hists = make_histograms(self.topo_file_list)
             if self.cluster_reload:
-                print("Loading distance matrix from file!")
-                self.distance_matrix = np.load(self.outputpath + "/distance_matrix.dat")
+                print("Loading distance matrix and topo file list from files!")
+                self.topo_file_list = []
+                with open(self.outputpath + "/topo_file_list.txt", "r") as file_list:
+                    for line in file_list:
+                        self.topo_file_list.append(line.strip())
+                print("{} files found for clustering from input".format(len(self.topo_file_list)))
+                self.distance_matrix = np.load(self.outputpath + "/distance_matrix.dat.npy")
             else:
+                self.topo_file_list = []
+                for file in glob(self.inputpath + "/*.top"):
+                    self.topo_file_list.append(file)
+                self.topo_file_list.sort()
+                topo_file_name = self.outputpath + "/topo_file_list.txt"
+                with open(topo_file_name, "w") as file_list:
+                    for i in self.topo_file_list:
+                        file_list.write(f"{i} \n")
+                print("{} files found for clustering".format(len(self.topo_file_list)))
+                self.hists = make_histograms(self.topo_file_list)
                 self.distance_matrix = construct_distance_matrix(self.hists)
                 np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
         elif options["CPET_method"] == "cluster_volume":
@@ -78,8 +99,12 @@ class cluster:
             print("Invalid cluster method specified, defaulting to K-Medoids")
             self.cluster_method = "kmeds"
             self.cluster_results = self.kmeds()
-        self.cluster_analyze()
-
+        compressed_dictionary = self.cluster_analyze()
+        #Save cluster results to json file
+        with open(self.outputpath + "/compressed_dictionary.json", "w") as outfile:
+            json.dump(compressed_dictionary, outfile, cls=NpEncoder)
+            
+        
     def kmeds(self):
         cluster_results = {}
         distance_matrix = self.distance_matrix
@@ -212,12 +237,17 @@ class cluster:
         Returns:
             compressed_dictionary: dictionary with information about the clusters
         """
+        #generate compressed distance matrix of cluster centers
+        self.reduced_distance_matrix = self.distance_matrix[
+            self.cluster_results["cluster_centers_indices"]
+        ][:, self.cluster_results["cluster_centers_indices"]]
+
         compressed_dictionary = {}
         # get count of a value in a list
         for i in range(self.cluster_results["n_clusters"]):
             temp_dict = {}
             temp_dict["count"] = list(self.cluster_results["labels"]).count(i)
-            temp_dict["index_center"] = self.cluster_results.cluster_centers_indices[i]
+            temp_dict["index_center"] = self.cluster_results["cluster_centers_indices"][i]
             temp_dict["name_center"] = self.topo_file_list[temp_dict["index_center"]]
             temp_dict["percentage"] = float(temp_dict["count"]) / float(
                 len(self.cluster_results["labels"])
@@ -226,9 +256,9 @@ class cluster:
             temp_dict["mean_distance"] = np.mean(self.distance_matrix[temp_dict["index_center"]][cluster_indices])
             temp_dict["max_distance"] = np.max(self.distance_matrix[temp_dict["index_center"]][cluster_indices])
             temp_zip = zip(
-                            self.topo_file_list[cluster_indices], 
-                            list(self.distance_matrix[temp_dict["index_center"]][cluster_indices])
-                       )
+                [self.topo_file_list[i].split("/")[-1] for i in cluster_indices],
+                [self.distance_matrix[temp_dict["index_center"]][i] for i in cluster_indices]
+            )
             sorted_temp_zip = sorted(temp_zip, key = lambda x: x[1])
             temp_dict["files"], temp_dict["distances"] = zip(*sorted_temp_zip)
             compressed_dictionary[str(i)] = temp_dict
@@ -264,7 +294,7 @@ class cluster:
             mds = MDS(n_components=3, dissimilarity="precomputed", random_state = 0)
             projection = mds.fit_transform(self.distance_matrix)  # Directly feed the distance matrix
             color_palette = sns.color_palette('deep', 12)
-            cluster_colors = [color_palette[label] for label in self.cluster_results.labels_]
+            cluster_colors = [color_palette[label] for label in self.cluster_results["labels"]]
 
             # Define different perspectives
             perspectives = [

@@ -28,7 +28,7 @@ def main():
         warnings.warn("More than 3 pdb files found in the input directory, choosing 3 random pdbs to benchmarking on")
         files_input = [choice(files_input) for i in range(num)]
     topo_files = []
-    benchmark_radii = [None,40,30,20] #User customized
+    benchmark_radii = [None,80,70,60,50,40,30,20] #User customized
 
     for radius in benchmark_radii:
         print(f"Running for radius: {radius}")
