@@ -490,6 +490,7 @@ class calculator:
         print("mesh shape: {}".format(self.mesh.shape))
         print("x shape: {}".format(self.x.shape))
         print("Q shape: {}".format(self.Q.shape))
+        print("First few lines of x: {}".format(self.x[:5]))
         field_box = compute_field_on_grid(self.mesh, self.x, self.Q)
         return field_box, self.mesh.shape
 
@@ -511,8 +512,9 @@ class calculator:
         print("x shape: {}".format(self.x.shape))
         print("Q shape: {}".format(self.Q.shape))
         start_time = time.time()
+        #Since x and Q are already rotated and translated, need to supply 0 vector as center
         point_mag = np.norm(
-            calculate_electric_field_dev_c_shared(self.x, self.Q, self.center)
+            calculate_electric_field_dev_c_shared(np.array([0,0,0]), self.x, self.Q)
         )
         end_time = time.time()
         print(f"{end_time - start_time:.2f}")
@@ -524,8 +526,10 @@ class calculator:
         print("point: {}".format(self.center))
         print("x shape: {}".format(self.x.shape))
         print("Q shape: {}".format(self.Q.shape))
+        print("First few lines of x: {}".format(self.x[:5]))
         start_time = time.time()
-        point_field = calculate_electric_field_dev_c_shared(self.center, self.x, self.Q)
+        #Since x and Q are already rotated and translated, need to supply 0 vector as center
+        point_field = calculate_electric_field_dev_c_shared(np.array([0,0,0]), self.x, self.Q)
         end_time = time.time()
         print(f"{end_time - start_time}")
         return point_field

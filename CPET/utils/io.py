@@ -63,6 +63,16 @@ def save_numpy_as_dat(meta_data, field, name):
     )
     
     lines_header = [first_line] + [second_line] + [third_line] + [basis_matrix_lines]
+    """
+    #OPTIONAL FOR TESTING NO TRANSFORMATION
+    field_coords = field[:, 0:3]
+    field_vecs = field[:, 3:6]
+    transformed_field_coords = field_coords@trans_mat.T
+    transformed_field_coords = transformed_field_coords + center
+    transformed_field_vecs = np.matmul(field_vecs, trans_mat.T)
+    field = np.concatenate((transformed_field_coords, transformed_field_vecs), axis=1)
+    """
+
 
     # write as
     np.savetxt(
