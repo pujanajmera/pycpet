@@ -9,6 +9,7 @@ from sklearn_extra.cluster import KMedoids
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.manifold import MDS
+from kneed import KneeLocator
 from mpl_toolkits.mplot3d import Axes3D
 from glob import glob
 from CPET.utils.calculator import (
@@ -109,10 +110,10 @@ class cluster:
         cluster_results = {}
         distance_matrix = self.distance_matrix
         distance_matrix = distance_matrix**2
-        silhouette_list = []
-        for i in range(10):
+        inertia_list = []
+        for i in range(15):
             kmeds = KMedoids(
-                n_clusters = i + 2, 
+                n_clusters = i + 1, 
                 random_state = 0, 
                 metric = "precomputed", 
                 method = "pam",
@@ -120,29 +121,30 @@ class cluster:
             )
             kmeds.fit(distance_matrix)
             labels = list(kmeds.labels_)
-            score = silhouette_score(distance_matrix, 
-                                     labels, 
-                                     metric = "precomputed"
-            )
-            print(i + 2, score)
-            silhouette_list.append(score)
-        max_index = silhouette_list.index(max(silhouette_list))
+            inertia_list.append(kmeds.inertia_)
+            print(i + 1, kmeds.inertia_)
+
+        #Use second-derivate based elbow locating with 1-15 clusters
+        kn = KneeLocator([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], inertia_list, curve='convex', direction='decreasing')
+
         print(
-            f"Using {max_index+2} number of clusters with Partitioning around Medoids (PAM)"
+            f"Using {kn.elbow} number of clusters with Partitioning around Medoids (PAM), derived from elbow method"
         )
+
         kmeds = KMedoids(
-            n_clusters = max_index + 2, 
+            n_clusters = kn.elbow, 
             random_state = 0, 
             metric = "precomputed", 
             method = "pam", 
             init = "k-medoids++"
         )
+
         kmeds.fit(distance_matrix)
         cluster_results["labels"] = list(kmeds.labels_)
         cluster_results["silhouette_score"] = silhouette_score(distance_matrix, 
                                                                cluster_results["labels"], 
                                                                metric = "precomputed")
-        cluster_results["n_clusters"] = max_index + 2
+        cluster_results["n_clusters"] = int(kn.elbow)
         cluster_results["cluster_centers_indices"] = kmeds.medoid_indices_
         
         return cluster_results

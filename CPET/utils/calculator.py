@@ -293,7 +293,7 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q):
     R_sq = R_sq.astype(np.float32)
     r_mag_sq = Math.einsum_ij_i(R_sq).reshape(-1, 1)
     r_mag_cube = np.power(r_mag_sq, -3 / 2)
-    E = Math.einsum_operation(R, r_mag_cube, Q) * 14.3996451
+    E = Math.einsum_operation(R, r_mag_cube, Q)
     # print(E.shape)
     # print("-")
     # print("end efield calc")
@@ -430,7 +430,7 @@ def compute_field_on_grid(grid_coords, x, Q):
     for i, x_0 in enumerate(reshaped_meshgrid):
         E[i] = calculate_electric_field_dev_c_shared(x_0, x, Q)
         if x_0[0] == 0 and x_0[1] == 0 and x_0[2] == 0:
-            print(E[i])
+            print(f"Center field: {E[i]}")
 
     point_field_concat = np.concatenate((reshaped_meshgrid, E), axis=1)
 
