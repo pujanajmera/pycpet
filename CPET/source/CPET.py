@@ -3,6 +3,7 @@ from CPET.source.cluster import cluster
 import CPET.utils.visualize as visualize
 from CPET.source.pca import pca_pycpet
 from CPET.utils.io import save_numpy_as_dat
+from CPET.utils.calculator import report_inside_box
 from glob import glob
 from random import choice
 import os
@@ -58,6 +59,8 @@ class CPET:
             self.run_point_mag()
         elif self.m == "cluster" or self.m == "cluster_volume":
             self.run_cluster()
+        elif self.m == "box_check":
+            self.run_box_check()
         elif self.m == "visualize_field":
             self.run_visualize_efield()
         elif self.m == "pca": 
@@ -297,6 +300,26 @@ class CPET:
                     field_box,
                     fmt="%.3f",
                 )
+
+    def run_box_check(self, num=100000):
+        files_input = glob(self.inputpath + "/*.pdb")
+        if len(files_input) == 0:
+            raise ValueError("No pdb files found in the input directory")
+        if len(files_input) == 1:
+            warnings.warn("Only one pdb file found in the input directory")
+        for file in files_input:
+            if "filter_radius" in self.options or "filter_resids" in self.options or "filter_resnum" in self.options:
+                #Error out, radius not compatible
+                raise ValueError(
+                    "filter_radius/filter_resids/filter_resnum is not compatible with box_check. Please remove from options"
+                    )
+            #Need to not filter in box to check, but can filter all else
+            self.options["filter_in_box"] = False
+            self.calculator = calculator(self.options, path_to_pdb=file)
+            protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
+            print("protein file: {}".format(protein))
+            report_inside_box(self.calculator)
+        print("No more files to process!")
 
     def run_cluster(self):
         self.cluster.Cluster()

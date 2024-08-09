@@ -739,3 +739,17 @@ def construct_distance_matrix_volume(fields):
             matrix[i][j] = np.mean(cosine_similarity)
             matrix[j][i] = matrix[i][j]
     return matrix
+
+def report_inside_box(calculator_object):
+    """
+    Reports atoms that are inside the box, not including anything that has been filtered
+    """
+    for i in range(len(calculator_object.x)):
+        if Inside_Box(calculator_object.x[i], calculator_object.dimensions):
+            print("Atom record {}_{}_{}_{} found inside box".format(calculator_object.atom_number[i],
+                                                                    calculator_object.atom_type[i],
+                                                                    calculator_object.resids[i],
+                                                                    calculator_object.residue_number[i]))
+            print("Corresponding protein: {}".format(calculator_object.path_to_pdb))
+
+    

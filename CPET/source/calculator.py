@@ -169,11 +169,13 @@ class calculator:
 
         if "filter_resnum_andname" in options.keys():
             # print("filtering residues: {}".format(options["filter_resids"]))
-            self.x, self.Q, self.residue_number, self.resids = filter_resnum_andname(
+            self.x, self.Q, self.residue_number, self.resids, self.atom_number, self.atom_type = filter_resnum_andname(
                 self.x,
                 self.Q,
                 self.residue_number,
                 self.resids,
+                self.atom_number,
+                self.atom_type,
                 filter_list=options["filter_resnum_andname"],
             )
 

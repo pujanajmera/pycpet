@@ -340,8 +340,8 @@ def filter_resnum(x, Q, resnums, resids, filter_list):
     return x_filtered, Q_filtered, resnums_filtered, resids_filtered
 
 
-def filter_resnum_andname(x, Q, resnums, resnames, filter_list):
-    # Filter out points that are inside the box
+def filter_resnum_andname(x, Q, resnums, resnames, atom_number, atom_type, filter_list):
+    # Filter out points that are part of select resnum and resname
     x = x
     filter_inds = []
     for i in range(len(resnums)):
@@ -353,8 +353,10 @@ def filter_resnum_andname(x, Q, resnums, resnames, filter_list):
     Q_filtered = Q[filter_inds]
     resnums_filtered = resnums[filter_inds]
     resnames_filtered = resnames[filter_inds]
+    atom_number_filtered = atom_number[filter_inds]
+    atom_type_filtered = atom_type[filter_inds]
 
-    return x_filtered, Q_filtered, resnums_filtered, resnames_filtered
+    return x_filtered, Q_filtered, resnums_filtered, resnames_filtered, atom_number_filtered, atom_type_filtered
 
 
 def filter_in_box(x, Q, center, dimensions):
