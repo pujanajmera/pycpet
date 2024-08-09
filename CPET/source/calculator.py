@@ -211,11 +211,12 @@ class calculator:
         if (
             options["CPET_method"] == "volume" or options["CPET_method"] == "volume_ESP"
         ):
+            N_cr = 2 * self.dimensions / self.step_size
             (self.mesh, self.transformation_matrix) = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,
-                N_cr=20,
+                N_cr = N_cr,
                 dimensions=self.dimensions,
                 dtype=self.dtype,
                 inclusive=True
@@ -241,7 +242,7 @@ class calculator:
                     dtype=self.dtype,
                     max_steps=self.max_steps,
                 )
-        else:
+        elif (options["CPET_method"] != "volume" and options["CPET_method"] != "volume_ESP") and options["initializer"] == "uniform":
             num_per_dim = round(self.n_samples ** (1 / 3))
             if num_per_dim**3 < self.n_samples:
                 num_per_dim += 1
@@ -262,7 +263,7 @@ class calculator:
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,
                 dimensions=self.dimensions,
-                N_cr = num_per_dim,
+                N_cr = [num_per_dim, num_per_dim, num_per_dim],
                 dtype=self.dtype,
                 max_steps=self.max_steps, 
                 ret_rand_max=True, 
@@ -424,6 +425,7 @@ class calculator:
         print(f"Number of samples: {self.n_samples}")
         print(f"Number of charges: {len(self.Q)}")
         print(f"Step size: {self.step_size}")
+        print(f"Start point shape: {self.random_start_points.shape}")
         start_time = time.time()
         # print("starting pooling")
         #print("random start points")

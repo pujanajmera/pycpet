@@ -188,13 +188,13 @@ def initialize_box_points_uniform(center, x, y, N_cr, dimensions, dtype="float32
 
     # construct a grid of points in the box - lengths are floats
     if inclusive:
-        x_coords = np.linspace(-half_length, half_length, N_cr + 1)
-        y_coords = np.linspace(-half_width, half_width, N_cr + 1)
-        z_coords = np.linspace(-half_height, half_height, N_cr + 1)
+        x_coords = np.linspace(-half_length, half_length, N_cr[0] + 1)
+        y_coords = np.linspace(-half_width, half_width, N_cr[1] + 1)
+        z_coords = np.linspace(-half_height, half_height, N_cr[2] + 1)
     else: 
-        x_coords = np.linspace(-half_length, half_length, N_cr + 1, endpoint=False)[1:]
-        y_coords = np.linspace(-half_width, half_width, N_cr + 1, endpoint=False)[1:]
-        z_coords = np.linspace(-half_height, half_height, N_cr + 1, endpoint=False)[1:] 
+        x_coords = np.linspace(-half_length, half_length, N_cr[0] + 1, endpoint=False)[1:]
+        y_coords = np.linspace(-half_width, half_width, N_cr[1] + 1, endpoint=False)[1:]
+        z_coords = np.linspace(-half_height, half_height, N_cr[2] + 1, endpoint=False)[1:] 
 
     x_mesh, y_mesh, z_mesh = np.meshgrid(x_coords, y_coords, z_coords)
     local_coords = np.stack([x_mesh, y_mesh, z_mesh], axis=-1, dtype=dtype)
