@@ -27,7 +27,7 @@ def main():
         warnings.warn("More than 3 pdb files found in the input directory, choosing 3 random pdbs to benchmarking on")
         files_input = [choice(files_input) for i in range(num)]
     topo_files = []
-    benchmark_step_sizes = [0.1,0.05,0.01,0.001]
+    benchmark_step_sizes = [0.1,0.05,0.01,0.005,0.001]
     benchmark_samples = [100000,10000,1000]
     for step_size in benchmark_step_sizes:
         for n_samples in benchmark_samples:

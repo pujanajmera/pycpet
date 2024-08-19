@@ -3,6 +3,8 @@ import numpy as np
 import networkx as nx
 import seaborn as sns
 import json
+import psutil
+import time
 
 from sklearn.cluster import AffinityPropagation, HDBSCAN
 from sklearn_extra.cluster import KMedoids
@@ -15,6 +17,7 @@ from glob import glob
 from CPET.utils.calculator import (
     make_histograms,
     construct_distance_matrix,
+    construct_distance_matrix_par,
     construct_distance_matrix_alt2,
     construct_distance_matrix_volume,
     make_fields,
@@ -70,6 +73,7 @@ class cluster:
                 print("{} files found for clustering".format(len(self.topo_file_list)))
                 self.hists = make_histograms(self.topo_file_list)
                 self.distance_matrix = construct_distance_matrix(self.hists)
+                #self.distance_matrix = construct_distance_matrix_par(self.hists,32,300)
                 np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
         elif options["CPET_method"] == "cluster_volume":
             self.field_file_list = []
@@ -111,7 +115,7 @@ class cluster:
         distance_matrix = self.distance_matrix
         distance_matrix = distance_matrix**2
         inertia_list = []
-        for i in range(15):
+        for i in range(20):
             kmeds = KMedoids(
                 n_clusters = i + 1, 
                 random_state = 0, 
@@ -125,7 +129,7 @@ class cluster:
             print(i + 1, kmeds.inertia_)
 
         #Use second-derivate based elbow locating with 1-15 clusters
-        kn = KneeLocator([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], inertia_list, curve='convex', direction='decreasing')
+        kn = KneeLocator([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], inertia_list, curve='convex', direction='decreasing')
 
         print(
             f"Using {kn.elbow} number of clusters with Partitioning around Medoids (PAM), derived from elbow method"

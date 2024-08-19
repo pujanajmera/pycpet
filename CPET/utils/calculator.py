@@ -5,9 +5,15 @@ import matplotlib
 import matplotlib.pyplot as plt
 import warnings
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics.pairwise import pairwise_distances
 from scipy.spatial.distance import pdist, squareform
 from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
 from scipy.stats import iqr
+import time
+import psutil
+from multiprocessing import Pool
+from numba import njit, prange
+import numba as nb
 
 package_name = "CPET-python"
 package = pkg_resources.get_distribution(package_name)
@@ -185,7 +191,7 @@ def initialize_box_points_uniform(center, x, y, N_cr, dimensions, dtype="float32
     transformation_matrix = np.column_stack(
         [x_unit, y_unit, z_unit]
     ).T  # Each column is a unit vector
-
+    print(N_cr)
     # construct a grid of points in the box - lengths are floats
     if inclusive:
         x_coords = np.linspace(-half_length, half_length, N_cr[0] + 1)
@@ -196,9 +202,10 @@ def initialize_box_points_uniform(center, x, y, N_cr, dimensions, dtype="float32
         y_coords = np.linspace(-half_width, half_width, N_cr[1] + 1, endpoint=False)[1:]
         z_coords = np.linspace(-half_height, half_height, N_cr[2] + 1, endpoint=False)[1:] 
 
-    x_mesh, y_mesh, z_mesh = np.meshgrid(x_coords, y_coords, z_coords)
-    local_coords = np.stack([x_mesh, y_mesh, z_mesh], axis=-1, dtype=dtype)
+    x_mesh, y_mesh, z_mesh = np.meshgrid(x_coords, y_coords, z_coords,indexing='ij')
     
+    local_coords = np.stack([x_mesh, y_mesh, z_mesh], axis=-1, dtype=dtype)
+    print(local_coords.shape)
     if not seed == None:
         np.random.seed(seed)
 
@@ -209,7 +216,7 @@ def initialize_box_points_uniform(center, x, y, N_cr, dimensions, dtype="float32
         #print(f"max steps: {max_steps}")
         random_max_samples = np.random.randint(1, max_steps, n_samples)
         return local_coords, random_max_samples, transformation_matrix
-    
+
     return local_coords, transformation_matrix
 
 
@@ -573,12 +580,6 @@ def Inside_Box(local_point, dimensions):
     return is_inside
 
 
-def distance_numpy(hist1, hist2):
-    a = (hist1 - hist2) ** 2
-    b = hist1 + hist2
-    return np.sum(np.divide(a, b, out=np.zeros_like(a), where=b != 0)) / 2.0
-
-
 def make_histograms(topo_files, plot=False):
     histograms = []
 
@@ -586,9 +587,11 @@ def make_histograms(topo_files, plot=False):
     dist_list = []
     curv_list = []
     len_list = []
+    topo_list = []
+    start_time = time.time()
     for topo_file in topo_files:
         curvatures, distances = [], []
-        print(topo_file)
+        #print(topo_file)
         with open(topo_file) as topology_data:
             for line in topology_data:
                 if line.startswith("#"):
@@ -602,8 +605,11 @@ def make_histograms(topo_files, plot=False):
             ValueError(f"Length of distances and curvatures do not match for {topo_file}")
         else:
             len_list.append(len(distances))
+        topo_list.append((distances, curvatures))
         dist_list.extend(distances)
         curv_list.extend(curvatures)
+    end_time = time.time()
+    print(f"Time taken to parse topology files: {end_time - start_time:.2f} seconds")
 
     len_list_equality = all(x == len_list[0] for x in len_list) if len_list else True
     if not len_list_equality:
@@ -632,24 +638,17 @@ def make_histograms(topo_files, plot=False):
     print(f"Min curvature: {min_curvature}")
     # Need 0.02A resolution for max_distance
     distance_nbins = int((max_distance-min_distance) / distance_binres)
-    #distance_nbins = 200
+    distance_nbins = 200
     # Need 0.02A resolution for max_curvature
     curvature_nbins = int((max_curvature-min_curvature) / curv_binres)
-    #curvature_nbins = 200
+    curvature_nbins = 200
+    
 
+    start_time = time.time()
     # Make histograms
-    for topo_file in topo_files:
-        curvatures, distances = [], []
-
-        with open(topo_file) as topology_data:
-            for line in topology_data:
-                if line.startswith("#"):
-                    continue
-
-                line = line.split()
-                distances.append(float(line[0]))
-                curvatures.append(float(line[1]))
-        print(f"Plotting histo for {topo_file}")
+    for i, topo_file in enumerate(topo_files):
+        distances, curvatures = topo_list[i]
+        #print(f"Plotting histo for {topo_file}")
         # bins is number of histograms bins in x and y direction
         # range gives xrange, yrange for the histogram
         a, b, c, q = plt.hist2d(
@@ -666,7 +665,7 @@ def make_histograms(topo_files, plot=False):
         for j in a:
             for m in j:
                 NormConstant += m
-        print(NormConstant)
+        #print(NormConstant)
         actual = []
         for j in a:
             actual.append([m / NormConstant for m in j])
@@ -675,7 +674,8 @@ def make_histograms(topo_files, plot=False):
         histograms.append(actual.flatten())
         if plot:
             plt.show()
-
+    end_time = time.time()
+    print(f"Time taken to parse topology files into histograms: {end_time - start_time:.2f} seconds")
     return np.array(histograms)
 
 
@@ -692,30 +692,78 @@ def make_fields(field_files):
         fields.append(np.array(field))
     return fields
 
+def distance_numpy(hist1, hist2):
+    a = (hist1 - hist2) ** 2
+    b = hist1 + hist2
+    return np.sum(np.divide(a, b, out=np.zeros_like(a), where=b != 0)) / 2.0
 
-def construct_distance_matrix(histograms):
-    matrix = np.diag(np.zeros(len(histograms)))
+
+'''def construct_distance_matrix(histograms):
+    start_time = time.time()
+    n = len(histograms)
+    matrix = np.zeros((n, n), dtype=np.float64)
     for i, hist1 in enumerate(histograms):
         for j, hist2 in enumerate(histograms[i + 1 :]):
             j += i + 1
             matrix[i][j] = distance_numpy(hist1, hist2)
             matrix[j][i] = matrix[i][j]
+    end_time = time.time()
+    print(f"Time taken to generate pairwise distance matrix: {end_time - start_time:.2f} seconds")
+    return matrix'''
+
+def construct_distance_matrix(histograms):
+    start_time = time.time()
+    n = len(histograms)
+    matrix = pairwise_distances(histograms, metric=distance_numpy, n_jobs=-1)
+    for i in range(n):
+        matrix[i][i] = 0.0 #Make sure the diagonal is zero
+    end_time = time.time()
+    print(f"Time taken to generate pairwise distance matrix: {end_time - start_time:.2f} seconds")
     return matrix
 
+def compute_distance_par(args):
+    hist1, hist2, i, j = args
+    dist = distance_numpy(hist1, hist2)
+    return (i, j, dist)
+
+def construct_distance_matrix_par(histograms, num_processes=None, chunk_size=None):
+    start_time = time.time()
+    matrix = np.diag(np.zeros(len(histograms)))
+
+    args = [(histograms[i], histograms[j], i, j)
+            for i in range(len(histograms))
+            for j in range(i + 1, len(histograms))]
+
+    with Pool(processes=num_processes) as pool:
+        results = pool.map(compute_distance_par, args, chunksize=chunk_size)
+    
+    for i, j, dist in results:
+        matrix[i][j] = dist
+        matrix[j][i] = dist
+
+    end_time = time.time()
+    print(f"Time taken to generate pairwise distance matrix: {end_time - start_time:.2f} seconds")
+    return matrix
 
 def construct_distance_matrix_alt2(histograms):
     new_histograms = []
+    start_time = time.time()
     for h in histograms:
         h_copy = np.copy(h)  # Make a copy of the histogram
         h_copy[h_copy < 0.001] = 0  # Set values less than 0.001 to zero in the
         h_copy = h_copy / np.sum(h_copy)  # Normalize the histogram
         new_histograms.append(h_copy)  # Append the modified copy to the new list
+    end_time = time.time()
+    print(f"Time taken to filter and renormalize histograms: {end_time - start_time:.2f} seconds")
     matrix = np.diag(np.zeros(len(new_histograms)))
+    start_time = time.time()
     for i, hist1 in enumerate(new_histograms):
         for j, hist2 in enumerate(new_histograms[i + 1 :]):
             j += i + 1
             matrix[i][j] = distance_numpy(hist1, hist2)
             matrix[j][i] = matrix[i][j]
+    end_time = time.time()
+    print(f"Time taken to generate pairwise distance matrix: {end_time - start_time:.2f} seconds")
     return matrix
 
 

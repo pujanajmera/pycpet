@@ -36,12 +36,6 @@ from CPET.utils.gpu import (
     batched_filter_gpu,
     generate_path_filter_gpu,
 )
-from CPET.utils.gridcpu import (
-    propagate_topo_matrix_gridcpu,
-    compute_curv_and_dist_mat_gridcpu,
-    batched_filter_gridcpu,
-    initialize_streamline_grid_gridcpu,
-)
 
 
 class calculator:
@@ -212,6 +206,7 @@ class calculator:
             options["CPET_method"] == "volume" or options["CPET_method"] == "volume_ESP"
         ):
             N_cr = 2 * self.dimensions / self.step_size
+            N_cr = [int(N_cr[0]),int(N_cr[1]),int(N_cr[2])]
             (self.mesh, self.transformation_matrix) = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
@@ -276,30 +271,7 @@ class calculator:
             self.n_samples = len(self.random_start_points)
             #print("random start points")
             #print(self.random_start_points)
-
-        print("start point shape: ", str(self.random_start_points.shape))
-
-        if "batch_size" in options.keys() and options["CPET_method"] == "woohoo":
-
-            # reshape the random_start_points and random_max_samples to be batches of size batch_size
-            self.batch_size = options["batch_size"]
-            # get partition start points
-            ind_partition = np.arange(0, self.n_samples, self.batch_size)
-
-            self.random_start_points_batched = [
-                    self.random_start_points[i : i + self.batch_size]
-                    for i in ind_partition
-                ]
-
-            self.random_max_samples_batched = [
-                    self.random_max_samples[i : i + self.batch_size]
-                    for i in ind_partition
-                ]
-            
-            # self.random_max_samples_batched = [self.batch_size for i in range(self.n_samples//self.batch_size)]
-            # self.random_max_samples_batched.append(self.n_samples%self.batch_size)
-            # self.random_start_points_batched = [i*self.batch_size for i in range(self.n_samples//self.batch_size)]
-            # self.random_start_points_batched.append((self.n_samples//self.batch_size)*self.batch_size)
+            print("start point shape: ", str(self.random_start_points.shape))
 
         self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
 
