@@ -14,6 +14,8 @@ import psutil
 from multiprocessing import Pool
 from numba import njit, prange
 import numba as nb
+from tqdm import tqdm
+import gc
 
 package_name = "CPET-python"
 package = pkg_resources.get_distribution(package_name)
@@ -638,10 +640,10 @@ def make_histograms(topo_files, plot=False):
     print(f"Min curvature: {min_curvature}")
     # Need 0.02A resolution for max_distance
     distance_nbins = int((max_distance-min_distance) / distance_binres)
-    distance_nbins = 200
+    # distance_nbins = 200
     # Need 0.02A resolution for max_curvature
     curvature_nbins = int((max_curvature-min_curvature) / curv_binres)
-    curvature_nbins = 200
+    # curvature_nbins = 200
     
 
     start_time = time.time()
@@ -679,6 +681,109 @@ def make_histograms(topo_files, plot=False):
     return np.array(histograms)
 
 
+def make_histograms_mem(topo_files, output_dir, plot=False):
+    histograms = []
+
+    # Calculate reasonable maximum distances and curvatures
+    dist_list = []
+    curv_list = []
+    len_list = []
+    topo_list = []
+    start_time = time.time()
+    for topo_file in topo_files:
+        curvatures, distances = [], []
+        #print(topo_file)
+        with open(topo_file) as topology_data:
+            for line in topology_data:
+                if line.startswith("#"):
+                    continue
+
+                line = line.split()
+                distances.append(float(line[0]))
+                curvatures.append(float(line[1]))
+        # print(max(distances),max(curvatures))
+        if len(distances) != len(curvatures):
+            ValueError(f"Length of distances and curvatures do not match for {topo_file}")
+        else:
+            len_list.append(len(distances))
+        topo_list.append((distances, curvatures))
+        dist_list.extend(distances)
+        curv_list.extend(curvatures)
+    end_time = time.time()
+    print(f"Time taken to parse topology files: {end_time - start_time:.2f} seconds")
+
+    len_list_equality = all(x == len_list[0] for x in len_list) if len_list else True
+    if not len_list_equality:
+        warnings.warn(f"Topologies provided are of different sizes, using the mean value of {np.mean(len_list)} to represent binning for {len_list}")
+        len_dist_curv = np.mean(len_list)
+    else:
+        len_dist_curv = len_list[0]
+
+    max_distance = max(dist_list)
+    max_curvature = max(curv_list)
+    min_distance = min(dist_list)
+    min_curvature = min(curv_list)
+
+
+    distance_binres = 2 * iqr(dist_list) / (len_dist_curv ** (1 / 3))
+    curv_binres = 2 * iqr(curv_list) / (len_dist_curv ** (1 / 3))
+
+    #distance_binres = 0.02
+    #curv_binres = 0.02
+
+    print(f"Distance bin resolution: {distance_binres}")
+    print(f"Curvature bin resolution: {curv_binres}")
+
+    print(f"Max distance: {max_distance}")
+    print(f"Min distance: {min_distance}")
+    print(f"Max curvature: {max_curvature}")
+    print(f"Min curvature: {min_curvature}")
+    # Need 0.02A resolution for max_distance
+    distance_nbins = int((max_distance-min_distance) / distance_binres)
+    # distance_nbins = 200
+    # Need 0.02A resolution for max_curvature
+    curvature_nbins = int((max_curvature-min_curvature) / curv_binres)
+    # curvature_nbins = 200
+
+
+    start_time = time.time()
+    # Make histograms
+    hist_list = []
+    for i, topo_file in enumerate(topo_files):
+        distances, curvatures = topo_list[i]
+        #print(f"Plotting histo for {topo_file}")
+        # bins is number of histograms bins in x and y direction
+        # range gives xrange, yrange for the histogram
+        a, b, c, q = plt.hist2d(
+            distances,
+            curvatures,
+            bins=(distance_nbins, curvature_nbins),
+            range=[[min_distance, max_distance], [min_curvature, max_curvature]],
+            norm=matplotlib.colors.LogNorm(),
+            density=True,
+            cmap="jet",
+        )
+        NormConstant = 0
+        for j in a:
+            for m in j:
+                NormConstant += m
+        #print(NormConstant)
+        actual = []
+        for j in a:
+            actual.append([m / NormConstant for m in j])
+
+        actual = np.array(actual)
+        outfile = os.path.join(output_dir,f"{topo_files[i].split('/')[-1][:-4]}_hist.npy")
+        np.save(outfile, actual.flatten())
+        hist_list.append(outfile)
+        del actual
+        if plot:
+            plt.show()
+    end_time = time.time()
+    print(f"Time taken to parse topology files into histograms: {end_time - start_time:.2f} seconds")
+    return hist_list
+
+
 def make_fields(field_files):
     fields = []
     for field_file in field_files:
@@ -698,18 +803,24 @@ def distance_numpy(hist1, hist2):
     return np.sum(np.divide(a, b, out=np.zeros_like(a), where=b != 0)) / 2.0
 
 
-'''def construct_distance_matrix(histograms):
+def construct_distance_matrix_mem(hist_file_list):
+    '''
+    Memory-efficient implementation
+    '''
     start_time = time.time()
-    n = len(histograms)
+    n = len(hist_file_list)
     matrix = np.zeros((n, n), dtype=np.float64)
-    for i, hist1 in enumerate(histograms):
-        for j, hist2 in enumerate(histograms[i + 1 :]):
-            j += i + 1
+    for i in range(n):
+        for j in range(i+1, n):
+            hist1 = np.load(hist_file_list[i])
+            hist2 = np.load(hist_file_list[j])
             matrix[i][j] = distance_numpy(hist1, hist2)
             matrix[j][i] = matrix[i][j]
+            del hist1
+            del hist2
     end_time = time.time()
     print(f"Time taken to generate pairwise distance matrix: {end_time - start_time:.2f} seconds")
-    return matrix'''
+    return matrix
 
 def construct_distance_matrix(histograms):
     start_time = time.time()
@@ -721,30 +832,7 @@ def construct_distance_matrix(histograms):
     print(f"Time taken to generate pairwise distance matrix: {end_time - start_time:.2f} seconds")
     return matrix
 
-def compute_distance_par(args):
-    hist1, hist2, i, j = args
-    dist = distance_numpy(hist1, hist2)
-    return (i, j, dist)
-
-def construct_distance_matrix_par(histograms, num_processes=None, chunk_size=None):
-    start_time = time.time()
-    matrix = np.diag(np.zeros(len(histograms)))
-
-    args = [(histograms[i], histograms[j], i, j)
-            for i in range(len(histograms))
-            for j in range(i + 1, len(histograms))]
-
-    with Pool(processes=num_processes) as pool:
-        results = pool.map(compute_distance_par, args, chunksize=chunk_size)
-    
-    for i, j, dist in results:
-        matrix[i][j] = dist
-        matrix[j][i] = dist
-
-    end_time = time.time()
-    print(f"Time taken to generate pairwise distance matrix: {end_time - start_time:.2f} seconds")
-    return matrix
-
+'''
 def construct_distance_matrix_alt2(histograms):
     new_histograms = []
     start_time = time.time()
@@ -765,7 +853,7 @@ def construct_distance_matrix_alt2(histograms):
     end_time = time.time()
     print(f"Time taken to generate pairwise distance matrix: {end_time - start_time:.2f} seconds")
     return matrix
-
+'''
 
 def construct_distance_matrix_volume(fields):
     """

@@ -16,9 +16,9 @@ from mpl_toolkits.mplot3d import Axes3D
 from glob import glob
 from CPET.utils.calculator import (
     make_histograms,
+    make_histograms_mem,
     construct_distance_matrix,
-    construct_distance_matrix_par,
-    construct_distance_matrix_alt2,
+    construct_distance_matrix_mem,
     construct_distance_matrix_volume,
     make_fields,
 )
@@ -71,9 +71,10 @@ class cluster:
                     for i in self.topo_file_list:
                         file_list.write(f"{i} \n")
                 print("{} files found for clustering".format(len(self.topo_file_list)))
-                self.hists = make_histograms(self.topo_file_list)
-                self.distance_matrix = construct_distance_matrix(self.hists)
-                #self.distance_matrix = construct_distance_matrix_par(self.hists,32,300)
+                #self.hists = make_histograms(self.topo_file_list)
+                #self.distance_matrix = construct_distance_matrix(self.hists)
+                self.histlist = make_histograms_mem(self.topo_file_list, self.outputpath)
+                self.distance_matrix = construct_distance_matrix_mem(self.histlist)
                 np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
         elif options["CPET_method"] == "cluster_volume":
             self.field_file_list = []

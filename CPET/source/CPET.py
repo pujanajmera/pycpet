@@ -34,9 +34,6 @@ class CPET:
             # creates a pca object
             self.pca_pycpet = pca_pycpet(options)
 
-        self.benchmark_samples = self.options["benchmark"]["n_samples"]
-        self.benchmark_step_sizes = self.options["benchmark"]["step_size"]
-        self.benchmark_replicas = self.options["benchmark"]["replicas"]
         self.profile = self.options["profile"]
 
 
