@@ -578,21 +578,44 @@ def distance_numpy(hist1, hist2):
     return np.sum(np.divide(a, b, out=np.zeros_like(a), where=b != 0)) / 2.0
 
 
-def make_histograms(topo_files, plot=False):
+def relative_descriptor(target_file, reference_folder, representation= 'topology'):
+    """
+    Compute a relative descriptor as the distance between the target file and a reference folder files.
+
+    target_file: str
+        The path to the target file
+    reference_folder: str
+        The path to the reference folder
+    representation: str
+        The representation of the target file. Default is 'topology'. TODO: add field
+    """
+    files_reference = glob.glob(reference_folder + '/*')
+    #iles = files_reference + [target_file]
+    histogram_relative = make_histograms_reference(target_file, files_reference, plot=False)[-1]
+    
+    return histogram_relative
+
+def make_histograms_reference(target_file, topo_files_reference, plot=False):
     histograms = []
 
     # Calculate reasonable maximum distances and curvatures
     dist_list = []
     curv_list = []
-    for topo_file in topo_files:
+    for topo_file in topo_files_reference:
         curvatures, distances = [], []
         print(topo_file)
         with open(topo_file) as topology_data:
             for line in topology_data:
                 if line.startswith("#"):
                     continue
-
-                line = line.split()
+                # strip the line of any leading or trailing whitespace
+                line = line.strip()
+                # if the line has a comma split by comma
+                if "," in line:
+                    line = line.split(",")
+                else:
+                    line = line.split()
+                #print(line)
                 distances.append(float(line[0]))
                 curvatures.append(float(line[1]))
         # print(max(distances),max(curvatures))
@@ -610,11 +633,112 @@ def make_histograms(topo_files, plot=False):
     print(f"Min distance: {min_distance}")
     print(f"Max curvature: {max_curvature}")
     print(f"Min curvature: {min_curvature}")
+    
+    
     # Need 0.02A resolution for max_distance
     max_distance_nbins = int(max_distance / 0.02)
     # Need 0.02A resolution for max_curvature
     max_curvature_nbins = int(max_curvature / 0.02)
 
+    
+    # Make histograms
+    # add target file to the list of files
+    full_topos = topo_files_reference + [target_file]
+    
+    for topo_file in full_topos:
+        curvatures, distances = [], []
+
+        with open(topo_file) as topology_data:
+            for line in topology_data:
+                if line.startswith("#"):
+                    continue
+
+                line = line.strip()
+                # if the line has a comma split by comma
+                if "," in line:
+                    line = line.split(",")
+                else:
+                    line = line.split()
+
+                distances.append(float(line[0]))
+                curvatures.append(float(line[1]))
+                
+        print(f"Plotting histo for {topo_file}")
+        # bins is number of histograms bins in x and y direction (so below is 100x100 bins)
+        # range gives xrange, yrange for the histogram
+        a, b, c, q = plt.hist2d(
+            distances,
+            curvatures,
+            bins=(max_distance_nbins, max_curvature_nbins),
+            range=[[0, max_distance], [0, max_curvature]],
+            norm=matplotlib.colors.LogNorm(),
+            density=True,
+            cmap="jet",
+        )
+
+        NormConstant = 0
+        for j in a:
+            for m in j:
+                NormConstant += m
+
+        actual = []
+        for j in a:
+            actual.append([m / NormConstant for m in j])
+
+        actual = np.array(actual)
+        histograms.append(actual.flatten())
+        if plot:
+            plt.show()
+
+    return np.array(histograms)
+
+
+def make_histograms(topo_files, plot=False):
+    histograms = []
+
+    # Calculate reasonable maximum distances and curvatures
+    dist_list = []
+    curv_list = []
+    for topo_file in topo_files:
+        curvatures, distances = [], []
+        print(topo_file)
+        with open(topo_file) as topology_data:
+            for line in topology_data:
+                if line.startswith("#"):
+                    continue
+                # strip the line of any leading or trailing whitespace
+                line = line.strip()
+                # if the line has a comma split by comma
+                if "," in line:
+                    line = line.split(",")
+                else:
+                    line = line.split()
+                #print(line)
+                distances.append(float(line[0]))
+                curvatures.append(float(line[1]))
+        # print(max(distances),max(curvatures))
+        dist_list.extend(distances)
+        curv_list.extend(curvatures)
+    
+    # Do 95th percentiles instead to take care of extreme cases for curvature
+    max_distance = max(dist_list)
+    min_distance = min(dist_list)
+    max_curvature = max(curv_list)
+    min_curvature = min(curv_list)
+
+    # max_curvature = np.percentile(curv_list, 98)
+    print(f"Max distance: {max_distance}")
+    print(f"Min distance: {min_distance}")
+    print(f"Max curvature: {max_curvature}")
+    print(f"Min curvature: {min_curvature}")
+    
+    
+    # Need 0.02A resolution for max_distance
+    max_distance_nbins = int(max_distance / 0.02)
+    # Need 0.02A resolution for max_curvature
+    max_curvature_nbins = int(max_curvature / 0.02)
+
+    
     # Make histograms
     for topo_file in topo_files:
         curvatures, distances = [], []
@@ -624,9 +748,16 @@ def make_histograms(topo_files, plot=False):
                 if line.startswith("#"):
                     continue
 
-                line = line.split()
+                line = line.strip()
+                # if the line has a comma split by comma
+                if "," in line:
+                    line = line.split(",")
+                else:
+                    line = line.split()
+
                 distances.append(float(line[0]))
                 curvatures.append(float(line[1]))
+                
         print(f"Plotting histo for {topo_file}")
         # bins is number of histograms bins in x and y direction (so below is 100x100 bins)
         # range gives xrange, yrange for the histogram

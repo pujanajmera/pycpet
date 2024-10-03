@@ -42,6 +42,21 @@ class cluster:
             else:
                 self.distance_matrix = construct_distance_matrix_alt2(self.hists)
                 np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
+        
+        elif options["CPET_method"] == "cluster_triangulation": 
+            self.reference_folder = options["reference_folder"]
+            self.topo_file_list = []
+            for file in glob(self.inputpath + "/*.top"):
+                self.topo_file_list.append(file)
+            self.topo_file_list.sort()
+            topo_file_name = self.outputpath + "/topo_file_list.txt"
+            hists = []
+            for file in self.topo_file_list:
+                hists.append(relative_descriptor(file, self.reference_folder))
+            self.hists = hists
+            self.distance_matrix = construct_distance_matrix(self.hists)
+            np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
+
         elif options["CPET_method"] == "cluster_volume":
             self.field_file_list = []
             for file in glob(self.inputpath + "/*_efield.dat"):
