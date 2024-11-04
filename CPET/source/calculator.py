@@ -52,6 +52,7 @@ class calculator:
         self.GPU_batch_freq = options["GPU_batch_freq"]
         self.dtype = options["dtype"]
         self.max_streamline_init = options["max_streamline_init"] if "max_streamline_init" in options.keys() else "true_rand"
+        self.write_transformed_pdb = options["write_transformed_pdb"] if "write_transformed_pdb" in options.keys() else False
 
         #Be very careful with the box_shift option. The box needs to be centered at the origin and therefore, the code will shift protein in the opposite direction of the provided box vector 
         self.box_shift = options["box_shift"] if "box_shift" in options.keys() else [0,0,0]
@@ -140,7 +141,13 @@ class calculator:
         else:
             raise ValueError("y must be a list or dict")
 
-        
+        if self.write_transformed_pdb == True:
+            self.x_copy = self.x
+            self.residue_number_copy = self.residue_number
+            self.resids_copy = self.resids
+            self.atom_number_copy = self.atom_number
+            self.atom_type_copy = self.atom_type
+
         if "filter_resids" in options.keys():
             # print("filtering residues: {}".format(options["filter_resids"]))
             self.x, self.Q, self.residue_number, self.resids = filter_residue(
@@ -272,9 +279,28 @@ class calculator:
             #print("random start points")
             #print(self.random_start_points)
             print("start point shape: ", str(self.random_start_points.shape))
-
         self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
+        if self.write_transformed_pdb == True:
+            self.x_copy = (self.x_copy - self.center) @ np.linalg.inv(self.transformation_matrix)
+            chain_id = 'A'
+            with open(f"transform_{path_to_pdb.split('/')[-1][:-4]}.pdb", 'w') as f:
+                for i in range(len(self.x_copy)):
+                    atom_number = int(self.atom_number_copy[i])
+                    atom_name = self.atom_type_copy[i]  # The atom name (like 'CA', 'O')
+                    residue_name = self.resids_copy[i]  # Residue name (like 'ALA')
+                    residue_number = self.residue_number_copy[i]
+                    x, y, z = self.x_copy[i]
 
+                    # PDB format: ATOM or HETATM, atom number, atom name, residue name, chain (default 'A'),
+                    # residue number, coordinates (x, y, z), occupancy (default 1.00), temperature factor (default 0.00)
+                    f.write(
+                        f"ATOM  {atom_number:>5d} {atom_name:<4} {residue_name:>3} {chain_id:>1}{residue_number:>4d}    "
+                        f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00           \n"
+                    )
+
+        #print(self.center)
+        #print(self.x_vec_pt)
+        #print(self.y_vec_pt)
         if self.box_shift != [0,0,0]:
             print("Shifting box by: ", self.box_shift)
             self.x = self.x - np.array(self.box_shift)
@@ -467,6 +493,7 @@ class calculator:
         print("x shape: {}".format(self.x.shape))
         print("Q shape: {}".format(self.Q.shape))
         print("First few lines of x: {}".format(self.x[:5]))
+        print("Transformation matrix: {}".format(self.transformation_matrix))
         field_box = compute_field_on_grid(self.mesh, self.x, self.Q)
         return field_box, self.mesh.shape
 

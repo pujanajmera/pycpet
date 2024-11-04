@@ -71,10 +71,10 @@ class cluster:
                     for i in self.topo_file_list:
                         file_list.write(f"{i} \n")
                 print("{} files found for clustering".format(len(self.topo_file_list)))
-                #self.hists = make_histograms(self.topo_file_list)
-                #self.distance_matrix = construct_distance_matrix(self.hists)
-                self.histlist = make_histograms_mem(self.topo_file_list, self.outputpath)
-                self.distance_matrix = construct_distance_matrix_mem(self.histlist)
+                self.hists = make_histograms(self.topo_file_list)
+                self.distance_matrix = construct_distance_matrix(self.hists)
+                #self.histlist = make_histograms_mem(self.topo_file_list, self.outputpath)
+                #self.distance_matrix = construct_distance_matrix_mem(self.histlist)
                 np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
         elif options["CPET_method"] == "cluster_volume":
             self.field_file_list = []
@@ -116,7 +116,7 @@ class cluster:
         distance_matrix = self.distance_matrix
         distance_matrix = distance_matrix**2
         inertia_list = []
-        for i in range(20):
+        for i in range(50):
             kmeds = KMedoids(
                 n_clusters = i + 1, 
                 random_state = 0, 
@@ -130,7 +130,10 @@ class cluster:
             print(i + 1, kmeds.inertia_)
 
         #Use second-derivate based elbow locating with 1-15 clusters
-        kn = KneeLocator([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], inertia_list, curve='convex', direction='decreasing')
+        kn = KneeLocator([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50], 
+                inertia_list, 
+                curve='convex', 
+                direction='decreasing')
 
         print(
             f"Using {kn.elbow} number of clusters with Partitioning around Medoids (PAM), derived from elbow method"

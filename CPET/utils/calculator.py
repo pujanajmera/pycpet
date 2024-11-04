@@ -16,6 +16,8 @@ from numba import njit, prange
 import numba as nb
 from tqdm import tqdm
 import gc
+import sys
+import os
 
 package_name = "CPET-python"
 package = pkg_resources.get_distribution(package_name)
@@ -692,7 +694,9 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
     start_time = time.time()
     for topo_file in topo_files:
         curvatures, distances = [], []
-        #print(topo_file)
+        print(topo_file)
+        sys.stdout.flush()
+        time.sleep(1.0)
         with open(topo_file) as topology_data:
             for line in topology_data:
                 if line.startswith("#"):
@@ -709,9 +713,13 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
         topo_list.append((distances, curvatures))
         dist_list.extend(distances)
         curv_list.extend(curvatures)
+        del distances
+        del curvatures
+    gc.collect()
     end_time = time.time()
     print(f"Time taken to parse topology files: {end_time - start_time:.2f} seconds")
-
+    sys.stdout.flush()
+    time.sleep(1.0)
     len_list_equality = all(x == len_list[0] for x in len_list) if len_list else True
     if not len_list_equality:
         warnings.warn(f"Topologies provided are of different sizes, using the mean value of {np.mean(len_list)} to represent binning for {len_list}")
@@ -723,10 +731,12 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
     max_curvature = max(curv_list)
     min_distance = min(dist_list)
     min_curvature = min(curv_list)
-
-
+    
     distance_binres = 2 * iqr(dist_list) / (len_dist_curv ** (1 / 3))
     curv_binres = 2 * iqr(curv_list) / (len_dist_curv ** (1 / 3))
+    
+    del dist_list
+    del curv_list
 
     #distance_binres = 0.02
     #curv_binres = 0.02
@@ -738,6 +748,8 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
     print(f"Min distance: {min_distance}")
     print(f"Max curvature: {max_curvature}")
     print(f"Min curvature: {min_curvature}")
+    sys.stdout.flush()
+    time.sleep(1.0)
     # Need 0.02A resolution for max_distance
     distance_nbins = int((max_distance-min_distance) / distance_binres)
     # distance_nbins = 200
