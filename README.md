@@ -1,8 +1,6 @@
-# CPET-python
+# pycpet
 
-Classical Protein Electric Field Topology (https://github.com/matthew-hennefarth/CPET) but in python, and built for high-throughput accelerated calculations.
-
-Original code in C++ is by Matthew Hennerfarth
+Python-based Classical Protein Electric Field Topology, built for high-throughput accelerated calculations of several electrostatic properties of enzyme active sites from simulations.
 
 System requirements:
 - gcc (if you want to optimize speed)
