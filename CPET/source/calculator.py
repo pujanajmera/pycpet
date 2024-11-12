@@ -99,9 +99,13 @@ class calculator:
 
         ##################### define x axis
 
-        if type(options["x"]) == list:
+        #First, failsafe if x doesn't exist in options dict:
+        if "x" not in options.keys():
+            print("No x specified, calculating in input file reference frame. Ignoring y...")
+            compute_y = False
+        elif type(options["x"]) == list:
             self.x_vec_pt = np.array(options["x"])
-
+            compute_y = True
         elif type(options["x"]) == dict:
             method = options["x"]["method"]
             centering_atoms = [
@@ -115,15 +119,15 @@ class calculator:
                 if (self.atom_type[idx], self.residue_number[idx]) == atom_res
             ]
             self.x_vec_pt = calculate_center(pos_considered, method=method)
-
+            compute_y = True
         else:
-            print("No x specified, calculating in input file reference frame. Ignoring y...")
-            compute_y = False
+            #Return an error:
+            raise ValueError("x must be a list or dict")
 
         ##################### define y axis
 
         if compute_y == False:
-            pass
+            print("Not computing y since x is not specified")
         elif type(options["y"]) == list:
             self.y_vec_pt = np.array(options["y"])
 
@@ -213,7 +217,7 @@ class calculator:
 
         if (
             options["CPET_method"] == "volume" or options["CPET_method"] == "volume_ESP"
-        ) and self.y_vec_pt is not None:
+        ) and hasattr(self,'y_vec_pt'):
             N_cr = 2 * self.dimensions / self.step_size
             N_cr = [int(N_cr[0]),int(N_cr[1]),int(N_cr[2])]
             (self.mesh, self.transformation_matrix) = initialize_box_points_uniform(
@@ -231,7 +235,7 @@ class calculator:
         #print("max steps: ", max_steps)
         if (
             options["initializer"] == "random"
-        ) and self.y_vec_pt is not None:            
+        ) and hasattr(self,'y_vec_pt'):            
                 (
                     self.random_start_points,
                     self.random_max_samples,
@@ -246,7 +250,7 @@ class calculator:
                     dtype=self.dtype,
                     max_steps=self.max_steps,
                 )
-        elif (options["CPET_method"] != "volume" and options["CPET_method"] != "volume_ESP") and options["initializer"] == "uniform" and (self.y_vec_pt is not None):
+        elif (options["CPET_method"] != "volume" and options["CPET_method"] != "volume_ESP") and options["initializer"] == "uniform" and hasattr(self,'y_vec_pt'): #Take care if self.y_vec_pt does not exist yet
             num_per_dim = round(self.n_samples ** (1 / 3))
             if num_per_dim**3 < self.n_samples:
                 num_per_dim += 1
@@ -281,11 +285,12 @@ class calculator:
             #print("random start points")
             #print(self.random_start_points)
             print("start point shape: ", str(self.random_start_points.shape))
-        if self.y_vec_pt is not None:
-            print("Transforming coordinates")
+        if hasattr(self,'y_vec_pt'):
+            print("Rotating coordinates")
             self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
         else:
-            print("Not transforming coordinates since no y-vector is provided")
+            print("Not rotating coordinates since no y-vector is provided")
+            self.x = (self.x - self.center)
         if self.write_transformed_pdb == True:
             self.x_copy = (self.x_copy - self.center) @ np.linalg.inv(self.transformation_matrix)
             chain_id = 'A'
