@@ -19,7 +19,7 @@ import gc
 import sys
 import os
 
-package_name = "CPET-python"
+package_name = "pycpet"
 package = pkg_resources.get_distribution(package_name)
 package_path = package.location
 # import cupy as cp
