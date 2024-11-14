@@ -49,6 +49,11 @@ class cluster:
         self.cluster_reload = (
             options["cluster_reload"] if "cluster_reload" in options else False
         )
+        self.defined_n_clusters = (
+            options["defined_n_clusters"] if "defined_n_clusters" in options else None
+        )
+        #Make sure the provided value for n_clusters is an integer, not a string
+        assert self.defined_n_clusters == None or isinstance(self.defined_n_clusters,int), "Defined number of clusters must be an integer"
         self.inputpath = options["inputpath"]
         self.outputpath = options["outputpath"]
 
@@ -116,43 +121,54 @@ class cluster:
         distance_matrix = self.distance_matrix
         distance_matrix = distance_matrix**2
         inertia_list = []
-        for i in range(50):
+        if not self.defined_n_clusters:
+            for i in range(50):
+                kmeds = KMedoids(
+                    n_clusters = i + 1, 
+                    random_state = 0, 
+                    metric = "precomputed", 
+                    method = "pam",
+                    init = "k-medoids++"
+                )
+                kmeds.fit(distance_matrix)
+                labels = list(kmeds.labels_)
+                inertia_list.append(kmeds.inertia_)
+                print(i + 1, kmeds.inertia_)
+            #Use second-derivate based elbow locating with 1-15 clusters
+            kn = KneeLocator([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50], 
+                    inertia_list, 
+                    curve='convex', 
+                    direction='decreasing')
+
+            print(
+                f"Using {kn.elbow} number of clusters with Partitioning around Medoids (PAM), derived from elbow method"
+            )
+            cluster_results["n_clusters"] = int(kn.elbow)
             kmeds = KMedoids(
-                n_clusters = i + 1, 
+                n_clusters = kn.elbow, 
+                random_state = 0, 
+                metric = "precomputed", 
+                method = "pam", 
+                init = "k-medoids++"
+            )
+
+            kmeds.fit(distance_matrix)
+        else:
+            print(f"Using {self.defined_n_clusters} number of clusters with Partitioning around Medoids (PAM)")
+            kmeds = KMedoids(
+                n_clusters = self.defined_n_clusters, 
                 random_state = 0, 
                 metric = "precomputed", 
                 method = "pam",
                 init = "k-medoids++"
             )
             kmeds.fit(distance_matrix)
-            labels = list(kmeds.labels_)
-            inertia_list.append(kmeds.inertia_)
-            print(i + 1, kmeds.inertia_)
-
-        #Use second-derivate based elbow locating with 1-15 clusters
-        kn = KneeLocator([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50], 
-                inertia_list, 
-                curve='convex', 
-                direction='decreasing')
-
-        print(
-            f"Using {kn.elbow} number of clusters with Partitioning around Medoids (PAM), derived from elbow method"
-        )
-
-        kmeds = KMedoids(
-            n_clusters = kn.elbow, 
-            random_state = 0, 
-            metric = "precomputed", 
-            method = "pam", 
-            init = "k-medoids++"
-        )
-
-        kmeds.fit(distance_matrix)
+            cluster_results["n_clusters"] = self.defined_n_clusters
         cluster_results["labels"] = list(kmeds.labels_)
         cluster_results["silhouette_score"] = silhouette_score(distance_matrix, 
                                                                cluster_results["labels"], 
                                                                metric = "precomputed")
-        cluster_results["n_clusters"] = int(kn.elbow)
+        
         cluster_results["cluster_centers_indices"] = kmeds.medoid_indices_
         
         return cluster_results
