@@ -1,6 +1,6 @@
 # pycpet
 
-Python-based Classical Protein Electric Field Topology, built for high-throughput accelerated calculations of several electrostatic properties of enzyme active sites from simulations.
+Python-based Computation of Protein Electric Field Topology, built for high-throughput accelerated calculations of several electrostatic properties of enzyme active sites from simulations.
 
 System requirements:
 - gcc (if you want to optimize speed)

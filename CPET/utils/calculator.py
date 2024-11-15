@@ -587,45 +587,70 @@ def Inside_Box(local_point, dimensions):
 def make_histograms(topo_files, plot=False):
     histograms = []
 
-    # Calculate reasonable maximum distances and curvatures
-    dist_list = []
-    curv_list = []
-    len_list = []
-    topo_list = []
+    # First pass: Calculate total number of data points
+    len_list = np.zeros(len(topo_files), dtype=int)
     start_time = time.time()
-    for topo_file in topo_files:
-        curvatures, distances = [], []
-        #print(topo_file)
+    for idx, topo_file in enumerate(topo_files):
         with open(topo_file) as topology_data:
+            line_count = sum(1 for line in topology_data if not line.startswith("#"))
+            len_list[idx] = line_count
+    total_points = np.sum(len_list)
+    end_time = time.time()
+    print(f"Time taken to count data points: {end_time - start_time:.2f} seconds")
+
+    # Initialize NumPy arrays with the total size
+    dist_list = np.zeros(total_points)
+    curv_list = np.zeros(total_points)
+    topo_data_indices = np.zeros(len(topo_files) + 1, dtype=int)  # To store start indices
+
+    # Second pass: Read data into NumPy arrays
+    start_time = time.time()
+    current_index = 0
+    for idx, topo_file in enumerate(topo_files):
+        num_points = len_list[idx]
+        distances = np.zeros(num_points)
+        curvatures = np.zeros(num_points)
+        with open(topo_file) as topology_data:
+            point_idx = 0
             for line in topology_data:
                 if line.startswith("#"):
                     continue
+                line = line.strip().split()
+                distances[point_idx] = float(line[0])
+                curvatures[point_idx] = float(line[1])
+                point_idx += 1
 
-                line = line.split()
-                distances.append(float(line[0]))
-                curvatures.append(float(line[1]))
-        # print(max(distances),max(curvatures))
-        if len(distances) != len(curvatures):
-            ValueError(f"Length of distances and curvatures do not match for {topo_file}")
-        else:
-            len_list.append(len(distances))
-        topo_list.append((distances, curvatures))
-        dist_list.extend(distances)
-        curv_list.extend(curvatures)
+        if distances.size != curvatures.size:
+            raise ValueError(f"Length of distances and curvatures do not match for {topo_file}")
+
+        # Store data in the main arrays
+        dist_list[current_index:current_index+num_points] = distances
+        curv_list[current_index:current_index+num_points] = curvatures
+
+        # Store the start index for this file's data
+        topo_data_indices[idx] = current_index
+        current_index += num_points
+
+    # Append the final index
+    topo_data_indices[-1] = current_index
     end_time = time.time()
-    print(f"Time taken to parse topology files: {end_time - start_time:.2f} seconds")
+    print(f"Time taken to read data into arrays: {end_time - start_time:.2f} seconds")
 
-    len_list_equality = all(x == len_list[0] for x in len_list) if len_list else True
+    # Check if all files have the same length
+    len_list_equality = np.all(len_list == len_list[0]) if len_list.size > 0 else True
     if not len_list_equality:
-        warnings.warn(f"Topologies provided are of different sizes, using the mean value of {np.mean(len_list)} to represent binning for {len_list}")
+        warnings.warn(
+            f"Topologies provided are of different sizes, using the mean value of {np.mean(len_list)} "
+            f"to represent binning for {len_list}"
+        )
         len_dist_curv = np.mean(len_list)
     else:
         len_dist_curv = len_list[0]
-    
-    max_distance = max(dist_list)
-    max_curvature = max(curv_list)
-    min_distance = min(dist_list)
-    min_curvature = min(curv_list)
+
+    max_distance = np.max(dist_list)
+    max_curvature = np.max(curv_list)
+    min_distance = np.min(dist_list)
+    min_curvature = np.min(curv_list)
 
     distance_binres = 2 * iqr(dist_list) / (len_dist_curv ** (1 / 3))
     curv_binres = 2 * iqr(curv_list) / (len_dist_curv ** (1 / 3))
@@ -640,21 +665,20 @@ def make_histograms(topo_files, plot=False):
     print(f"Min distance: {min_distance}")
     print(f"Max curvature: {max_curvature}")
     print(f"Min curvature: {min_curvature}")
-    # Need 0.02A resolution for max_distance
-    distance_nbins = int((max_distance-min_distance) / distance_binres)
-    # distance_nbins = 200
-    # Need 0.02A resolution for max_curvature
-    curvature_nbins = int((max_curvature-min_curvature) / curv_binres)
-    # curvature_nbins = 200
-    
+
+    # Calculate number of bins
+    distance_nbins = int((max_distance - min_distance) / distance_binres)
+    curvature_nbins = int((max_curvature - min_curvature) / curv_binres)
 
     start_time = time.time()
     # Make histograms
-    for i, topo_file in enumerate(topo_files):
-        distances, curvatures = topo_list[i]
-        #print(f"Plotting histo for {topo_file}")
-        # bins is number of histograms bins in x and y direction
-        # range gives xrange, yrange for the histogram
+    for idx in range(len(topo_files)):
+        start_idx = topo_data_indices[idx]
+        end_idx = topo_data_indices[idx + 1]
+        distances = dist_list[start_idx:end_idx]
+        curvatures = curv_list[start_idx:end_idx]
+
+        # Compute the 2D histogram
         a, b, c, q = plt.hist2d(
             distances,
             curvatures,
@@ -665,16 +689,9 @@ def make_histograms(topo_files, plot=False):
             cmap="jet",
         )
 
-        NormConstant = 0
-        for j in a:
-            for m in j:
-                NormConstant += m
-        #print(NormConstant)
-        actual = []
-        for j in a:
-            actual.append([m / NormConstant for m in j])
+        NormConstant = np.sum(a)
+        actual = a / NormConstant
 
-        actual = np.array(actual)
         histograms.append(actual.flatten())
         if plot:
             plt.show()

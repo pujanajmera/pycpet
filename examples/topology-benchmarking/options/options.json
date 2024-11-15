@@ -1,9 +1,7 @@
 {
-        "CPET_method": "topo",
-        "inputpath": "/jet/home/ajmera/che230029p/CODH-project/md_sim/CODH_params/2Z8Q_WT_empty/CO2_diffusion/Fd_CO2/benchmark_topologies/pdb",
-        "outputpath": "/jet/home/ajmera/che230029p/CODH-project/md_sim/CODH_params/2Z8Q_WT_empty/CO2_diffusion/Fd_CO2/benchmark_topologies/cpet",
-        "GPU_batch_freq": 100,
-	"profile": false,
+        "CPET_method": "topo-benchmark",
+        "inputpath": "/jet/home/ajmera/programs/pycpet/examples/topology-benchmarking/pdb",
+        "outputpath": "/jet/home/ajmera/programs/pycpet/examples/topology-benchmarking/outdir",
         "center": {
                 "method": "first",
                 "atoms": {
@@ -29,7 +27,6 @@
                 1.0
         ],
         "step_size": 0.001,
-	"batch_size": 100,
         "concur_slip": 64,
 	"initializer": "uniform",
 	"_filter_resnum_andname": [
