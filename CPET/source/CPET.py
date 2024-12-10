@@ -34,7 +34,7 @@ class CPET:
             # creates a pca object
             self.pca_pycpet = pca_pycpet(options)
 
-        self.profile = self.options["profile"]
+        self.profile = self.options["profile"] if "profile" in self.options else False
 
 
     def run(self):

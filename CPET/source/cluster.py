@@ -60,42 +60,47 @@ class cluster:
         if options["CPET_method"] == "cluster":
             if self.cluster_reload:
                 print("Loading distance matrix and topo file list from files!")
-                self.topo_file_list = []
+                self.file_list = []
                 with open(self.outputpath + "/topo_file_list.txt", "r") as file_list:
                     for line in file_list:
-                        self.topo_file_list.append(line.strip())
-                print("{} files found for clustering from input".format(len(self.topo_file_list)))
+                        self.file_list.append(line.strip())
+                print("{} topo files found for clustering from input".format(len(self.file_list)))
                 self.distance_matrix = np.load(self.outputpath + "/distance_matrix.dat.npy")
             else:
-                self.topo_file_list = []
+                self.file_list = []
                 for file in glob(self.inputpath + "/*.top"):
-                    self.topo_file_list.append(file)
-                self.topo_file_list.sort()
+                    self.file_list.append(file)
+                self.file_list.sort()
                 topo_file_name = self.outputpath + "/topo_file_list.txt"
                 with open(topo_file_name, "w") as file_list:
-                    for i in self.topo_file_list:
+                    for i in self.file_list:
                         file_list.write(f"{i} \n")
-                print("{} files found for clustering".format(len(self.topo_file_list)))
-                self.hists = make_histograms(self.topo_file_list)
+                print("{} topo files found for clustering".format(len(self.file_list)))
+                self.hists = make_histograms(self.file_list)
                 self.distance_matrix = construct_distance_matrix(self.hists)
-                #self.histlist = make_histograms_mem(self.topo_file_list, self.outputpath)
+                #self.histlist = make_histograms_mem(self.file_list, self.outputpath)
                 #self.distance_matrix = construct_distance_matrix_mem(self.histlist)
                 np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
         elif options["CPET_method"] == "cluster_volume":
-            self.field_file_list = []
-            for file in glob(self.inputpath + "/*_efield.dat"):
-                self.field_file_list.append(file)
-            self.field_file_list.sort()
-            field_file_name = self.outputpath + "/field_file_list.txt"
-            with open(field_file_name, "w") as file_list:
-                for i in self.field_file_list:
-                    file_list.write(f"{i} \n")
-            print("{} files found for clustering".format(len(self.field_file_list)))
-            self.fields = make_fields(self.field_file_list)
             if self.cluster_reload:
-                print("Loading distance matrix from file!")
-                self.distance_matrix = np.load(self.outputpath + "/distance_matrix.dat")
+                print("Loading distance matrix and field file list from files!")
+                self.file_list = []
+                with open(self.outputpath + "/field_file_list.txt", "r") as file_list:
+                    for line in file_list:
+                        self.file_list.append(line.strip())
+                print("{} field files found for clustering from input".format(len(self.file_list)))
+                self.distance_matrix = np.load(self.outputpath + "/distance_matrix.dat.npy")
             else:
+                self.file_list = []
+                for file in glob(self.inputpath + "/*_efield.dat"):
+                    self.file_list.append(file)
+                self.file_list.sort()
+                field_file_name = self.outputpath + "/field_file_list.txt"
+                with open(field_file_name, "w") as file_list:
+                    for i in self.file_list:
+                        file_list.write(f"{i} \n")
+                print("{} field files found for clustering".format(len(self.file_list)))
+                self.fields = make_fields(self.file_list)
                 self.distance_matrix = construct_distance_matrix_volume(self.fields)
                 np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
 
@@ -274,7 +279,7 @@ class cluster:
             temp_dict = {}
             temp_dict["count"] = list(self.cluster_results["labels"]).count(i)
             temp_dict["index_center"] = self.cluster_results["cluster_centers_indices"][i]
-            temp_dict["name_center"] = self.topo_file_list[temp_dict["index_center"]]
+            temp_dict["name_center"] = self.file_list[temp_dict["index_center"]]
             temp_dict["percentage"] = float(temp_dict["count"]) / float(
                 len(self.cluster_results["labels"])
             ) * 100
@@ -282,7 +287,7 @@ class cluster:
             temp_dict["mean_distance"] = np.mean(self.distance_matrix[temp_dict["index_center"]][cluster_indices])
             temp_dict["max_distance"] = np.max(self.distance_matrix[temp_dict["index_center"]][cluster_indices])
             temp_zip = zip(
-                [self.topo_file_list[i].split("/")[-1] for i in cluster_indices],
+                [self.file_list[i].split("/")[-1] for i in cluster_indices],
                 [self.distance_matrix[temp_dict["index_center"]][i] for i in cluster_indices]
             )
             sorted_temp_zip = sorted(temp_zip, key = lambda x: x[1])

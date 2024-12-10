@@ -45,9 +45,9 @@ class calculator:
         
         self.profile = options["profile"]
         self.path_to_pdb = path_to_pdb
-        self.step_size = options["step_size"]
-        self.n_samples = options["n_samples"]
-        self.dimensions = np.array(options["dimensions"])
+        self.step_size = options["step_size"] if "step_size" in options.keys() else None
+        self.n_samples = options["n_samples"] if "n_samples" in options.keys() else None
+        self.dimensions = np.array(options["dimensions"]) if "dimensions" in options.keys() else None
         self.concur_slip = options["concur_slip"]
         self.GPU_batch_freq = options["GPU_batch_freq"]
         self.dtype = options["dtype"]
@@ -229,13 +229,11 @@ class calculator:
                 dtype=self.dtype,
                 inclusive=True
             )
-
-        # self.transformation_matrix and self.uniform_transformation_matrix are the same
-        self.max_steps = round(2 * np.linalg.norm(self.dimensions) / self.step_size)
-        #print("max steps: ", max_steps)
-        if (
-            options["initializer"] == "random"
-        ) and hasattr(self,'y_vec_pt'):            
+        elif (
+            options["CPET_method"] == "topo" or options["CPET_method"] == "topo_GPU"
+        ) and hasattr(self,'y_vec_pt'):
+            self.max_steps = round(2 * np.linalg.norm(self.dimensions) / self.step_size)
+            if options["initializer"] == "random":
                 (
                     self.random_start_points,
                     self.random_max_samples,
@@ -250,41 +248,60 @@ class calculator:
                     dtype=self.dtype,
                     max_steps=self.max_steps,
                 )
-        elif (options["CPET_method"] != "volume" and options["CPET_method"] != "volume_ESP") and options["initializer"] == "uniform" and hasattr(self,'y_vec_pt'): #Take care if self.y_vec_pt does not exist yet
-            num_per_dim = round(self.n_samples ** (1 / 3))
-            if num_per_dim**3 < self.n_samples:
-                num_per_dim += 1
-            self.n_samples = num_per_dim**3
-            #print("num_per_dim: ", num_per_dim)
-            grid_density = 2 * self.dimensions / (num_per_dim + 1)
-            print("grid_density: ", grid_density)
-            seed=None
-            if self.max_streamline_init == "fixed_rand":
-                print("Fixing max steps with Random seed 42")
-                seed=42
+            elif options["initializer"] == "uniform":
+                num_per_dim = round(self.n_samples ** (1 / 3))
+                if num_per_dim**3 < self.n_samples:
+                    num_per_dim += 1
+                self.n_samples = num_per_dim**3
+                #print("num_per_dim: ", num_per_dim)
+                grid_density = 2 * self.dimensions / (num_per_dim + 1)
+                print("grid_density: ", grid_density)
+                seed=None
+                if self.max_streamline_init == "fixed_rand":
+                    print("Fixing max steps with Random seed 42")
+                    seed=42
+                (
+                    self.random_start_points, 
+                    self.random_max_samples, 
+                    self.transformation_matrix,
+                ) = initialize_box_points_uniform(
+                    center=self.center,
+                    x=self.x_vec_pt,
+                    y=self.y_vec_pt,
+                    dimensions=self.dimensions,
+                    N_cr = [num_per_dim, num_per_dim, num_per_dim],
+                    dtype=self.dtype,
+                    max_steps=self.max_steps, 
+                    ret_rand_max=True, 
+                    inclusive=False,
+                    seed=seed
+                ) 
+                # convert mesh to list of x, y, z points
+                #print(self.random_start_points)
+                self.random_start_points = self.random_start_points.reshape(-1, 3)
+                self.n_samples = len(self.random_start_points)
+                #print("random start points")
+                #print(self.random_start_points)
+                print("start point shape: ", str(self.random_start_points.shape))
+        elif (
+            options["CPET_method"] == "point_field" or options["CPET_method"] == "point_mag"
+        ) and hasattr(self,'y_vec_pt'):
             (
-                self.random_start_points, 
-                self.random_max_samples, 
+                _, 
+                _, 
                 self.transformation_matrix,
             ) = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,
-                dimensions=self.dimensions,
-                N_cr = [num_per_dim, num_per_dim, num_per_dim],
+                dimensions=[0,0,0],
+                N_cr = [0,0,0],
                 dtype=self.dtype,
-                max_steps=self.max_steps, 
+                max_steps=0, 
                 ret_rand_max=True, 
                 inclusive=False,
-                seed=seed
             ) 
-            # convert mesh to list of x, y, z points
-            #print(self.random_start_points)
-            self.random_start_points = self.random_start_points.reshape(-1, 3)
-            self.n_samples = len(self.random_start_points)
-            #print("random start points")
-            #print(self.random_start_points)
-            print("start point shape: ", str(self.random_start_points.shape))
+
         if hasattr(self,'y_vec_pt'):
             print("Rotating coordinates")
             self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
@@ -320,7 +337,8 @@ class calculator:
             self.x = self.x.astype(np.float32)
             self.Q = self.Q.astype(np.float32)
             self.center = self.center.astype(np.float32)
-            self.dimensions = self.dimensions.astype(np.float32)
+            if self.dimensions is not None:
+                self.dimensions = self.dimensions.astype(np.float32)
 
         print("... > Initialized Calculator!")
 

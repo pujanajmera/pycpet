@@ -586,11 +586,12 @@ def Inside_Box(local_point, dimensions):
 
 def make_histograms(topo_files, plot=False):
     histograms = []
-
+    '''
     # First pass: Calculate total number of data points
     len_list = np.zeros(len(topo_files), dtype=int)
     start_time = time.time()
-    for idx, topo_file in enumerate(topo_files):
+    #Use tqdm instead of original for loop
+    for idx, topo_file in tqdm(enumerate(topo_files), total=len(topo_files)):
         with open(topo_file) as topology_data:
             line_count = sum(1 for line in topology_data if not line.startswith("#"))
             len_list[idx] = line_count
@@ -606,7 +607,7 @@ def make_histograms(topo_files, plot=False):
     # Second pass: Read data into NumPy arrays
     start_time = time.time()
     current_index = 0
-    for idx, topo_file in enumerate(topo_files):
+    for idx, topo_file in tqdm(enumerate(topo_files), total=len(topo_files)):
         num_points = len_list[idx]
         distances = np.zeros(num_points)
         curvatures = np.zeros(num_points)
@@ -665,6 +666,13 @@ def make_histograms(topo_files, plot=False):
     print(f"Min distance: {min_distance}")
     print(f"Max curvature: {max_curvature}")
     print(f"Min curvature: {min_curvature}")
+    '''
+    distance_binres = 0.032748
+    curv_binres = 0.014065
+    max_distance = 3.072607
+    min_distance = 0.01
+    max_curvature = 83.996368
+    min_curvature = 0.00057532
 
     # Calculate number of bins
     distance_nbins = int((max_distance - min_distance) / distance_binres)
@@ -672,11 +680,17 @@ def make_histograms(topo_files, plot=False):
 
     start_time = time.time()
     # Make histograms
-    for idx in range(len(topo_files)):
-        start_idx = topo_data_indices[idx]
-        end_idx = topo_data_indices[idx + 1]
-        distances = dist_list[start_idx:end_idx]
-        curvatures = curv_list[start_idx:end_idx]
+    for idx in tqdm(range(len(topo_files))):
+        with open(topo_files[idx]) as topology_data:
+            distances = []
+            curvatures = []
+            for line in topology_data:
+                if line.startswith("#"):
+                    continue
+
+                line = line.split()
+                distances.append(float(line[0]))
+                curvatures.append(float(line[1]))
 
         # Compute the 2D histogram
         a, b, c, q = plt.hist2d(
@@ -688,7 +702,8 @@ def make_histograms(topo_files, plot=False):
             density=True,
             cmap="jet",
         )
-
+        del distances
+        del curvatures
         NormConstant = np.sum(a)
         actual = a / NormConstant
 
@@ -831,7 +846,6 @@ def distance_numpy(hist1, hist2):
     b = hist1 + hist2
     return np.sum(np.divide(a, b, out=np.zeros_like(a), where=b != 0)) / 2.0
 
-
 def construct_distance_matrix_mem(hist_file_list):
     '''
     Memory-efficient implementation
@@ -896,12 +910,9 @@ def construct_distance_matrix_volume(fields):
     for i, field1 in enumerate(fields):
         for j, field2 in enumerate(fields[i + 1 :]):
             j += i + 1
-            # Dot product calculation for vector fields
-            dot_product = np.sum(field1 * field2, axis=-1)
-            norms = np.linalg.norm(field1, axis=-1) * np.linalg.norm(field2, axis=-1)
-            cosine_similarity = dot_product / norms
-            # Average over all vector similarities in the field
-            matrix[i][j] = np.mean(cosine_similarity)
+            # Euclidean distance for vector fields
+            dists = np.linalg.norm(field1-field2, axis=-1)
+            matrix[i][j] = np.sum(dists)
             matrix[j][i] = matrix[i][j]
     return matrix
 
