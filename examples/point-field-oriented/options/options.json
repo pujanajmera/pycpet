@@ -1,7 +1,6 @@
 {
         "CPET_method": "point_field",
         "inputpath": "./pdb",
-        "outputpath": "./outdir",
         "center": {
                 "method": "mean",
                 "atoms": {
@@ -24,5 +23,6 @@
         "filter_resnum_andname": [
                 {"378":"CF1"}
         ],
+        "filter_radius": 40,
         "_comment": "WARNING: keeping filter_res_radius will overwrite filter_radius and filter_resname"
 }

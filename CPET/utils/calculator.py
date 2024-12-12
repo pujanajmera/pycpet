@@ -161,7 +161,18 @@ def initialize_box_points_random(
     return random_points_local, random_max_samples, transformation_matrix, max_steps
 
 
-def initialize_box_points_uniform(center, x, y, N_cr, dimensions, dtype="float32", max_steps=10, ret_rand_max=False, inclusive=True, seed=None):
+def initialize_box_points_uniform(
+    center,
+    x,
+    y,
+    N_cr,
+    dimensions,
+    dtype="float32",
+    max_steps=10,
+    ret_rand_max=False,
+    inclusive=True,
+    seed=None,
+):
     """
     Initializes random points in box centered at the origin
     Takes
@@ -178,7 +189,7 @@ def initialize_box_points_uniform(center, x, y, N_cr, dimensions, dtype="float32
     """
     # Convert lists to numpy arrays
     print("... initializing box points uniformly")
-    
+
     x = x - center  # Translate to origin
     y = y - center  # Translate to origin
     half_length, half_width, half_height = dimensions
@@ -201,23 +212,29 @@ def initialize_box_points_uniform(center, x, y, N_cr, dimensions, dtype="float32
         x_coords = np.linspace(-half_length, half_length, N_cr[0] + 1)
         y_coords = np.linspace(-half_width, half_width, N_cr[1] + 1)
         z_coords = np.linspace(-half_height, half_height, N_cr[2] + 1)
-    else: 
-        x_coords = np.linspace(-half_length, half_length, N_cr[0] + 1, endpoint=False)[1:]
+    else:
+        x_coords = np.linspace(-half_length, half_length, N_cr[0] + 1, endpoint=False)[
+            1:
+        ]
         y_coords = np.linspace(-half_width, half_width, N_cr[1] + 1, endpoint=False)[1:]
-        z_coords = np.linspace(-half_height, half_height, N_cr[2] + 1, endpoint=False)[1:] 
+        z_coords = np.linspace(-half_height, half_height, N_cr[2] + 1, endpoint=False)[
+            1:
+        ]
 
-    x_mesh, y_mesh, z_mesh = np.meshgrid(x_coords, y_coords, z_coords,indexing='ij')
-    
+    x_mesh, y_mesh, z_mesh = np.meshgrid(x_coords, y_coords, z_coords, indexing="ij")
+
     local_coords = np.stack([x_mesh, y_mesh, z_mesh], axis=-1, dtype=dtype)
     print(local_coords.shape)
     if not seed == None:
         np.random.seed(seed)
 
     if ret_rand_max:
-        n_samples = local_coords.shape[0] * local_coords.shape[1] * local_coords.shape[2]
-        #print(f"max distance: {max_distance}")
-        #print(f"step size: {step_size}")
-        #print(f"max steps: {max_steps}")
+        n_samples = (
+            local_coords.shape[0] * local_coords.shape[1] * local_coords.shape[2]
+        )
+        # print(f"max distance: {max_distance}")
+        # print(f"step size: {step_size}")
+        # print(f"max steps: {max_steps}")
         random_max_samples = np.random.randint(1, max_steps, n_samples)
         return local_coords, random_max_samples, transformation_matrix
 
@@ -256,7 +273,7 @@ def calculate_electric_field_base(x_0, x, Q):
     # Create matrix R
     R = nb_subtract(x_0, x)
     denom = np.linalg.norm(R, axis=1) ** 3
-    E_vec = R * (1 / denom).reshape(-1, 1) * Q * 14.3996451    
+    E_vec = R * (1 / denom).reshape(-1, 1) * Q * 14.3996451
     E_vec = np.sum(E_vec, axis=0)
     return E_vec
 
@@ -298,9 +315,9 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q):
     # Create matrix R
     # print("subtract")
 
-    R = nb_subtract(x_0, x) # right
+    R = nb_subtract(x_0, x)  # right
 
-    R_sq = R**2 # right
+    R_sq = R**2  # right
     R_sq = R_sq.astype(np.float32)
     r_mag_sq = Math.einsum_ij_i(R_sq).reshape(-1, 1)
     r_mag_cube = np.power(r_mag_sq, -3 / 2)
@@ -321,11 +338,7 @@ def calculate_electric_field_c_shared_full(x_0, x, Q):
     Returns
         E(array) - electric field at the point of shape (1,3)
     """
-    E = Math.calc_field_base(
-        x_0=x_0, 
-        x=x, 
-        Q=Q
-    )
+    E = Math.calc_field_base(x_0=x_0, x=x, Q=Q)
     return E
 
 
@@ -339,11 +352,7 @@ def calculate_electric_field_c_shared_full_alt(x_0, x, Q):
     Returns
         E(array) - electric field at the point of shape (1,3)
     """
-    E = Math.calc_field(
-        x_0=x_0, 
-        x=x, 
-        Q=Q
-    )
+    E = Math.calc_field(x_0=x_0, x=x, Q=Q)
     return E
 
 
@@ -404,7 +413,6 @@ def calculate_electric_field_gpu_for_test(x_0, x, Q, device="cuda"):
     else:
         device = torch.device("cpu")
 
-    
     x_0 = torch.tensor(x_0, dtype=torch.float32, device=device)
     x = torch.tensor(x, dtype=torch.float32, device=device)
     Q = torch.tensor(Q, dtype=torch.float32, device=device)
@@ -509,19 +517,19 @@ def curv(v_prime, v_prime_prime, eps=10e-6):
     Returns
         curvature(float) - the curvature
     """
-    #if np.linalg.norm(v_prime) ** 3 < eps:
+    # if np.linalg.norm(v_prime) ** 3 < eps:
     #    denominator = eps
-    #else:
+    # else:
     #    denominator = np.linalg.norm(v_prime) ** 3
-    
+
     denominator = np.linalg.norm(v_prime, axis=0) ** 3
-    curvature = np.linalg.norm(np.cross(v_prime, v_prime_prime), axis=0) 
-    
-    if denominator == 0: 
+    curvature = np.linalg.norm(np.cross(v_prime, v_prime_prime), axis=0)
+
+    if denominator == 0:
         return curvature / eps
     else:
         return curvature / denominator
-    
+
 
 def curv_dev(v_prime, v_prime_prime):
     """
@@ -586,7 +594,7 @@ def Inside_Box(local_point, dimensions):
 
 def make_histograms(topo_files, plot=False):
     histograms = []
-    '''
+    """
     # First pass: Calculate total number of data points
     len_list = np.zeros(len(topo_files), dtype=int)
     start_time = time.time()
@@ -666,7 +674,7 @@ def make_histograms(topo_files, plot=False):
     print(f"Min distance: {min_distance}")
     print(f"Max curvature: {max_curvature}")
     print(f"Min curvature: {min_curvature}")
-    '''
+    """
     distance_binres = 0.032748
     curv_binres = 0.014065
     max_distance = 3.072607
@@ -711,7 +719,9 @@ def make_histograms(topo_files, plot=False):
         if plot:
             plt.show()
     end_time = time.time()
-    print(f"Time taken to parse topology files into histograms: {end_time - start_time:.2f} seconds")
+    print(
+        f"Time taken to parse topology files into histograms: {end_time - start_time:.2f} seconds"
+    )
     return np.array(histograms)
 
 
@@ -739,7 +749,9 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
                 curvatures.append(float(line[1]))
         # print(max(distances),max(curvatures))
         if len(distances) != len(curvatures):
-            ValueError(f"Length of distances and curvatures do not match for {topo_file}")
+            ValueError(
+                f"Length of distances and curvatures do not match for {topo_file}"
+            )
         else:
             len_list.append(len(distances))
         topo_list.append((distances, curvatures))
@@ -754,7 +766,9 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
     time.sleep(1.0)
     len_list_equality = all(x == len_list[0] for x in len_list) if len_list else True
     if not len_list_equality:
-        warnings.warn(f"Topologies provided are of different sizes, using the mean value of {np.mean(len_list)} to represent binning for {len_list}")
+        warnings.warn(
+            f"Topologies provided are of different sizes, using the mean value of {np.mean(len_list)} to represent binning for {len_list}"
+        )
         len_dist_curv = np.mean(len_list)
     else:
         len_dist_curv = len_list[0]
@@ -763,15 +777,15 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
     max_curvature = max(curv_list)
     min_distance = min(dist_list)
     min_curvature = min(curv_list)
-    
+
     distance_binres = 2 * iqr(dist_list) / (len_dist_curv ** (1 / 3))
     curv_binres = 2 * iqr(curv_list) / (len_dist_curv ** (1 / 3))
-    
+
     del dist_list
     del curv_list
 
-    #distance_binres = 0.02
-    #curv_binres = 0.02
+    # distance_binres = 0.02
+    # curv_binres = 0.02
 
     print(f"Distance bin resolution: {distance_binres}")
     print(f"Curvature bin resolution: {curv_binres}")
@@ -783,19 +797,18 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
     sys.stdout.flush()
     time.sleep(1.0)
     # Need 0.02A resolution for max_distance
-    distance_nbins = int((max_distance-min_distance) / distance_binres)
+    distance_nbins = int((max_distance - min_distance) / distance_binres)
     # distance_nbins = 200
     # Need 0.02A resolution for max_curvature
-    curvature_nbins = int((max_curvature-min_curvature) / curv_binres)
+    curvature_nbins = int((max_curvature - min_curvature) / curv_binres)
     # curvature_nbins = 200
-
 
     start_time = time.time()
     # Make histograms
     hist_list = []
     for i, topo_file in enumerate(topo_files):
         distances, curvatures = topo_list[i]
-        #print(f"Plotting histo for {topo_file}")
+        # print(f"Plotting histo for {topo_file}")
         # bins is number of histograms bins in x and y direction
         # range gives xrange, yrange for the histogram
         a, b, c, q = plt.hist2d(
@@ -811,20 +824,24 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
         for j in a:
             for m in j:
                 NormConstant += m
-        #print(NormConstant)
+        # print(NormConstant)
         actual = []
         for j in a:
             actual.append([m / NormConstant for m in j])
 
         actual = np.array(actual)
-        outfile = os.path.join(output_dir,f"{topo_files[i].split('/')[-1][:-4]}_hist.npy")
+        outfile = os.path.join(
+            output_dir, f"{topo_files[i].split('/')[-1][:-4]}_hist.npy"
+        )
         np.save(outfile, actual.flatten())
         hist_list.append(outfile)
         del actual
         if plot:
             plt.show()
     end_time = time.time()
-    print(f"Time taken to parse topology files into histograms: {end_time - start_time:.2f} seconds")
+    print(
+        f"Time taken to parse topology files into histograms: {end_time - start_time:.2f} seconds"
+    )
     return hist_list
 
 
@@ -841,20 +858,22 @@ def make_fields(field_files):
         fields.append(np.array(field))
     return fields
 
+
 def distance_numpy(hist1, hist2):
     a = (hist1 - hist2) ** 2
     b = hist1 + hist2
     return np.sum(np.divide(a, b, out=np.zeros_like(a), where=b != 0)) / 2.0
 
+
 def construct_distance_matrix_mem(hist_file_list):
-    '''
+    """
     Memory-efficient implementation
-    '''
+    """
     start_time = time.time()
     n = len(hist_file_list)
     matrix = np.zeros((n, n), dtype=np.float64)
     for i in range(n):
-        for j in range(i+1, n):
+        for j in range(i + 1, n):
             hist1 = np.load(hist_file_list[i])
             hist2 = np.load(hist_file_list[j])
             matrix[i][j] = distance_numpy(hist1, hist2)
@@ -862,20 +881,26 @@ def construct_distance_matrix_mem(hist_file_list):
             del hist1
             del hist2
     end_time = time.time()
-    print(f"Time taken to generate pairwise distance matrix: {end_time - start_time:.2f} seconds")
+    print(
+        f"Time taken to generate pairwise distance matrix: {end_time - start_time:.2f} seconds"
+    )
     return matrix
+
 
 def construct_distance_matrix(histograms):
     start_time = time.time()
     n = len(histograms)
     matrix = pairwise_distances(histograms, metric=distance_numpy, n_jobs=-1)
     for i in range(n):
-        matrix[i][i] = 0.0 #Make sure the diagonal is zero
+        matrix[i][i] = 0.0  # Make sure the diagonal is zero
     end_time = time.time()
-    print(f"Time taken to generate pairwise distance matrix: {end_time - start_time:.2f} seconds")
+    print(
+        f"Time taken to generate pairwise distance matrix: {end_time - start_time:.2f} seconds"
+    )
     return matrix
 
-'''
+
+"""
 def construct_distance_matrix_alt2(histograms):
     new_histograms = []
     start_time = time.time()
@@ -896,7 +921,8 @@ def construct_distance_matrix_alt2(histograms):
     end_time = time.time()
     print(f"Time taken to generate pairwise distance matrix: {end_time - start_time:.2f} seconds")
     return matrix
-'''
+"""
+
 
 def construct_distance_matrix_volume(fields):
     """
@@ -911,10 +937,11 @@ def construct_distance_matrix_volume(fields):
         for j, field2 in enumerate(fields[i + 1 :]):
             j += i + 1
             # Euclidean distance for vector fields
-            dists = np.linalg.norm(field1-field2, axis=-1)
+            dists = np.linalg.norm(field1 - field2, axis=-1)
             matrix[i][j] = np.sum(dists)
             matrix[j][i] = matrix[i][j]
     return matrix
+
 
 def report_inside_box(calculator_object):
     """
@@ -922,10 +949,12 @@ def report_inside_box(calculator_object):
     """
     for i in range(len(calculator_object.x)):
         if Inside_Box(calculator_object.x[i], calculator_object.dimensions):
-            print("Atom record {}_{}_{}_{} found inside box".format(calculator_object.atom_number[i],
-                                                                    calculator_object.atom_type[i],
-                                                                    calculator_object.resids[i],
-                                                                    calculator_object.residue_number[i]))
+            print(
+                "Atom record {}_{}_{}_{} found inside box".format(
+                    calculator_object.atom_number[i],
+                    calculator_object.atom_type[i],
+                    calculator_object.resids[i],
+                    calculator_object.residue_number[i],
+                )
+            )
             print("Corresponding protein: {}".format(calculator_object.path_to_pdb))
-
-    

@@ -15,27 +15,30 @@ class CPET:
     def __init__(self, options):
         self.options = options
         self.m = self.options["CPET_method"]
-        self.inputpath = self.options["inputpath"]
-        self.outputpath = self.options["outputpath"]
-        
+        self.inputpath = (
+            self.options["inputpath"] if "inputpath" in self.options else "./inpdir"
+        )
+        self.outputpath = (
+            self.options["outputpath"] if "outputpath" in self.options else "./outdir"
+        )
+
         if "step_size" in self.options:
             self.step_size = self.options["step_size"]
         if "dimensions" in self.options:
             self.dimesions = self.options["dimensions"]
-        
+
         if not os.path.exists(self.outputpath):
             os.makedirs(self.outputpath)
-        
+
         if self.m == "cluster" or self.m == "cluster_volume":
             # creates a cluster object
             self.cluster = cluster(options)
-        
-        if self.m == "pca": 
+
+        if self.m == "pca":
             # creates a pca object
             self.pca_pycpet = pca_pycpet(options)
 
         self.profile = self.options["profile"] if "profile" in self.options else False
-
 
     def run(self):
         if self.m == "topo":
@@ -56,7 +59,7 @@ class CPET:
             self.run_box_check()
         elif self.m == "visualize_field":
             self.run_visualize_efield()
-        elif self.m == "pca": 
+        elif self.m == "pca":
             self.run_pca()
 
         else:
@@ -119,9 +122,7 @@ class CPET:
                 x for x in os.listdir(self.outputpath) if x.split(".")[-1] == "top"
             ]
             if protein + ".top" not in files_done:
-                hist = (
-                    self.calculator.compute_topo_GPU_batch_filter()
-                )
+                hist = self.calculator.compute_topo_GPU_batch_filter()
                 if not benchmarking:
                     np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
                 if benchmarking:
@@ -144,10 +145,10 @@ class CPET:
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
             raise ValueError("No pdb files found in the input directory")
-        
+
         if len(files_input) == 1:
             warnings.warn("Only one pdb file found in the input directory")
-        
+
         for i in range(num):
             if len(files_input) != 0:
                 file = choice(files_input)
@@ -161,24 +162,23 @@ class CPET:
             files_done = [
                 x for x in os.listdir(self.outputpath) if x[-11:] == "_efield.dat"
             ]
-            
+
             if protein + "_efield.dat" not in files_done:
                 field_box, mesh_shape = self.calculator.compute_box()
                 print(field_box.shape)
                 meta_data = {
-                    "dimensions": self.dimesions, 
+                    "dimensions": self.dimesions,
                     "step_size": [self.step_size, self.step_size, self.step_size],
                     "num_steps": [mesh_shape[0], mesh_shape[1], mesh_shape[2]],
                     "transformation_matrix": self.calculator.transformation_matrix,
                     "center": self.calculator.center,
                 }
-                
+
                 save_numpy_as_dat(
                     name=self.outputpath + "/{}_efield.dat".format(protein),
                     field=field_box,
-                    meta_data=meta_data
+                    meta_data=meta_data,
                 )
-
 
     def run_point_field(self):
         files_input = glob(self.inputpath + "/*.pdb")
@@ -244,12 +244,16 @@ class CPET:
         if len(files_input) == 1:
             warnings.warn("Only one pdb file found in the input directory")
         for file in files_input:
-            if "filter_radius" in self.options or "filter_resids" in self.options or "filter_resnum" in self.options:
-                #Error out, radius not compatible
+            if (
+                "filter_radius" in self.options
+                or "filter_resids" in self.options
+                or "filter_resnum" in self.options
+            ):
+                # Error out, radius not compatible
                 raise ValueError(
                     "filter_radius/filter_resids/filter_resnum is not compatible with box_check. Please remove from options"
-                    )
-            #Need to not filter in box to check, but can filter all else
+                )
+            # Need to not filter in box to check, but can filter all else
             self.options["filter_in_box"] = False
             self.calculator = calculator(self.options, path_to_pdb=file)
             protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]

@@ -54,3 +54,7 @@ export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/cuda/lib64
 For c-shared libraries manually setting the number of OMP threads is needed: 
 
 export OMP_NUM_THREADS=0
+
+## Examples
+
+Several examples are in the ```examples``` directory. Most of these are designed for running high-throughput, but can readily be done for single calculations.

@@ -37,19 +37,15 @@ def save_numpy_as_dat(meta_data, field, name):
     center = meta_data["center"]
 
     first_line = "#Sample Density: {} {} {}; Volume: Box: {} {} {}\n".format(
-        int((step_size_list[0] - 1 ) / 2), 
-        int((step_size_list[1] - 1 ) / 2),
-        int((step_size_list[2] - 1 ) / 2),
+        int((step_size_list[0] - 1) / 2),
+        int((step_size_list[1] - 1) / 2),
+        int((step_size_list[2] - 1) / 2),
         dimensions[0],
         dimensions[1],
-        dimensions[2]
+        dimensions[2],
     )
     second_line = "#Frame 0\n"
-    third_line = "#Center: {} {} {}\n".format(
-        center[0],
-        center[1],
-        center[2]
-    )
+    third_line = "#Center: {} {} {}\n".format(center[0], center[1], center[2])
     basis_matrix_lines = "#Basis Matrix:\n# {} {} {}\n# {} {} {}\n# {} {} {}\n".format(
         trans_mat[0][0],
         trans_mat[0][1],
@@ -59,9 +55,9 @@ def save_numpy_as_dat(meta_data, field, name):
         trans_mat[1][2],
         trans_mat[2][0],
         trans_mat[2][1],
-        trans_mat[2][2]
+        trans_mat[2][2],
     )
-    
+
     lines_header = [first_line] + [second_line] + [third_line] + [basis_matrix_lines]
     """
     #OPTIONAL FOR TESTING NO TRANSFORMATION
@@ -72,7 +68,6 @@ def save_numpy_as_dat(meta_data, field, name):
     transformed_field_vecs = np.matmul(field_vecs, trans_mat.T)
     field = np.concatenate((transformed_field_coords, transformed_field_vecs), axis=1)
     """
-
 
     # write as
     np.savetxt(
@@ -125,8 +120,8 @@ def read_mat(file, meta_data=False, verbose=False):
         "bounds_y": [-y_size, y_size + step_size_y],
         "bounds_z": [-z_size, z_size + step_size_z],
     }
-    #print(lines[0].split())
-    #print(meta_dict)
+    # print(lines[0].split())
+    # print(meta_dict)
     if verbose:
         print(meta_dict)
 
@@ -138,8 +133,8 @@ def read_mat(file, meta_data=False, verbose=False):
         steps_y = 2 * int(lines[0].split()[3]) + 1
         steps_z = 2 * int(lines[0].split()[4]) + 1
         mat = np.zeros((steps_x, steps_y, steps_z, 3))
-        #print(mat.shape)
-        
+        # print(mat.shape)
+
         for ind, i in enumerate(lines[7:]):
             line_split = i.split()
             # print(i)
@@ -165,15 +160,15 @@ def read_mat(file, meta_data=False, verbose=False):
         return mat
 
 
-def default_options_initializer(options): 
+def default_options_initializer(options):
     """
-        Initializes default options for CPET after checking if they are present in the options dictionary
-        Takes
-            options(dict) - dictionary of options
-        Returns
-            options(dict) - dictionary of options with default values
+    Initializes default options for CPET after checking if they are present in the options dictionary
+    Takes
+        options(dict) - dictionary of options
+    Returns
+        options(dict) - dictionary of options with default values
     """
-    
+
     if "concur_slip" not in options.keys():
         options["concur_slip"] = 4
 
@@ -275,7 +270,7 @@ def filter_radius_whole_residue(x, Q, resids, resnums, center, radius=2.0):
     print(resids.shape)
     print(resnums.shape)
     j = 0
-    #Generate dictionary of indices. Accounts for residues that have the same resnum but different resid, as those aren't adjacent
+    # Generate dictionary of indices. Accounts for residues that have the same resnum but different resid, as those aren't adjacent
     for i in range(len(resids)):
         if resids[i] == resid_current and resnums[i] == resnum_current:
             current_entry = true_res_dict[j - 1]
@@ -287,12 +282,12 @@ def filter_radius_whole_residue(x, Q, resids, resnums, center, radius=2.0):
                 "resid": resids[i],
                 "resnum": resnums[i],
                 "indices": [i],
-                "is_in_radius": is_in_radius[i]
+                "is_in_radius": is_in_radius[i],
             }
             resid_current = resids[i]
             resnum_current = resnums[i]
             j += 1
-    #Compress true_res_dict into a list of indices to filter out
+    # Compress true_res_dict into a list of indices to filter out
     indices_to_filter_out = [
         k
         for key in true_res_dict
@@ -356,7 +351,14 @@ def filter_resnum_andname(x, Q, resnums, resnames, atom_number, atom_type, filte
     atom_number_filtered = atom_number[filter_inds]
     atom_type_filtered = atom_type[filter_inds]
 
-    return x_filtered, Q_filtered, resnums_filtered, resnames_filtered, atom_number_filtered, atom_type_filtered
+    return (
+        x_filtered,
+        Q_filtered,
+        resnums_filtered,
+        resnames_filtered,
+        atom_number_filtered,
+        atom_type_filtered,
+    )
 
 
 def filter_in_box(x, Q, center, dimensions):
@@ -436,11 +438,11 @@ def parse_pqr(path_to_pqr):
                 ret_atom_num.append(int(line.split()[0][6:]))
                 res_name.append(line.split()[2])
                 atom_type.append(line.split()[1])
-                
+
             else:
                 ret_atom_num.append(int(line.split()[1]))
                 res_name.append(line.split()[3])
-                atom_type.append(line.split()[2])        
+                atom_type.append(line.split()[2])
 
             if len(line.split()[res_ind]) > 4:
                 res_val = int(line.split()[res_ind - 1][1:])
@@ -487,7 +489,14 @@ def parse_pqr(path_to_pqr):
             temp = []
             tempq = []
 
-    return np.array(x), np.array(Q).reshape(-1, 1), ret_atom_num, res_name, res_num, atom_type
+    return (
+        np.array(x),
+        np.array(Q).reshape(-1, 1),
+        ret_atom_num,
+        res_name,
+        res_num,
+        atom_type,
+    )
 
 
 def parse_pdb(pdb_file_path, get_charges=False, float32=True):

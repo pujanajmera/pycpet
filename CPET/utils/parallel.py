@@ -74,8 +74,8 @@ def task(x_0, n_iter, x, Q, step_size, dimensions):
         if not Inside_Box(x_0, dimensions):
             # count += 1
             break
-    #print(x_0 - x_init)
-    #print("step size {} n_iter {} norm {}".format(step_size, n_iter, np.linalg.norm(x_0 - x_init)))
+    # print(x_0 - x_init)
+    # print("step size {} n_iter {} norm {}".format(step_size, n_iter, np.linalg.norm(x_0 - x_init)))
 
     x_init_plus = propagate_topo_dev(x_init, x, Q, step_size)
     x_init_plus_plus = propagate_topo_dev(x_init_plus, x, Q, step_size)

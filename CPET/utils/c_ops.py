@@ -112,7 +112,6 @@ class Math_ops:
             self.array_1d_float,
         ]
 
-
     def sparse_dot(self, A, B):
         # b is just a single vector, not a sparse matrix
         # a is a full sparse matrix
@@ -202,7 +201,6 @@ class Math_ops:
         )
         return res
 
-
     def thread_operation(self, x_0, n_iter, x, Q, step_size, dimensions):
         """
         Takes:
@@ -226,7 +224,6 @@ class Math_ops:
 
         return res
 
-
     def calc_field_base(self, x_0, x, Q):
         """
         Takes:
@@ -237,20 +234,12 @@ class Math_ops:
             res(array) - (3, 1) array of electric field
         """
         res = np.zeros(3, dtype="float32")
-        #self.math.efield.restype = None
-        #Q = Q.reshape(-1)
+        # self.math.efield.restype = None
+        # Q = Q.reshape(-1)
 
+        self.math.calc_field_base(res, x_0, len(Q), x, Q.reshape(len(Q)))
 
-        self.math.calc_field_base(
-            res, 
-            x_0,
-            len(Q),
-            x, 
-            Q.reshape(len(Q))
-        )
-        
         return res
-    
 
     def calc_field(self, x_0, x, Q):
         """
@@ -262,16 +251,9 @@ class Math_ops:
             res(array) - (3, 1) array of electric field
         """
         res = np.zeros(3, dtype="float32")
-        #self.math.efield.restype = None
-        #Q = Q.reshape(-1)
+        # self.math.efield.restype = None
+        # Q = Q.reshape(-1)
 
+        self.math.calc_field(res, x_0, len(Q), x, Q.reshape(len(Q)))
 
-        self.math.calc_field(
-            res, 
-            x_0,
-            len(Q),
-            x, 
-            Q.reshape(len(Q))
-        )
-        
         return res
