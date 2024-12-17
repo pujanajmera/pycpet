@@ -37,6 +37,16 @@ class NpEncoder(json.JSONEncoder):
 
 class cluster:
     def __init__(self, options):
+        """
+        Method to initialize the cluster object
+        Takes:
+            options: dictionary with options for the cluster object parsed from options.json file
+        """
+        # General Options
+        self.inputpath = options["inputpath"]
+        self.outputpath = options["outputpath"]
+
+        # Cluster Specific Options
         if not options["cluster_method"]:
             print("No cluster method specified, defaulting to K-Medoids")
             self.cluster_method = "kmeds"
@@ -54,73 +64,75 @@ class cluster:
         self.defined_n_clusters = (
             options["defined_n_clusters"] if "defined_n_clusters" in options else None
         )
+        self.tensor_threshold = (
+            options["tensor_threshold"] if "tensor_threshold" in options else 0.05
+        )
         # Make sure the provided value for n_clusters is an integer, not a string
         assert self.defined_n_clusters == None or isinstance(
             self.defined_n_clusters, int
         ), "Defined number of clusters must be an integer"
-        self.inputpath = options["inputpath"]
-        self.outputpath = options["outputpath"]
-
         if options["CPET_method"] == "cluster":
-            if self.cluster_reload:
-                print("Loading distance matrix and topo file list from files!")
-                self.file_list = []
-                with open(self.outputpath + "/topo_file_list.txt", "r") as file_list:
-                    for line in file_list:
-                        self.file_list.append(line.strip())
-                print(
-                    "{} topo files found for clustering from input".format(
-                        len(self.file_list)
+        method_dict = {
+            "cluster": ["topo_file_list.txt","top"],
+            "cluster_volume": ["field_file_list.txt","_efield.dat"],
+            "cluster_volume_tensor": ["field_file_list.txt","_efield.dat"], ##DEV
+            "cluster_volume_esp_tensor": ["esp_file_list.txt","_esp.dat"], ##DEV
+        }
+        list_file = method_dict[options["CPET_method"]][0]
+        if self.cluster_reload:
+            print("Loading distance matrix and topo file list from files!")
+            self.file_list = []
+            with open(self.outputpath + f"/{list_file}", "r") as file_list:
+                for line in file_list:
+                    self.file_list.append(line.strip())
+            print(
+                "{} files found for clustering method {} from input".format(
+                    len(self.file_list),
+                    options["CPET_method"]
+                )
+            )
+            self.distance_matrix = np.load(
+                self.outputpath + "/distance_matrix.dat.npy"
+            )
+        else:
+            self.file_list = []
+            for file in glob(self.inputpath + f"/*.{method_dict[options['CPET_method']][1]}"):
+                self.file_list.append(file)
+            self.file_list.sort()
+            topo_file_name = self.outputpath + f"/{list_file}"
+            with open(topo_file_name, "w") as file_list:
+                for i in self.file_list:
+                    file_list.write(f"{i} \n")
+            print(
+                "{} files found for clustering method {}".format(
+                    len(self.file_list),
+                    options["CPET_method"]
                     )
-                )
-                self.distance_matrix = np.load(
-                    self.outputpath + "/distance_matrix.dat.npy"
-                )
-            else:
-                self.file_list = []
-                for file in glob(self.inputpath + "/*.top"):
-                    self.file_list.append(file)
-                self.file_list.sort()
-                topo_file_name = self.outputpath + "/topo_file_list.txt"
-                with open(topo_file_name, "w") as file_list:
-                    for i in self.file_list:
-                        file_list.write(f"{i} \n")
-                print("{} topo files found for clustering".format(len(self.file_list)))
+            )
+            if options["CPET_method"] == "cluster":
                 self.hists = make_histograms(self.file_list)
                 self.distance_matrix = construct_distance_matrix(self.hists)
                 # self.histlist = make_histograms_mem(self.file_list, self.outputpath)
                 # self.distance_matrix = construct_distance_matrix_mem(self.histlist)
-                np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
-        elif options["CPET_method"] == "cluster_volume":
-            if self.cluster_reload:
-                print("Loading distance matrix and field file list from files!")
-                self.file_list = []
-                with open(self.outputpath + "/field_file_list.txt", "r") as file_list:
-                    for line in file_list:
-                        self.file_list.append(line.strip())
-                print(
-                    "{} field files found for clustering from input".format(
-                        len(self.file_list)
-                    )
-                )
-                self.distance_matrix = np.load(
-                    self.outputpath + "/distance_matrix.dat.npy"
-                )
-            else:
-                self.file_list = []
-                for file in glob(self.inputpath + "/*_efield.dat"):
-                    self.file_list.append(file)
-                self.file_list.sort()
-                field_file_name = self.outputpath + "/field_file_list.txt"
-                with open(field_file_name, "w") as file_list:
-                    for i in self.file_list:
-                        file_list.write(f"{i} \n")
-                print("{} field files found for clustering".format(len(self.file_list)))
+            elif options["CPET_method"] == "cluster_volume":
                 self.fields = make_fields(self.file_list)
                 self.distance_matrix = construct_distance_matrix_volume(self.fields)
-                np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
+            elif options["CPET_method"] == "cluster_volume_tensor":
+                self.full_tensor = make_5d_tensor(self.file_list)
+                self.rank = determine_rank(self.full_tensor, self.tensor_threshold) #Time-limiting step (and probably memory)
+                self.reduced_tensor = reduce_tensor(self.full_tensor, self.rank)
+                self.distance_matrix = construct_distance_matrix_tensor(self.reduced_tensor)
+            elif options["CPET_method"] == "cluster_volume_esp_tensor":
+                self.full_tensor = make_5d_tensor(self.file_list) #Try to use same fxn as above, to be efficient
+                self.rank = determine_rank(self.full_tensor, self.tensor_threshold)
+                self.reduced_tensor = reduce_tensor(self.full_tensor, self.rank)
+                self.distance_matrix = construct_distance_matrix_tensor(self.reduced_tensor)
+            np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
 
     def Cluster(self):
+        """
+        Run clustering through various methods
+        """
         if self.cluster_method == "kmeds":
             self.cluster_results = self.kmeds()
         elif self.cluster_method == "affinity":
@@ -137,6 +149,11 @@ class cluster:
             json.dump(compressed_dictionary, outfile, cls=NpEncoder)
 
     def kmeds(self):
+        """
+        Method to run K-Medoids clustering, optimized via knee-locator
+        Returns:
+            cluster_results: dictionary with information about the clusters in best performing K-Medoids
+        """
         cluster_results = {}
         distance_matrix = self.distance_matrix
         distance_matrix = distance_matrix**2

@@ -53,7 +53,7 @@ class CPET:
             self.run_point_field()
         elif self.m == "point_mag":
             self.run_point_mag()
-        elif self.m == "cluster" or self.m == "cluster_volume":
+        elif self.m == "cluster" or self.m == "cluster_volume" or self.m == "cluster_volume_tensor" or self.m == "cluster_volume_esp_tensor":
             self.run_cluster()
         elif self.m == "box_check":
             self.run_box_check()

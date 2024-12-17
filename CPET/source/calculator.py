@@ -1,7 +1,3 @@
-"""""" """""" """""" """""" """""" """""" """""" """""" """""" """""" """""" """"""
-# Dev script to benchmark the performance of various topo calc methods
-"""""" """""" """""" """""" """""" """""" """""" """""" """""" """""" """""" """"""
-
 import numpy as np
 import time
 from multiprocessing import Pool
@@ -40,6 +36,12 @@ from CPET.utils.gpu import (
 
 class calculator:
     def __init__(self, options, path_to_pdb=None):
+        """
+        Initialize the calculator object with the following parameters:
+        Takes:
+            options: dict, from options.json
+            path_to_pdb: str, path to the operational pdb file
+        """
         # self.efield_calc = calculator(math_loc=math_loc)
         self.options = default_options_initializer(options)
 
