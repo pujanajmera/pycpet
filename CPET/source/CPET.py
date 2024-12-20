@@ -262,10 +262,41 @@ class CPET:
         print("No more files to process!")
 
     def run_cluster(self):
+        print("Running the cluster analysis. Method type: {}".format(self.m))
         self.cluster.Cluster()
 
     def run_visualize_efield(self):
-        visualize.visualize_fields(self.inputpath, self.outputpath, self.options)
+        print("Visualizing the electric field. This module will load a ChimeraX session with the first protein and the electric field, and requires the electric field to be computed first.")
+        files_input_pdb = glob(self.inputpath + "/*.pdb")
+        files_input_efield = glob(self.inputpath + "/*_efield.dat")
+        if len(files_input_pdb) == 0:
+            raise ValueError("No pdb files found in the input directory")
+        if len(files_input_pdb) > 1:
+            warnings.warn("More than one pdb file found in the input directory. Only the first will be visualized, .bild files will be generated for all of them though.")
+
+        #Sort list of pdbs and efields
+        files_input_pdb.sort()
+        
+        #Check to make sure each pdb file has a corresponding electric field file in the input path while visualizing fields
+        for i in range(len(files_input_pdb)):
+            #Modify efield file list to just have file name, not _efield.dat
+            files_input_efield = [efield.split("/")[-1].split("_efield")[0] for efield in files_input_efield]
+            #Efield list is unsorted, so just check if the protein file is anywhere in the efield list
+            if not any(files_input_pdb[i].split("/")[-1].split(".")[0] in efield for efield in files_input_efield):
+                raise ValueError("No electric field file found for protein: {}".format(files_input_pdb[i].split("/")[-1]))
+
+            #Automatically visualize the electric field for the first protein, in dev mode for now
+            """
+            if i==0:
+                print("Visualizing the electric field for the protein: {}".format(files_input_pdb[i].split("/")[-1]))
+                visualize.visualize_field(path_to_pdb = files_input_pdb[i], path_to_efield = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_efield.dat", options = self.options, display = True)
+            else:
+                print("Generating .bild file for the protein: {}".format(files_input_pdb[i].split("/")[-1]))
+                visualize.visualize_field(path_to_pdb = files_input_pdb[i], path_to_efield = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_efield.dat", options = self.options)
+            """
+            print("Generating .bild file for the protein: {}".format(files_input_pdb[i].split("/")[-1]))
+            visualize.visualize_field(path_to_pdb = files_input_pdb[i], path_to_efield = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_efield.dat", options = self.options)
+
 
     def run_pca(self):
         _, _ = self.pca_pycpet.fit_and_transform()

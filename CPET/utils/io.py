@@ -32,17 +32,12 @@ def save_numpy_as_dat(meta_data, field, name):
     """
 
     dimensions = meta_data["dimensions"]
-    step_size_list = meta_data["num_steps"]
+    num_steps_list = meta_data["num_steps"]
     trans_mat = meta_data["transformation_matrix"].transpose()
     center = meta_data["center"]
 
     first_line = "#Sample Density: {} {} {}; Volume: Box: {} {} {}\n".format(
-        int((step_size_list[0] - 1) / 2),
-        int((step_size_list[1] - 1) / 2),
-        int((step_size_list[2] - 1) / 2),
-        dimensions[0],
-        dimensions[1],
-        dimensions[2],
+        num_steps_list[0], num_steps_list[1], num_steps_list[2], dimensions[0], dimensions[1], dimensions[2]
     )
     second_line = "#Frame 0\n"
     third_line = "#Center: {} {} {}\n".format(center[0], center[1], center[2])

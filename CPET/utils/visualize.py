@@ -2,6 +2,7 @@ import numpy as np
 from glob import glob
 import warnings
 import math
+# from chimerax.core.commands import run
 
 """
 Overall script for all visualization functions and visualization-affiliates.
@@ -17,41 +18,56 @@ To-add:
 """
 
 
-def visualize_fields(fields_path, output_path, options):
+def visualize_field(path_to_pdb, path_to_efield, options, display=False):
     """
     Visualize electric fields in proteins by creating a bild file
-    for Chimera/ChimeraX input
+    for Chimera/ChimeraX input, with optional display in ChimeraX
     Takes:
-        fields_path(str) - path to the fields file
-        output_path(str) - path to save the bild files
-        options(dict) - options for visualization
+        path_to_pdb: Path to the PDB file of the protein
+        path_to_field: Path to the corresponding field file
+        options: Options dictionary
+        display: Boolean to display the fields in ChimeraX
     """
-    files_input = glob(fields_path + "/*_efield.dat")
-    if len(files_input) == 0:
-        ValueError("No fields files found in the input directory")
-    if len(files_input) > 1:
-        warnings.warn(
-            "More than 1 fields files - scaling will be based on the set of files"
-        )
-    for file in files_input:
-        (
-            sample_density_array,
-            volume_box_array,
-            center_array,
-            basis_matrix_array,
-            field_array,
-        ) = process_field_file(file)
-        transformed_field_array = transform_field(
-            field_array, center_array, basis_matrix_array
-        )
-        tip_to_tail_vectors = generate_tip_tail_vectors(
-            transformed_field_array.copy(), sample_density_array, volume_box_array
-        )
-        generate_bild_file(
-            tip_to_tail_vectors, transformed_field_array, args.c, args.s, args.o, args.v
-        )
 
-    return "Bild files saved in: {}".format(output_path)
+    # Extract key options
+
+    if "visualization" in options.keys():
+        cutoff = options["visualization"]["cutoff"] if "cutoff" in options["visualization"] else 0
+        sparsify_factor = options["visualization"]["sparsify_factor"] if "sparsify_factor" in options["visualization"] else 1
+    else:
+        cutoff = 0
+        sparsify_factor = 1
+
+    name = path_to_pdb.split("/")[-1].split(".")[0]
+
+    bild_path = options["outputpath"] + "/" + name
+
+    # Generate bild file
+    (
+        sample_density_array,
+        volume_box_array,
+        center_array,
+        basis_matrix_array,
+        field_array,
+    ) = process_field_file(path_to_efield)
+    transformed_field_array = transform_field(
+        field_array, center_array, basis_matrix_array
+        )
+    tip_to_tail_vectors = generate_tip_tail_vectors(
+        transformed_field_array.copy(), sample_density_array, volume_box_array
+    )
+    generate_bild_file(
+        tip_to_tail_vectors, transformed_field_array, cutoff, sparsify_factor, bild_path, path_to_efield
+    )
+
+    # Display in ChimeraX, still in development
+    """
+    if display:
+        run("open " + path_to_pdb)
+        run("open " + bild_path + ".bild")
+    """
+
+    return "Bild file saved for {}".format(name)
 
 
 def process_field_file(file_path):
@@ -143,16 +159,9 @@ def check_field(field_array, sample_density_array):
     """
     # print(sample_density_array)
     # print(field_array.shape)
-    if field_array.shape[0] != np.product(
-        np.concatenate(
-            [
-                (2 * sample_density_array + 1)[0:2],
-                np.expand_dims(2 * sample_density_array[2] + 1, axis=0),
-            ]
-        )
-    ):
+    if field_array.shape[0] != np.product(sample_density_array, axis=0):
         raise ValueError(
-            f"Field provided does not match sample density, field of shape {field_array.shape[0]} does not match expected sample amount of {np.product(np.concatenate([(2*sample_density_array+1)[0:2],np.expand_dims(sample_density_array[2], axis=0)]))}"
+            f"Field provided does not match sample density, field of shape {field_array.shape[0]} does not match expected sample amount of {np.product(sample_density_array, axis=0)}"
         )
     else:
         print("Field matches sample density, check passed, continuing...")
@@ -192,7 +201,7 @@ def generate_tip_tail_vectors(field_array, sample_density_array, volume_box_arra
         tip_to_tail_vectors: Tip to tail vectors
     """
 
-    max_vector_length = 0.9 * np.min(volume_box_array / sample_density_array)
+    max_vector_length = 0.9 * np.min(2*volume_box_array / sample_density_array)
 
     """
     if sample_density_array!=[] and volume_box_array!=[]:

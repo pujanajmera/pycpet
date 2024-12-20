@@ -71,7 +71,6 @@ class cluster:
         assert self.defined_n_clusters == None or isinstance(
             self.defined_n_clusters, int
         ), "Defined number of clusters must be an integer"
-        if options["CPET_method"] == "cluster":
         method_dict = {
             "cluster": ["topo_file_list.txt","top"],
             "cluster_volume": ["field_file_list.txt","_efield.dat"],

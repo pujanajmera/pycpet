@@ -4,7 +4,6 @@ Python-based Computation of Protein Electric Field Topology, built for high-thro
 
 System requirements:
 - gcc (if you want to optimize speed)
-- OTHER STUFF?
 
 Follow these steps to install PyCPET
 
@@ -32,28 +31,8 @@ gcc -fopenmp math_module.c -o math_module.so -shared -fPIC -O3 -march=native -fu
 5. When running, we advise you set the following:
 
 CPU multithreading: 
-    export OMP_NUM_THREADS=0
+    export OMP_NUM_THREADS=1
 GPU-accelerated code:
-    
-
-
-
-
-Installing:
-
-pip install -e .
-
-Upon installing, you will see the executable cpet.py available. This is the operating script for all calculations. An example options file is provided under source/options, and more details about the available options are below
-
-For pycuda you might need:
-
-export CPATH=$CPATH:/usr/local/cuda/include
-
-export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/cuda/lib64
-
-For c-shared libraries manually setting the number of OMP threads is needed: 
-
-export OMP_NUM_THREADS=0
 
 ## Examples
 
