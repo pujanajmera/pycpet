@@ -88,8 +88,10 @@ class calculator:
                 self.resids,
                 self.residue_number,
                 self.atom_type,
+                self.chains
             ) = parse_pdb(self.path_to_pdb, get_charges=True)
 
+        print(self.chains)
         ##################### define center axis
 
         if type(options["center"]) == list:
@@ -97,16 +99,38 @@ class calculator:
 
         elif type(options["center"]) == dict:
             method = options["center"]["method"]
-            centering_atoms = [
-                (element, options["center"]["atoms"][element])
-                for element in options["center"]["atoms"]
-            ]
-            pos_considered = [
-                pos
-                for atom_res in centering_atoms
-                for idx, pos in enumerate(self.x)
-                if (self.atom_type[idx], self.residue_number[idx]) == atom_res
-            ]
+            chains = options["center"]["chains"] if "chains" in options["center"].keys() else None
+            if chains is not None:
+                if type(chains) != list:
+                    raise ValueError("chains must be a list")
+                if len(chains) != len(options["center"]["atoms"].keys()):
+                    raise ValueError("chains must be the same length as atoms")
+                centering_atoms = [
+                    (element, options["center"]["atoms"][element], chain)
+                    for element, chain in zip(options["center"]["atoms"], chains)
+                ]
+                pos_considered = [
+                    pos
+                    for atom_res in centering_atoms
+                    for idx, pos in enumerate(self.x)
+                    if (
+                        self.atom_type[idx],
+                        self.residue_number[idx],
+                        self.chains[idx],
+                    )
+                    == atom_res
+                ]
+            else:
+                centering_atoms = [
+                    (element, options["center"]["atoms"][element])
+                    for element in options["center"]["atoms"]
+                ]
+                pos_considered = [
+                    pos
+                    for atom_res in centering_atoms
+                    for idx, pos in enumerate(self.x)
+                    if (self.atom_type[idx], self.residue_number[idx]) == atom_res
+                ]
             self.center = calculate_center(pos_considered, method=method)
         else:
             raise ValueError("center must be a list or dict")
@@ -124,16 +148,38 @@ class calculator:
             compute_y = True
         elif type(options["x"]) == dict:
             method = options["x"]["method"]
-            centering_atoms = [
-                (element, options["x"]["atoms"][element])
-                for element in options["x"]["atoms"]
-            ]
-            pos_considered = [
-                pos
-                for atom_res in centering_atoms
-                for idx, pos in enumerate(self.x)
-                if (self.atom_type[idx], self.residue_number[idx]) == atom_res
-            ]
+            chains = options["x"]["chains"] if "chains" in options["x"].keys() else None
+            if chains is not None:
+                if type(chains) != list:
+                    raise ValueError("chains must be a list")
+                if len(chains) != len(options["x"]["atoms"].keys()):
+                    raise ValueError("chains must be the same length as atoms")
+                centering_atoms = [
+                    (element, options["x"]["atoms"][element], chain)
+                    for element, chain in zip(options["x"]["atoms"], chains)
+                ]
+                pos_considered = [
+                    pos
+                    for atom_res in centering_atoms
+                    for idx, pos in enumerate(self.x)
+                    if (
+                        self.atom_type[idx],
+                        self.residue_number[idx],
+                        self.chains[idx],
+                    )
+                    == atom_res
+                ]
+            else:
+                centering_atoms = [
+                    (element, options["x"]["atoms"][element])
+                    for element in options["x"]["atoms"]
+                ]
+                pos_considered = [
+                    pos
+                    for atom_res in centering_atoms
+                    for idx, pos in enumerate(self.x)
+                    if (self.atom_type[idx], self.residue_number[idx]) == atom_res
+                ]
             self.x_vec_pt = calculate_center(pos_considered, method=method)
             compute_y = True
         else:
@@ -149,16 +195,38 @@ class calculator:
 
         elif type(options["y"]) == dict:
             method = options["y"]["method"]
-            centering_atoms = [
-                (element, options["y"]["atoms"][element])
-                for element in options["y"]["atoms"]
-            ]
-            pos_considered = [
-                pos
-                for atom_res in centering_atoms
-                for idx, pos in enumerate(self.x)
-                if (self.atom_type[idx], self.residue_number[idx]) == atom_res
-            ]
+            chains = options["y"]["chains"] if "chains" in options["y"].keys() else None
+            if chains is not None:
+                if type(chains) != list:
+                    raise ValueError("chains must be a list")
+                if len(chains) != len(options["y"]["atoms"].keys()):
+                    raise ValueError("chains must be the same length as atoms")
+                centering_atoms = [
+                    (element, options["y"]["atoms"][element], chain)
+                    for element, chain in zip(options["y"]["atoms"], chains)
+                ]
+                pos_considered = [
+                    pos
+                    for atom_res in centering_atoms
+                    for idx, pos in enumerate(self.x)
+                    if (
+                        self.atom_type[idx],
+                        self.residue_number[idx],
+                        self.chains[idx],
+                    )
+                    == atom_res
+                ]
+            else:
+                centering_atoms = [
+                    (element, options["y"]["atoms"][element])
+                    for element in options["y"]["atoms"]
+                ]
+                pos_considered = [
+                    pos
+                    for atom_res in centering_atoms
+                    for idx, pos in enumerate(self.x)
+                    if (self.atom_type[idx], self.residue_number[idx]) == atom_res
+                ]
             self.y_vec_pt = calculate_center(pos_considered, method=method)
         else:
             raise ValueError("Since you have provided x, y must be a list or dict")

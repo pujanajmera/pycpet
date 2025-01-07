@@ -333,7 +333,7 @@ def scale_tip_to_tail_vectors(
     for i in range(len(tip_to_tail_vectors)):
 
         # use field mag as scaling factor
-        m = 10 * sparsify_factor * field_mags[i] * min_dim
+        m = 5 * sparsify_factor * field_mags[i] * min_dim
 
         xA = tip_to_tail_vectors[i][0]
         yA = tip_to_tail_vectors[i][1]
@@ -394,9 +394,7 @@ def generate_bild_file(
     density1, density2, density3 = map(int, density.split())
     dim1, dim2, dim3 = map(float, dim.split())
 
-    nx = 2 * density1 + 1
-    ny = 2 * density2 + 1
-    nz = 2 * density3 + 1
+    nx, ny, nz = density1, density2, density3
 
     # Added code to deal with non-ideal sparsification values: take s and convert it to hcf(closest(factors(nx),s),closest(factors(ny),s),closest(factors(ny),s))i
     sparsify_factor = math.gcd(
@@ -453,6 +451,6 @@ def generate_bild_file(
             if field_mags[i] > percentile_cutoff:
                 bild.write(f".color {r[i]} {g[i]} {b[i][0]}\n")
                 bild.write(
-                    f".arrow {tip_to_tail_vectors[i, 0]} {tip_to_tail_vectors[i, 1]} {tip_to_tail_vectors[i, 2]} {tip_to_tail_vectors[i, 3]} {tip_to_tail_vectors[i, 4]} {tip_to_tail_vectors[i, 5]} 0.01 {0.04*field_mags[i]*sparsify_factor*5*min(dim1,dim2,dim3)} 0.001\n"
+                    f".arrow {tip_to_tail_vectors[i, 0]} {tip_to_tail_vectors[i, 1]} {tip_to_tail_vectors[i, 2]} {tip_to_tail_vectors[i, 3]} {tip_to_tail_vectors[i, 4]} {tip_to_tail_vectors[i, 5]} 0.01 {0.04*field_mags[i]*sparsify_factor*2.5*min(dim1,dim2,dim3)} 0.001\n"
                 )
     bild.close()

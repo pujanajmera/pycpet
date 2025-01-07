@@ -510,6 +510,7 @@ def parse_pdb(pdb_file_path, get_charges=False, float32=True):
     residue_name = []
     residue_number = []
     atom_type = []
+    chains = []
     if float32:
         dtype = "float32"
     else:
@@ -521,6 +522,7 @@ def parse_pdb(pdb_file_path, get_charges=False, float32=True):
                 atom_number_line = int(line[6:11].strip())
                 atom_type_line = line[12:16].strip()
                 residue_name_line = line[17:20].strip()
+                chain_line = line[21]
                 residue_number_line = int(line[22:26].strip())
                 x = float(line[30:38].strip())
                 y = float(line[38:46].strip())
@@ -532,6 +534,7 @@ def parse_pdb(pdb_file_path, get_charges=False, float32=True):
                 residue_name.append(residue_name_line)
                 residue_number.append(residue_number_line)
                 atom_type.append(atom_type_line)
+                chains.append(chain_line)
 
                 if get_charges:
                     Q.append(float(line[55:64].strip()))
@@ -544,6 +547,7 @@ def parse_pdb(pdb_file_path, get_charges=False, float32=True):
             np.array(residue_name),
             np.array(residue_number),
             np.array(atom_type),
+            np.array(chains),
         )
     return (
         np.array(xyz, dtype=dtype),
@@ -551,6 +555,7 @@ def parse_pdb(pdb_file_path, get_charges=False, float32=True):
         np.array(residue_name),
         np.array(residue_number),
         np.array(atom_type),
+        np.array(chains),
     )
 
 

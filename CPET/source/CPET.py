@@ -80,14 +80,14 @@ class CPET:
             else:
                 print("No more files to process!")
                 break
-            self.calculator = calculator(self.options, path_to_pdb=file)
-            protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
             files_input.remove(file)
+            protein = file.split("/")[-1].split(".")[0]
             print("protein file: {}".format(protein))
             files_done = [
                 x for x in os.listdir(self.outputpath) if x.split(".")[-1] == "top"
             ]
             if protein + ".top" not in files_done:
+                self.calculator = calculator(self.options, path_to_pdb=file)
                 hist = self.calculator.compute_topo_complete_c_shared()
                 if not benchmarking:
                     np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
@@ -102,6 +102,8 @@ class CPET:
                         ),
                         hist,
                     )
+            else:
+                print("Already done for protein: {}, skipping...".format(protein))
 
     def run_topo_GPU(self, num=100000, benchmarking=False):
         files_input = glob(self.inputpath + "/*.pdb")

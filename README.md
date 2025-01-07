@@ -37,3 +37,15 @@ GPU-accelerated code:
 ## Examples
 
 Several examples are in the ```examples``` directory. Most of these are designed for running high-throughput, but can readily be done for single calculations.
+
+
+## Formatting
+
+Most of the code here requires well-formated PDB or PQR files. The formatting is as follows (see io.py for more details):
+
+PDB:
+- Up to the charge information, follow standard formatting: https://www.cgl.ucsf.edu/chimerax/docs/user/formats/pdbintro.html
+- For charge information, charges must be in columns 55-64 of each line, inclusive
+
+PQR:
+- 
