@@ -296,7 +296,100 @@ def filter_radius_whole_residue(x, Q, resids, resnums, center, radius=2.0):
     return x_filtered, Q_filtered
 
 
-def filter_residue(x, Q, resnums, resids, filter_list):
+def filter_IDs(x, Q, ID, filter_dict):
+    """
+    General filter to remove anything in the filter list based on
+    identity information solely. Includes currently:
+    - Atom Number (self.atom_number in calculator object)
+    - Atom Name (self.atom_type in calculator object)
+    - Residue Name (self.resid in calculator object)
+    - Residue Number (self.resnum in calculator object)
+    - Chain (self.chain in calculator object, if available)
+
+    Takes:
+        x(array) - coordinates of charges of shape (N,3)
+        Q(array) - magnitude and sign of charges of shape (N,1)
+        ID(list) - identity information of shape (N,), where each value is a tuple of 
+        the form (atom_number, atom_type, atom_resid, atom_resnum, atom_chain)
+        filter_dict(dict) - dictionary of identity information to filter out
+    Returns:
+        x_filtered(array) - filtered coordinates of charges of shape (N,3)
+        Q_filtered(array) - filtered magnitude and sign of charges of shape (N,1)
+        ID_filtered(array) - filtered identity information of shape (N,)
+    """
+
+    # ------------------------------------
+    # 1) Convert ID into a pandas DataFrame
+    # ------------------------------------
+    # We'll assume ID is a list of tuples, each (atom_number, atom_type, resid, resnum, chain).
+    # Let's create a DataFrame with 5 named columns:
+    df_id = pd.DataFrame(ID, columns=['atom_number', 'atom_type', 'resid', 'resnum', 'chain'])
+
+    N = len(df_id)
+    if len(x) != N or len(Q) != N:
+        raise ValueError("x, Q, and ID must have the same length.")
+
+    # ------------------------------------
+    # 2) Check filter_dict list lengths
+    # ------------------------------------
+    filter_lengths = [len(lst) for lst in filter_dict.values()]
+    if filter_lengths:  # if filter_dict is not empty
+        if len(set(filter_lengths)) != 1:
+            # mismatch in lengths
+            msg = "ERROR: Not all filter lists in filter_dict have the same length.\n"
+            for key, val in filter_dict.items():
+                msg += f" - {key}: length {len(val)}\n"
+            raise ValueError(msg)
+        num_filters = filter_lengths[0]
+    else:
+        # If filter_dict is empty, then there are no filters => we keep everything
+        return x, Q, ID
+
+    # ------------------------------------
+    # 3) Build a mask of which rows match ANY filter
+    #    We'll call it "any_filter_mask"
+    # ------------------------------------
+    any_filter_mask = np.zeros(N, dtype=bool)  # start with all False
+
+    # We'll iterate over each filter index f_idx in [0, num_filters-1],
+    # and build a "local_mask" for each filter. Then we'll combine them.
+    for f_idx in range(num_filters):
+        local_mask = np.ones(N, dtype=bool)  # start True, narrow it down
+
+        # For each key in filter_dict, see if there's a constraint
+        for key, val_list in filter_dict.items():
+            filter_val = val_list[f_idx]
+            # If filter_val != "", we need to check it
+            if filter_val != "":
+                # Convert both sides to string if needed (since some data might be numeric)
+                # We compare row-by-row in a vectorized way:
+                local_mask &= (df_id[key].astype(str) == str(filter_val))
+
+        # local_mask is now True for rows that match this filter, and False otherwise
+        # Combine it with our global any_filter_mask via logical OR
+        any_filter_mask |= local_mask
+
+    # ------------------------------------
+    # 4) any_filter_mask == True means the row matched at least one filter
+    #    => we want to remove it. So let's invert it for "keep_mask".
+    # ------------------------------------
+    keep_mask = ~any_filter_mask  # True where row did NOT match any filter
+
+    # ------------------------------------
+    # 5) Filter x, Q, and ID using keep_mask
+    # ------------------------------------
+    # If x, Q, ID are lists, we can do list comprehensions;
+    # If they're NumPy arrays, we can just slice them with keep_mask.
+    # Example if x, Q are lists:
+    x_filtered  = [val for val, keep in zip(x, keep_mask) if keep]
+    Q_filtered  = [val for val, keep in zip(Q, keep_mask) if keep]
+    # For ID, we can slice df_id or the original ID
+    ID_filtered = [ID[i] for i, keep in enumerate(keep_mask) if keep]
+
+    return x_filtered, Q_filtered, ID_filtered
+
+
+def filter_residue(x, Q, resnums, resids, atom_number, atom_type, filter_list):
     # Filter out points that are inside the box
     x = x
     filter_inds = []
@@ -309,8 +402,17 @@ def filter_residue(x, Q, resnums, resids, filter_list):
     Q_filtered = Q[filter_inds]
     resnums_filtered = resnums[filter_inds]
     resids_filtered = resids[filter_inds]
+    atom_number_filtered = atom_number[filter_inds]
+    atom_type_filtered = atom_type[filter_inds]
 
-    return x_filtered, Q_filtered, resnums_filtered, resids_filtered
+    return (
+        x_filtered,
+        Q_filtered,
+        resnums_filtered,
+        resids_filtered,
+        atom_number_filtered,
+        atom_type_filtered,
+    )
 
 
 def filter_resnum(x, Q, resnums, resids, filter_list):

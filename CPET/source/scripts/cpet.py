@@ -2,6 +2,8 @@ from CPET.source.CPET import CPET
 import json
 import os
 import argparse
+import logging
+
 
 
 def main():
@@ -15,7 +17,15 @@ def main():
         default="./options/options.json",
     )
 
-    #Have other arguments as overrides to the options file
+    parser.add_argument(
+        '-v', '--verbose',
+        help="Be verbose",
+        action="store_const", 
+        dest="loglevel", 
+        const=logging.INFO,
+    )
+
+    #Overrides to the options file
 
     parser.add_argument(
         "-i",
@@ -38,9 +48,16 @@ def main():
         default=None
     )
 
+    parser.add_argument(
+        "--units",
+        type=str,
+        help="Units for the output files. Default is V/Angstrom. Overrides the units in the options file",
+        default=None
+    )
 
     args = parser.parse_args()
     options = args.o
+    logging.basicConfig(level=args.loglevel)
 
     # check if the options are valid
     if not os.path.exists(options):
@@ -55,9 +72,11 @@ def main():
             options["outputpath"] = args.d
         if args.m:
             options["CPET_method"] = args.m
+        if args.units:
+            options["units"] = args.units
 
     cpet = CPET(options)
     cpet.run()
 
-
-main()
+if __name__ == "__main__":
+    main()

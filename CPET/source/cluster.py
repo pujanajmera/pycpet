@@ -17,10 +17,10 @@ from glob import glob
 from CPET.utils.calculator import (
     make_histograms,
     make_histograms_mem,
+    make_fields,
     construct_distance_matrix,
     construct_distance_matrix_mem,
     construct_distance_matrix_volume,
-    make_fields,
 )
 
 
@@ -67,10 +67,17 @@ class cluster:
         self.tensor_threshold = (
             options["tensor_threshold"] if "tensor_threshold" in options else 0.05
         )
-        # Make sure the provided value for n_clusters is an integer, not a string
+        self.rank = (
+            options["rank"] if "rank" in options else None
+        )
+        # Make sure the provided value for n_clusters and rank is an integer, not a string
         assert self.defined_n_clusters == None or isinstance(
             self.defined_n_clusters, int
         ), "Defined number of clusters must be an integer"
+        assert self.rank == None or isinstance(
+            self.rank, int
+        ), "Rank must be an integer"
+
         method_dict = {
             "cluster": ["topo_file_list.txt","top"],
             "cluster_volume": ["field_file_list.txt","_efield.dat"],
@@ -118,12 +125,14 @@ class cluster:
                 self.distance_matrix = construct_distance_matrix_volume(self.fields)
             elif options["CPET_method"] == "cluster_volume_tensor":
                 self.full_tensor = make_5d_tensor(self.file_list)
-                self.rank = determine_rank(self.full_tensor, self.tensor_threshold) #Time-limiting step (and probably memory)
+                if self.rank == None:
+                    self.rank = determine_rank(self.full_tensor, self.tensor_threshold) #Time-limiting step (and probably memory)
                 self.reduced_tensor = reduce_tensor(self.full_tensor, self.rank)
                 self.distance_matrix = construct_distance_matrix_tensor(self.reduced_tensor)
             elif options["CPET_method"] == "cluster_volume_esp_tensor":
                 self.full_tensor = make_5d_tensor(self.file_list) #Try to use same fxn as above, to be efficient
-                self.rank = determine_rank(self.full_tensor, self.tensor_threshold)
+                if self.rank == None:
+                    self.rank = determine_rank(self.full_tensor, self.tensor_threshold)
                 self.reduced_tensor = reduce_tensor(self.full_tensor, self.rank)
                 self.distance_matrix = construct_distance_matrix_tensor(self.reduced_tensor)
             np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
@@ -146,6 +155,7 @@ class cluster:
         # Save cluster results to json file
         with open(self.outputpath + "/compressed_dictionary.json", "w") as outfile:
             json.dump(compressed_dictionary, outfile, cls=NpEncoder)
+
 
     def kmeds(self):
         """
@@ -264,6 +274,7 @@ class cluster:
 
         return cluster_results
 
+
     def affinity(self):
         affinity = AffinityPropagation(
             affinity="precomputed", damping=0.5, max_iter=4000
@@ -276,6 +287,7 @@ class cluster:
         self.cluster_results.n_clusters_ = len(
             self.cluster_results.cluster_centers_indices
         )
+
 
     def hdbscan(self):
         performance_list = []
@@ -342,6 +354,7 @@ class cluster:
         print(
             f"Best performance with {best_performance[4]}% cutoff and silhouette score of {best_silhouette}"
         )
+
 
     def cluster_analyze(self):
         """

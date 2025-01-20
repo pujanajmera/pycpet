@@ -9,36 +9,33 @@ from random import choice
 import os
 import numpy as np
 import warnings
-
+import logging
 
 class CPET:
     def __init__(self, options):
+        #Logistics
         self.options = options
+        self.logger = logging.getLogger(__name__) #Inherit logger from cpet.py
         self.m = self.options["CPET_method"]
+        self.logger.info("Instantiating CPET, running method: {}".format(self.m))
         self.inputpath = (
             self.options["inputpath"] if "inputpath" in self.options else "./inpdir"
         )
         self.outputpath = (
             self.options["outputpath"] if "outputpath" in self.options else "./outdir"
         )
-
-        if "step_size" in self.options:
-            self.step_size = self.options["step_size"]
-        if "dimensions" in self.options:
-            self.dimesions = self.options["dimensions"]
-
         if not os.path.exists(self.outputpath):
+            print("Output directory does not exist, creating: \n{}".format(self.outputpath))
             os.makedirs(self.outputpath)
-
-        if self.m == "cluster" or self.m == "cluster_volume":
-            # creates a cluster object
-            self.cluster = cluster(options)
-
-        if self.m == "pca":
-            # creates a pca object
-            self.pca_pycpet = pca_pycpet(options)
-
         self.profile = self.options["profile"] if "profile" in self.options else False
+
+        #Calculation-specific settings
+        self.step_size = (
+            self.options["step_size"] if "step_size" in self.options else None
+        )
+        self.dimensions = (
+            self.options["dimensions"] if "dimensions" in self.options else None
+        )
 
     def run(self):
         if self.m == "topo":
@@ -61,12 +58,12 @@ class CPET:
             self.run_visualize_efield()
         elif self.m == "pca":
             self.run_pca()
-
         else:
             print(
                 "You have reached the limit of this package's capabilities at the moment, we do not support the function called as of yet"
             )
             exit()
+
 
     def run_topo(self, num=100000, benchmarking=False):
         files_input = glob(self.inputpath + "/*.pdb")
@@ -105,6 +102,7 @@ class CPET:
             else:
                 print("Already done for protein: {}, skipping...".format(protein))
 
+
     def run_topo_GPU(self, num=100000, benchmarking=False):
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
@@ -138,6 +136,7 @@ class CPET:
                         ),
                         hist,
                     )
+
 
     def run_volume(self, num=100000):
         """
@@ -182,6 +181,7 @@ class CPET:
                     meta_data=meta_data,
                 )
 
+
     def run_point_field(self):
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
@@ -197,6 +197,7 @@ class CPET:
                 point_field = self.calculator.compute_point_field()
                 f.write("{}:{}\n".format(protein, point_field))
 
+
     def run_point_mag(self):
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
@@ -211,6 +212,7 @@ class CPET:
                 print("protein file: {}".format(protein))
                 point_field = self.calculator.compute_point_mag()
                 f.write("{}:{}\n".format(protein, point_field))
+
 
     def run_volume_ESP(self, num=100000):
         files_input = glob(self.inputpath + "/*.pdb")
@@ -239,6 +241,7 @@ class CPET:
                     fmt="%.3f",
                 )
 
+
     def run_box_check(self, num=100000):
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
@@ -248,12 +251,11 @@ class CPET:
         for file in files_input:
             if (
                 "filter_radius" in self.options
-                or "filter_resids" in self.options
                 or "filter_resnum" in self.options
             ):
                 # Error out, radius not compatible
                 raise ValueError(
-                    "filter_radius/filter_resids/filter_resnum is not compatible with box_check. Please remove from options"
+                    "filter_radius/filter_resnum is not compatible with box_check. Please remove from options"
                 )
             # Need to not filter in box to check, but can filter all else
             self.options["filter_in_box"] = False
@@ -263,9 +265,12 @@ class CPET:
             report_inside_box(self.calculator)
         print("No more files to process!")
 
+
     def run_cluster(self):
         print("Running the cluster analysis. Method type: {}".format(self.m))
+        self.cluster = cluster(self.options)
         self.cluster.Cluster()
+
 
     def run_visualize_efield(self):
         print("Visualizing the electric field. This module will load a ChimeraX session with the first protein and the electric field, and requires the electric field to be computed first.")
@@ -301,4 +306,5 @@ class CPET:
 
 
     def run_pca(self):
-        _, _ = self.pca_pycpet.fit_and_transform()
+        self.pca = pca_pycpet(self.options)
+        _, _ = self.pca.fit_and_transform()

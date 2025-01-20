@@ -24,6 +24,7 @@ from CPET.utils.io import (
     calculate_center,
     filter_resnum,
     filter_resnum_andname,
+    filter_IDs,
     default_options_initializer,
 )
 from CPET.utils.gpu import (
@@ -90,6 +91,23 @@ class calculator:
                 self.atom_type,
                 self.chains
             ) = parse_pdb(self.path_to_pdb, get_charges=True)
+
+        # Make ID list that has all information besides coordinates and charges
+        if hasattr(self, "chains"):
+            self.ID = [
+                (self.atom_number[i],
+                 self.atom_type[i],
+                 self.resids[i],
+                 self.residue_number[i],
+                 self.chains[i]) for i in range(len(self.x))
+            ]
+        else:
+            self.ID = [
+                (self.atom_number[i],
+                 self.atom_type[i],
+                 self.resids[i],
+                 self.residue_number[i]) for i in range(len(self.x))
+            ]
 
         print(self.chains)
         ##################### define center axis
@@ -237,14 +255,30 @@ class calculator:
             self.resids_copy = self.resids
             self.atom_number_copy = self.atom_number
             self.atom_type_copy = self.atom_type
+        """    
+        # Any sort of filtering related to atom identity information
+        self.x, self.Q, self.ID = filter_IDs(
+            self.x, self.Q, self.ID, options["filter_IDs"]
+        )
+        """
+        # Any sort of filtering related to radius information
 
         if "filter_resids" in options.keys():
             # print("filtering residues: {}".format(options["filter_resids"]))
-            self.x, self.Q, self.residue_number, self.resids = filter_residue(
+            (
+                self.x, 
+                self.Q, 
+                self.residue_number, 
+                self.resids, 
+                self.atom_number, 
+                self.atom_type
+            ) = filter_residue(
                 self.x,
                 self.Q,
                 self.residue_number,
                 self.resids,
+                self.atom_number,
+                self.atom_type,
                 filter_list=options["filter_resids"],
             )
 
@@ -377,6 +411,7 @@ class calculator:
         elif (
             options["CPET_method"] == "point_field"
             or options["CPET_method"] == "point_mag"
+            or options["CPET_method"] == "box_check"
         ) and hasattr(self, "y_vec_pt"):
             (_, _, self.transformation_matrix,) = initialize_box_points_uniform(
                 center=self.center,

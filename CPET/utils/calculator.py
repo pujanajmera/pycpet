@@ -571,6 +571,17 @@ def compute_curv_and_dist(
     return [dist, curv_mean]
 
 
+def inside_box_mask(points, dimensions):
+    """
+    Masked version of Inside_Box for more than one point
+    """
+    half_length, half_width, half_height = dimensions
+    cond_x = (points[:, 0] >= -half_length) & (points[:, 0] <= half_length)
+    cond_y = (points[:, 1] >= -half_width)  & (points[:, 1] <= half_width)
+    cond_z = (points[:, 2] >= -half_height) & (points[:, 2] <= half_height)
+    return cond_x & cond_y & cond_z
+
+
 def Inside_Box(local_point, dimensions):
     """
     Checks if a streamline point is inside a box
@@ -945,16 +956,20 @@ def construct_distance_matrix_volume(fields):
 
 def report_inside_box(calculator_object):
     """
-    Reports atoms that are inside the box, not including anything that has been filtered
+    Reports atoms that are inside the box, not including anything 
+    that has been filtered (vectorized)
     """
-    for i in range(len(calculator_object.x)):
-        if Inside_Box(calculator_object.x[i], calculator_object.dimensions):
-            print(
-                "Atom record {}_{}_{}_{} found inside box".format(
-                    calculator_object.atom_number[i],
-                    calculator_object.atom_type[i],
-                    calculator_object.resids[i],
-                    calculator_object.residue_number[i],
-                )
+    mask = inside_box_mask(calculator_object.x, calculator_object.dimensions)
+
+    inside_indices = np.where(mask)[0]
+
+    for idx in inside_indices:
+        print(
+            "Atom record {}_{}_{}_{} found inside box".format(
+                calculator_object.atom_number[idx],
+                calculator_object.atom_type[idx],
+                calculator_object.resids[idx],
+                calculator_object.residue_number[idx],
             )
-            print("Corresponding protein: {}".format(calculator_object.path_to_pdb))
+        )
+        print("Corresponding protein: {}".format(calculator_object.path_to_pdb))
