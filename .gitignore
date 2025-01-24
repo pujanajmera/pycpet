@@ -1,7 +1,5 @@
-*txt
 *pyc
 *egg-info
-*.pdb*
 *zip
 *log
 *in
@@ -9,3 +7,4 @@
 *dat
 *out
 *top
+*in

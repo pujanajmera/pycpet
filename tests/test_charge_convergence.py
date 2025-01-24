@@ -1,5 +1,5 @@
 import numpy as np
-from CPET.source.calculator import Topo_calc
+from CPET.source.calculator import calculator
 import warnings 
 warnings.filterwarnings(action='ignore')
 from scipy.stats import chisquare
@@ -47,6 +47,7 @@ def distance_numpy(hist1, hist2):
 class Test_topos:
     def __init__(self):
         self.options = {
+            "CPET_method": "woohoo",
             "path_to_pqr": "./test_files/test_large.pqr",
             "center": [104.785, 113.388, 117.966],
             "x": [105.785, 113.388, 117.966],
@@ -57,10 +58,11 @@ class Test_topos:
             "batch_size": 10,
             "concur_slip": 16,
             "filter_radius": 50.0,
-            "filter_in_box": True, 
+            "filter_in_box": True,
+            "initializer": "uniform",
             #"filter_resids": ["HEM"]
         }
-        self.topo = Topo_calc(self.options)
+        self.topo = calculator(self.options, path_to_pdb = self.options["path_to_pqr"])
 
         ret = self.topo.compute_topo()
         self.dist_c = ret[0] 

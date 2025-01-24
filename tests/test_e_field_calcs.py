@@ -18,7 +18,7 @@ from CPET.utils.calculator import (
     calculate_electric_field_dev_c_shared,
     calculate_electric_field_c_shared_full_alt,
     calculate_electric_field_c_shared_full,
-    calculate_electric_field_gpu_torch, 
+    calculate_electric_field_gpu_for_test, 
     )
 
 
@@ -86,16 +86,16 @@ def gather_reference_simplest_implementation(topo):
         
 
 class TestEField:
-    test_file = "./test_files/test_large.pdb"
+    test_file = "./test_files/test_large.pqr"
     options = {
         "dtype": "float32", 
         "center": {
             "method": "first", 
             "atoms": {
-                "CD": 2
+                "CG": 2
             }
         }, 
-        "x":[1, 0, 0],
+        "x": [1, 0, 0],
         "y": [0, 1, 0],
         "filter_radius": 10.0,
         "initializer": "uniform", 
@@ -118,7 +118,6 @@ class TestEField:
     # ground truth can be our compute_field_on_grid or the simplest cpu implementation we have
 
 
-    
     def field_equality(self, test_field):
         np.testing.assert_allclose(self.reference_field, test_field, rtol=1e-2, atol=1e-2)
         np.testing.assert_allclose(self.point_utility_field, test_field, rtol=1e-2, atol=1e-2)
@@ -133,8 +132,7 @@ class TestEField:
             calculate_electric_field_dev_c_shared, # works
             calculate_electric_field_c_shared_full, # works
             calculate_electric_field_c_shared_full_alt, # works
-            calculate_electric_field_gpu_torch,
-            # add your functions here
+            calculate_electric_field_gpu_for_test, # works
         ]
 
         for calculator_function in calculator_function_list:
@@ -158,11 +156,4 @@ class TestEField:
             self.field_equality(field_formatted)
 
         print("All tests passed!")
-    
 
-    # Note: if you create a new calculator, you should add a test here. 
-    # TODO: pujan - add compatability with your gpu calcs
-    # TODO: pujan - make your GPU field calcs either (a) a function (b) reimplement them here 
-    # TODO: the latter is not ideal cause if you ever change those implementations then you have
-    # TODO: to change them here too.
-     
