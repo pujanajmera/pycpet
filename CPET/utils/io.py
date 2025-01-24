@@ -1,5 +1,5 @@
 import numpy as np
-
+import pandas as pd
 
 def write_field_to_file(grid_points, field_points, filename):
     """
@@ -324,7 +324,7 @@ def filter_IDs(x, Q, ID, filter_dict):
     # We'll assume ID is a list of tuples, each (atom_number, atom_type, resid, resnum, chain).
     # Let's create a DataFrame with 5 named columns:
     df_id = pd.DataFrame(ID, columns=['atom_number', 'atom_type', 'resid', 'resnum', 'chain'])
-
+    #print(df_id)
     N = len(df_id)
     if len(x) != N or len(Q) != N:
         raise ValueError("x, Q, and ID must have the same length.")
@@ -333,6 +333,7 @@ def filter_IDs(x, Q, ID, filter_dict):
     # 2) Check filter_dict list lengths
     # ------------------------------------
     filter_lengths = [len(lst) for lst in filter_dict.values()]
+    print("Shape of filter array: {}".format(filter_lengths))
     if filter_lengths:  # if filter_dict is not empty
         if len(set(filter_lengths)) != 1:
             # mismatch in lengths
@@ -343,6 +344,7 @@ def filter_IDs(x, Q, ID, filter_dict):
         num_filters = filter_lengths[0]
     else:
         # If filter_dict is empty, then there are no filters => we keep everything
+        print("No filters in filter_dict. Keeping all data.")
         return x, Q, ID
 
     # ------------------------------------
@@ -385,8 +387,9 @@ def filter_IDs(x, Q, ID, filter_dict):
     Q_filtered  = [val for val, keep in zip(Q, keep_mask) if keep]
     # For ID, we can slice df_id or the original ID
     ID_filtered = [ID[i] for i, keep in enumerate(keep_mask) if keep]
-
-    return x_filtered, Q_filtered, ID_filtered
+    print("Length before filtering: {}".format(len(x), len(Q), len(ID)))
+    print("Length after filtering: {}".format(len(x_filtered), len(Q_filtered), len(ID_filtered)))
+    return np.array(x_filtered), np.array(Q_filtered), np.array(ID_filtered)
 
 
 def filter_residue(x, Q, resnums, resids, atom_number, atom_type, filter_list):

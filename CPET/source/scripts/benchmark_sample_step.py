@@ -28,7 +28,7 @@ def main():
         files_input = [choice(files_input) for i in range(num)]
     topo_files = []
     benchmark_step_sizes = [0.1,0.05,0.01,0.005,0.001]
-    benchmark_samples = [500000,100000,50000,10000,5000,1000]
+    benchmark_samples = [1000000,500000,100000,50000,10000,5000,1000]
     for step_size in benchmark_step_sizes:
         for n_samples in benchmark_samples:
             for i in range(3):

@@ -168,7 +168,7 @@ class CPET:
                 field_box, mesh_shape = self.calculator.compute_box()
                 print(field_box.shape)
                 meta_data = {
-                    "dimensions": self.dimesions,
+                    "dimensions": self.dimensions,
                     "step_size": [self.step_size, self.step_size, self.step_size],
                     "num_steps": [mesh_shape[0], mesh_shape[1], mesh_shape[2]],
                     "transformation_matrix": self.calculator.transformation_matrix,

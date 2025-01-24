@@ -255,12 +255,15 @@ class calculator:
             self.resids_copy = self.resids
             self.atom_number_copy = self.atom_number
             self.atom_type_copy = self.atom_type
-        """    
+        
+
         # Any sort of filtering related to atom identity information
-        self.x, self.Q, self.ID = filter_IDs(
-            self.x, self.Q, self.ID, options["filter_IDs"]
-        )
-        """
+        #NEED TO MAKE MORE ROBUST
+        if "filter_IDs" in options.keys():
+            self.x, self.Q, self.ID = filter_IDs(
+                self.x, self.Q, self.ID, options["filter_IDs"]
+            )
+
         # Any sort of filtering related to radius information
 
         if "filter_resids" in options.keys():
@@ -431,6 +434,14 @@ class calculator:
         else:
             print("Not rotating coordinates since no y-vector is provided")
             self.x = self.x - self.center
+        """
+        #Debug version
+        self.x_copy = self.x
+        self.residue_number_copy = self.residue_number
+        self.resids_copy = self.resids
+        self.atom_number_copy = self.atom_number
+        self.atom_type_copy = self.atom_type
+        """
         if self.write_transformed_pdb == True:
             self.x_copy = (self.x_copy - self.center) @ np.linalg.inv(
                 self.transformation_matrix
@@ -466,6 +477,7 @@ class calculator:
                 self.dimensions = self.dimensions.astype(np.float32)
 
         print("... > Initialized Calculator!")
+
 
     def compute_topo_base(self):
         print("... > Computing Topo!")
