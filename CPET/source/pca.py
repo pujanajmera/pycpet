@@ -38,13 +38,17 @@ class pca_pycpet:
         else:
             self.pca_obj = None
 
-        # load dataset and metadata
-        self.field_file_list = []
-        for file in glob(self.inputpath + "/*.dat"):
-            self.field_file_list.append(file)
-        if len(self.field_file_list) == 0:
-            raise ValueError("No data found in the input path!")
-
+        # user should also be able to specify list of files alternatively 
+        if "field_file_list" not in options:
+            # load dataset and metadata
+            self.field_file_list = []
+            for file in glob(self.inputpath + "/*.dat"):
+                self.field_file_list.append(file)
+            if len(self.field_file_list) == 0:
+                raise ValueError("No data found in the input path!")
+        else:
+            self.field_file_list = options["field_file_list"]
+            
         self.load()
 
     def load(self):

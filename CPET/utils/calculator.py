@@ -754,8 +754,14 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
             for line in topology_data:
                 if line.startswith("#"):
                     continue
-
-                line = line.split()
+                # strip the line of any leading or trailing whitespace
+                line = line.strip()
+                # if the line has a comma split by comma
+                if "," in line:
+                    line = line.split(",")
+                else:
+                    line = line.split()
+                #print(line)
                 distances.append(float(line[0]))
                 curvatures.append(float(line[1]))
         # print(max(distances),max(curvatures))
