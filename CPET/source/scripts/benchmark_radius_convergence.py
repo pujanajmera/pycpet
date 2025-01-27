@@ -1,6 +1,6 @@
 import numpy as np
 from CPET.source.calculator import calculator
-from CPET.utils.calculator import make_histograms, construct_distance_matrix_alt2, construct_distance_matrix
+from CPET.utils.calculator import make_histograms, construct_distance_matrix
 from CPET.source.CPET import CPET
 import warnings 
 warnings.filterwarnings(action='ignore')
@@ -28,7 +28,11 @@ def main():
         warnings.warn("More than 3 pdb files found in the input directory, choosing 3 random pdbs to benchmarking on")
         files_input = [choice(files_input) for i in range(num)]
     topo_files = []
-    benchmark_radii = [None,50,40,30,20] #User customized
+    if "benchmark_radii" in options:
+        benchmark_radii = options["benchmark_radii"]
+    else:
+        print("No benchmark radii specified, using default values: [None,50,40,30,20]")
+        benchmark_radii = [None,50,40,30,20]
 
     for radius in benchmark_radii:
         print(f"Running for radius: {radius}")

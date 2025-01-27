@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 def write_field_to_file(grid_points, field_points, filename):
     """
@@ -153,6 +154,19 @@ def read_mat(file, meta_data=False, verbose=False):
             ] = float(line_split[-1])
 
         return mat
+
+
+def pull_mats_from_MD_folder(root_dir):
+    x = []
+    target_files = []
+    target_files = glob(root_dir + "/*.dat")
+
+    for i in tqdm(target_files):
+        x.append(read_mat(i))
+
+    x = np.array(x)
+
+    return x
 
 
 def default_options_initializer(options):

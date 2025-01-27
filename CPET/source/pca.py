@@ -3,6 +3,7 @@ import pickle as pkl
 import os
 import json
 from glob import glob
+import warnings
 
 from sklearn.decomposition import PCA
 
@@ -19,16 +20,23 @@ class pca_pycpet:
         - outputpath: path to save the PCA object and metadata json
         - verbose: boolean to print out the PCA explained variance
 
+        Notes:
+        - Default mode is to take an arbitrary file list and obtain principal components. To
+        compare datasets and produce both individual and total PCs, change method from pca to 
+        pca_compare
+
         """
 
+        #Note: need to figure out what this means:
         self.pca_reload = options["pca_reload"] if "pca_reload" in options else False
-
         self.save_pca_tf = options["save_pca"] if "save_pca" in options else False
+        self.whitening = options["whitening"] if "whitening" in options else False
+        self.verbose = options["verbose"] if "verbose" in options else True
 
         self.inputpath = options["inputpath"]
         self.outputpath = options["outputpath"]
-        self.whitening = options["whitening"] if "whitening" in options else False
-        self.verbose = options["verbose"] if "verbose" in options else True
+        if "n_pca_components" not in options:
+            warnings.warn("No number of PCA components specified, using default value of 10")
         self.components = (
             options["n_pca_components"] if "n_pca_components" in options else 10
         )
@@ -38,12 +46,20 @@ class pca_pycpet:
         else:
             self.pca_obj = None
 
-        # load dataset and metadata
-        self.field_file_list = []
-        for file in glob(self.inputpath + "/*.dat"):
-            self.field_file_list.append(file)
-        if len(self.field_file_list) == 0:
-            raise ValueError("No data found in the input path!")
+        # user should also be able to specify list of files alternatively 
+        if "field_file_list" not in options:
+            # load dataset and metadata
+            self.field_file_list = []
+            for file in glob(self.inputpath + "/*.dat"):
+                self.field_file_list.append(file)
+            if len(self.field_file_list) == 0:
+                raise ValueError("No data found in the input path!")
+            field_file_name = self.outputpath + "/field_file_list.txt"
+            with open(field_file_name, "w") as file_list:
+                for i in self.file_list:
+                    file_list.write(f"{i} \n")
+        else:
+            self.field_file_list = options["field_file_list"]
 
         self.load()
 
@@ -150,3 +166,43 @@ class pca_pycpet:
         mat = self.pca_obj.inverse_transform(mat)
         mat = mat.reshape(len(mat), shape[1], shape[2], shape[3], shape[4])
         return mat
+
+
+    def plot_hist_along_component(x_list, pca_obj, label_list, components, loc, plot, type='png'):
+    if type(components) is list:
+        fig, axs = plt.subplots(len(components), 1)
+        names = ["PC {}".format(str(temp)) for temp in components]
+
+        for ind, comp in enumerate(components):
+            list_data = []
+            for _, x in enumerate(x_list):
+                x_pca, _ = pca(x, pca=pca_obj, verbose=False)
+                x_pca = x_pca[:, comp]
+                list_data.append(x_pca)
+
+            xs_list, density_list = create_hist_plot(list_data, kernel=0.25)
+
+            for i in range(len(xs_list)):
+                axs[ind].plot(
+                    xs_list[i],
+                    density_list[i],
+                    color=["#1f77b4", "#ff7f0e", "#2ca02c","#d62728","#9467bd","#8c564b","#e377c2"][i],
+                    label=label_list[i],
+                )
+
+            axs[ind].set_title(names[ind], fontsize=16)
+            axs[ind].set_ylabel("Density", fontsize=14)
+            axs[ind].legend()
+            for axs[ind] in axs:
+                axs[ind].tick_params(labelsize=14)
+
+        fig.set_size_inches(8, 25)
+        # fig.show()
+        if plot:
+            fig.show()
+        if type == 'png':
+            fig.savefig("./pca_comps_alcdehydro/{}/pca_{}-{}.png".format(loc, components[0], components[-1]))
+        elif type == 'svg':
+            fig.savefig("./pca_comps_alcdehydro/{}/pca_{}-{}.svg".format(loc, components[0], components[-1]))
+        else:
+            raise ValueError("Invalid plot format")

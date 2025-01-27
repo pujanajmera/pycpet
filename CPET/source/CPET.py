@@ -56,7 +56,7 @@ class CPET:
             self.run_box_check()
         elif self.m == "visualize_field":
             self.run_visualize_efield()
-        elif self.m == "pca":
+        elif self.m == "pca": or self.m == "pca_compare":
             self.run_pca()
         else:
             print(
@@ -306,5 +306,36 @@ class CPET:
 
 
     def run_pca(self):
-        self.pca = pca_pycpet(self.options)
-        _, _ = self.pca.fit_and_transform()
+        if self.m == "pca":
+            self.pca = pca_pycpet(self.options)
+            self.pca.fit_and_transform()
+        elif self.m == "pca_compare":
+            #Check for provided directories list for comparison
+            if "inputpath_list" not in self.options:
+                raise ValueError("No inputpath_list provided for PCA comparison mode. Please provide a list of directories that contain field files in the output file, or use the 'pca' method instead.")
+            if "outputpath_list" not in self.options:
+                warnings.warn("No outputpath_list provided. Using default outputpath_list based on inputpath_list")
+                #Add 'pca_out' to the end of each input path
+                self.options["outputpath_list"] = [path + "/pca_out" for path in self.options["inputpath_list"]]
+            if self.options["pca_combined_only"] == False:
+                #Run PCA for each individual variant
+                for inputpath, outputpath in zip(self.options["inputpath_list"], self.options["outputpath_list"]):
+                    self.options["inputpath"] = inputpath
+                    self.options["outputpath"] = outputpath
+                    print("Running PCA for variant: {}".format(inputpath.split("/")[-1]))
+                    self.pca = pca_pycpet(self.options)
+                    self.pca.fit_and_transform()
+            else:
+                from CPET.utils.io import pull_mats_from_MD_folder
+                #Pull all field files from all variants
+                all_fields = []
+                for i in range(len(self.options["inputpath_list"])):
+                    all_fields.extend(pull_mats_from_MD_folder(self.options["inputpath_list"][i]))
+                all_fields = np.concatenate(all_field_files, axis=0)
+
+                #Make a directory called 'pca_combined' in the current directory
+                if not os.path.exists("pca_combined"):
+                    os.makedirs("pca_combined")
+                self.options["outputpath"] = "./pca_combined"
+            #PCA for combined set of variants
+            #TBD            
