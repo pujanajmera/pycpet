@@ -169,40 +169,40 @@ class pca_pycpet:
 
 
     def plot_hist_along_component(x_list, pca_obj, label_list, components, loc, plot, type='png'):
-    if type(components) is list:
-        fig, axs = plt.subplots(len(components), 1)
-        names = ["PC {}".format(str(temp)) for temp in components]
+        if type(components) is list:
+            fig, axs = plt.subplots(len(components), 1)
+            names = ["PC {}".format(str(temp)) for temp in components]
 
-        for ind, comp in enumerate(components):
-            list_data = []
-            for _, x in enumerate(x_list):
-                x_pca, _ = pca(x, pca=pca_obj, verbose=False)
-                x_pca = x_pca[:, comp]
-                list_data.append(x_pca)
+            for ind, comp in enumerate(components):
+                list_data = []
+                for _, x in enumerate(x_list):
+                    x_pca, _ = pca(x, pca=pca_obj, verbose=False)
+                    x_pca = x_pca[:, comp]
+                    list_data.append(x_pca)
 
-            xs_list, density_list = create_hist_plot(list_data, kernel=0.25)
+                xs_list, density_list = create_hist_plot(list_data, kernel=0.25)
 
-            for i in range(len(xs_list)):
-                axs[ind].plot(
-                    xs_list[i],
-                    density_list[i],
-                    color=["#1f77b4", "#ff7f0e", "#2ca02c","#d62728","#9467bd","#8c564b","#e377c2"][i],
-                    label=label_list[i],
-                )
+                for i in range(len(xs_list)):
+                    axs[ind].plot(
+                        xs_list[i],
+                        density_list[i],
+                        color=["#1f77b4", "#ff7f0e", "#2ca02c","#d62728","#9467bd","#8c564b","#e377c2"][i],
+                        label=label_list[i],
+                    )
 
-            axs[ind].set_title(names[ind], fontsize=16)
-            axs[ind].set_ylabel("Density", fontsize=14)
-            axs[ind].legend()
-            for axs[ind] in axs:
-                axs[ind].tick_params(labelsize=14)
+                axs[ind].set_title(names[ind], fontsize=16)
+                axs[ind].set_ylabel("Density", fontsize=14)
+                axs[ind].legend()
+                for axs[ind] in axs:
+                    axs[ind].tick_params(labelsize=14)
 
-        fig.set_size_inches(8, 25)
-        # fig.show()
-        if plot:
-            fig.show()
-        if type == 'png':
-            fig.savefig("./pca_comps_alcdehydro/{}/pca_{}-{}.png".format(loc, components[0], components[-1]))
-        elif type == 'svg':
-            fig.savefig("./pca_comps_alcdehydro/{}/pca_{}-{}.svg".format(loc, components[0], components[-1]))
-        else:
-            raise ValueError("Invalid plot format")
+            fig.set_size_inches(8, 25)
+            # fig.show()
+            if plot:
+                fig.show()
+            if type == 'png':
+                fig.savefig("./pca_comps_alcdehydro/{}/pca_{}-{}.png".format(loc, components[0], components[-1]))
+            elif type == 'svg':
+                fig.savefig("./pca_comps_alcdehydro/{}/pca_{}-{}.svg".format(loc, components[0], components[-1]))
+            else:
+                raise ValueError("Invalid plot format")

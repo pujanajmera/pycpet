@@ -963,19 +963,22 @@ def construct_distance_matrix_volume(fields):
 def report_inside_box(calculator_object):
     """
     Reports atoms that are inside the box, not including anything 
-    that has been filtered (vectorized)
+    that has been filtered (vectorized). Trick to ignore atoms more than 1A outside of box circumsphere
+    (along largest side)
     """
-    mask = inside_box_mask(calculator_object.x, calculator_object.dimensions)
+    calc_obj_copy = calculator_object #Copy the object to avoid modifying the original object
+    max_len_box = calc_obj_copy.dimensions.max()
+    outside_sphere = np.linalg.norm(calc_obj_copy.x-calc_obj_copy.center, axis=1) > (max_len_box+1) #1A wiggle room
 
-    inside_indices = np.where(mask)[0]
-
-    for idx in inside_indices:
-        print(
-            "Atom record {}_{}_{}_{} found inside box".format(
-                calculator_object.atom_number[idx],
-                calculator_object.atom_type[idx],
-                calculator_object.resids[idx],
-                calculator_object.residue_number[idx],
+    for i in np.where(outside_sphere)[0]:
+        #Check to see if atom is in box
+        if not Inside_Box(calc_obj_copy.x[i], calc_obj_copy.dimensions):
+            print(
+                "Atom record {}_{}_{}_{} found inside box".format(
+                    calculator_object.atom_number[i],
+                    calculator_object.atom_type[i],
+                    calculator_object.resids[i],
+                    calculator_object.residue_number[i],
+                )
             )
-        )
-        print("Corresponding protein: {}".format(calculator_object.path_to_pdb))
+            print("Corresponding protein: {}".format(calculator_object.path_to_pdb))

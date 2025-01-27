@@ -56,7 +56,7 @@ class CPET:
             self.run_box_check()
         elif self.m == "visualize_field":
             self.run_visualize_efield()
-        elif self.m == "pca": or self.m == "pca_compare":
+        elif self.m == "pca" or self.m == "pca_compare":
             self.run_pca()
         else:
             print(
