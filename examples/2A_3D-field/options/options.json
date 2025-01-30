@@ -1,0 +1,30 @@
+{
+        "CPET_method": "volume",
+        "inputpath": "./pdb",
+        "center": {
+                "method": "mean",
+                "atoms": {
+                        "C7": 378,
+                        "O9": 378
+                }
+        },
+        "x": {
+                "method": "first",
+                "atoms": {
+                        "O9": 378
+                }
+        },
+        "y": {
+                "method": "first",
+                "atoms": {
+                        "N8": 378
+                }
+        },
+        "filter_resnum_andname": [
+                {"378":"CF1"}
+        ],
+        "filter_radius": 40,
+	"dimensions": [0.5,0.5,0.5],
+	"step_size": 0.1,
+        "_comment": "WARNING: keeping filter_res_radius will overwrite filter_radius and filter_resname"
+}

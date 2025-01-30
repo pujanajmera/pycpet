@@ -302,7 +302,7 @@ class CPET:
                 visualize.visualize_field(path_to_pdb = files_input_pdb[i], path_to_efield = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_efield.dat", options = self.options)
             """
             print("Generating .bild file for the protein: {}".format(files_input_pdb[i].split("/")[-1]))
-            visualize.visualize_field(path_to_pdb = files_input_pdb[i], path_to_efield = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_efield.dat", options = self.options)
+            visualize.visualize_field(path_to_pdb = files_input_pdb[i], path_to_efield = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_efield.dat", outputpath = self.outputpath, options = self.options)
 
 
     def run_pca(self):

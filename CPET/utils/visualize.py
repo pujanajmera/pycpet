@@ -18,7 +18,7 @@ To-add:
 """
 
 
-def visualize_field(path_to_pdb, path_to_efield, options, display=False):
+def visualize_field(path_to_pdb, path_to_efield, outputpath, options, display=False):
     """
     Visualize electric fields in proteins by creating a bild file
     for Chimera/ChimeraX input, with optional display in ChimeraX
@@ -40,7 +40,7 @@ def visualize_field(path_to_pdb, path_to_efield, options, display=False):
 
     name = path_to_pdb.split("/")[-1].split(".")[0]
 
-    bild_path = options["outputpath"] + "/" + name
+    bild_path = outputpath + "/" + name
 
     # Generate bild file
     (
