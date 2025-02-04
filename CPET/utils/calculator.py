@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import warnings
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics.pairwise import pairwise_distances
+from sklearn.metrics import mean_squared_error
 from scipy.spatial.distance import pdist, squareform
 from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
 from scipy.stats import iqr
@@ -18,6 +19,9 @@ from tqdm import tqdm
 import gc
 import sys
 import os
+from kneed import KneeLocator
+import tensorly as tl
+from tensorly.decomposition import parafac, tucker
 
 package_name = "pycpet"
 package = pkg_resources.get_distribution(package_name)
@@ -876,6 +880,106 @@ def make_fields(field_files):
     return fields
 
 
+def make_single_4d_tensor(field_file, N = [0,0,0], type = 'field', init=False):
+    with open(field_file, 'r') as file:
+        lines = file.readlines()
+
+    # Skip the first 7 lines (header)
+    data_lines = lines[7:]
+
+    # Initialize lists to store the parsed data
+    x_coords, y_coords, z_coords = [], [], []
+    if type == 'field':
+        ex, ey, ez = [], [], []
+    elif type == 'esp':
+        e = []
+
+    # Loop through the remaining lines and extract the data
+    for line in data_lines:
+        cols = line.split()
+        x_coords.append(float(cols[0]))
+        y_coords.append(float(cols[1]))
+        z_coords.append(float(cols[2]))
+        if type == 'field':
+            ex.append(float(cols[3]))
+            ey.append(float(cols[4]))
+            ez.append(float(cols[5]))
+        elif type == 'esp':
+            e.append(float(cols[3]))
+
+    # Convert lists to numpy arrays
+    x_coords = np.array(x_coords)
+    y_coords = np.array(y_coords)
+    z_coords = np.array(z_coords)
+
+    if type == 'field':
+        ex = np.array(ex)
+        ey = np.array(ey)
+        ez = np.array(ez)
+    elif type == 'esp':
+        e = np.array(e)
+
+    if init==False:
+        if N == [0,0,0]:
+            ValueError("Please provide the dimensions of the grid if init is false")
+        if type == 'field':
+            tensor_4d = np.zeros((N[0], N[1], N[2], 3))
+        elif type == 'esp':
+            tensor_4d = np.zeros((N[0], N[1], N[2], 1))
+    else:
+        # Find unique values of X, Y, Z to determine grid dimensions
+        unique_x = np.unique(x_coords)
+        unique_y = np.unique(y_coords)
+        unique_z = np.unique(z_coords)
+
+        # Determine grid dimensions
+        Nx, Ny, Nz = len(unique_x), len(unique_y), len(unique_z)
+
+        # Initialize a 4D tensor of shape [Nx, Ny, Nz, 3] for (Ex, Ey, Ez)
+        if type == 'field':
+            tensor_4d = np.zeros((N[0], N[1], N[2], 3))
+        elif type == 'esp':
+            tensor_4d = np.zeros((N[0], N[1], N[2], 1))
+
+    # Populate the tensor with the field data
+    for i in range(len(x_coords)):
+        ix = np.where(unique_x == x_coords[i])[0][0]
+        iy = np.where(unique_y == y_coords[i])[0][0]
+        iz = np.where(unique_z == z_coords[i])[0][0]
+
+        if type == 'field':
+            tensor_4d[ix, iy, iz, 0] = ex[i]  # Ex
+            tensor_4d[ix, iy, iz, 1] = ey[i]  # Ey
+            tensor_4d[ix, iy, iz, 2] = ez[i]  # Ez
+        elif type == 'esp':
+            tensor_4d[ix, iy, iz, 0] = e[i]  # ESP
+
+    if init==True:
+        return tensor_4d, [Nx, Ny, Nz]
+    
+    return tensor_4d
+
+
+def make_5d_tensor(field_files, type='field'):
+    first_field = field_files[0]
+    if type == 'field':
+        _, N = make_single_4d_tensor(first_field, init=True)
+        tensor_5d = np.zeros((len(field_files), N[0], N[1], N[2], 3))
+        for i, field_file in enumerate(field_files):
+            tensor_5d[i] = make_single_4d_tensor(field_file, N=N, type='field')
+    elif type == 'esp':
+        _, N = make_single_4d_tensor(first_field, init=True)
+        tensor_5d = np.zeros((len(field_files), N[0], N[1], N[2], 1))
+        for i, field_file in enumerate(field_files):
+            tensor_5d[i] = make_single_4d_tensor(field_file, N=N, type='esp')
+    else:
+        ValueError("Please provide the correct type of tensor clustering method, either 'field' or 'esp'")
+
+
+    
+    return tensor_5d
+
+
 def distance_numpy(hist1, hist2):
     a = (hist1 - hist2) ** 2
     b = hist1 + hist2
@@ -958,6 +1062,75 @@ def construct_distance_matrix_volume(fields):
             matrix[i][j] = np.sum(dists)
             matrix[j][i] = matrix[i][j]
     return matrix
+
+
+def construct_distance_matrix_tensor(cp_tensor):
+    factors = cp_tensor.factors
+    factors_dict = {f'factor_{idx}': factor for idx, factor in enumerate(factors)}
+    factor_matrix = factors[0]
+
+    #Plotting
+    #plot_rank_variation(factor_matrix)
+
+    dist_mat = squareform(pdist(factor_matrix, metric='euclidean'))
+    return dist_mat
+
+
+def reduce_tensor(tensor, rank):
+    # Perform CP decomposition
+    cp_tensor = parafac(tensor, rank=rank, init='random', tol=1e-6)
+
+    # Reconstruct the tensor from the CP decomposition
+    reconstructed_tensor = tl.cp_to_tensor(cp_tensor)
+
+    # Calculate the reconstruction error (mean squared error)
+    absolute_error = mean_squared_error(tensor.flatten(), reconstructed_tensor.flatten())
+
+    # Calculate relative error (RMSE or another metric)
+    relative_error = absolute_error / np.mean(np.abs(tensor.flatten()))
+
+    return cp_tensor, relative_error
+
+
+def determine_rank(tensor_5d, threshold=0.05, max_rank=50):
+    errors = []
+    ranks = list(range(1, max_rank+1))
+
+    # Loop over possible ranks and compute errors
+    for rank in ranks:
+        start_time = time.time()
+        
+        _, error = reduce_tensor(tensor_5d, rank)
+        errors.append(error)
+        print(f"Rank {rank}, Reconstruction Error: {error}")
+        
+        end_time = time.time()
+        print(f"Time taken to do CP decomposition for rank {rank}: {end_time - start_time:.4f} seconds")
+
+    #Using elbow method
+    # Use kneed to find the elbow point
+    kneedle = KneeLocator(ranks, errors, curve='convex', direction='decreasing')
+    elbow_rank = kneedle.elbow
+    optimal_rank = 50 #Just some default value
+
+
+    # Check if the reconstruction error at the elbow rank is less than 0.001
+    if errors[elbow_rank - 1] > 0.001:
+        print(f"Reconstruction error at elbow rank {elbow_rank} is {errors[elbow_rank - 1]}, which is > 0.001")
+        print("Searching for the lowest rank with error < 0.001...")
+    
+    
+    # Find the lowest rank where the reconstruction error is < 0.001
+        for i, error in enumerate(errors):
+            if error < 0.001:
+                optimal_rank = ranks[i]
+                print(f"Found optimal rank {optimal_rank} with reconstruction error {error}")
+                break
+    else:
+        optimal_rank = elbow_rank
+        print(f"Optimal Rank based on the elbow method (kneedle): {optimal_rank}")
+    
+    return optimal_rank
 
 
 def report_inside_box(calculator_object):

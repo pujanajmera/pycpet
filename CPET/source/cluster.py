@@ -18,9 +18,13 @@ from CPET.utils.calculator import (
     make_histograms,
     make_histograms_mem,
     make_fields,
+    make_5d_tensor,
     construct_distance_matrix,
     construct_distance_matrix_mem,
     construct_distance_matrix_volume,
+    construct_distance_matrix_tensor,
+    determine_rank,
+    reduce_tensor,
 )
 
 
@@ -69,6 +73,9 @@ class cluster:
         )
         self.rank = (
             options["rank"] if "rank" in options else None
+        )
+        self.max_rank = (
+            options["max_rank"] if "max_rank" in options else 50
         )
         # Make sure the provided value for n_clusters and rank is an integer, not a string
         assert self.defined_n_clusters == None or isinstance(
@@ -126,8 +133,8 @@ class cluster:
             elif options["CPET_method"] == "cluster_volume_tensor":
                 self.full_tensor = make_5d_tensor(self.file_list)
                 if self.rank == None:
-                    self.rank = determine_rank(self.full_tensor, self.tensor_threshold) #Time-limiting step (and probably memory)
-                self.reduced_tensor = reduce_tensor(self.full_tensor, self.rank)
+                    self.rank = determine_rank(self.full_tensor, self.tensor_threshold, self.max_rank) #Time-limiting step (and probably memory)
+                self.reduced_tensor, _ = reduce_tensor(self.full_tensor, self.rank)
                 self.distance_matrix = construct_distance_matrix_tensor(self.reduced_tensor)
             elif options["CPET_method"] == "cluster_volume_esp_tensor":
                 self.full_tensor = make_5d_tensor(self.file_list) #Try to use same fxn as above, to be efficient
