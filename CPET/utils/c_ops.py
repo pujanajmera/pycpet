@@ -112,6 +112,15 @@ class Math_ops:
             self.array_1d_float,
         ]
 
+        self.math.calc_esp_base.restype = None
+        self.math.calc_esp_base.argtypes = [
+            self.array_1d_float,
+            self.array_1d_float,
+            ctypes.c_int,
+            self.array_2d_float,
+            self.array_1d_float,
+        ]
+
     def sparse_dot(self, A, B):
         # b is just a single vector, not a sparse matrix
         # a is a full sparse matrix
@@ -223,6 +232,25 @@ class Math_ops:
         # print(res)
 
         return res
+    
+
+    def calc_esp_base(self, x_0, x, Q):
+        """
+        Takes:
+            x_0(array) - (3, 1) array of box position
+            x(np array) - positions of charges
+            Q(np array) - charge values
+        Returns:
+            res(array) - (1, 1) array of electrostatic potential
+        """
+        res = np.zeros(1, dtype="float32")
+        # self.math.efield.restype = None
+        # Q = Q.reshape(-1)
+
+        self.math.calc_esp_base(res, x_0, len(Q), x, Q.reshape(len(Q)))
+
+        return res
+
 
     def calc_field_base(self, x_0, x, Q):
         """

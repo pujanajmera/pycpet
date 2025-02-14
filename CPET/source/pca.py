@@ -4,6 +4,7 @@ import os
 import json
 from glob import glob
 import warnings
+import matplotlib.pyplot as plt
 
 from sklearn.decomposition import PCA
 

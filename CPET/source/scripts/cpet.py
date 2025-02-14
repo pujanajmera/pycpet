@@ -65,7 +65,6 @@ def main():
     else:
         with open(options, "r") as f:
             options = json.load(f)
-        
         if args.i:
             options["inputpath"] = args.i
         if args.d:

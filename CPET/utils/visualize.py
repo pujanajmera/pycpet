@@ -17,6 +17,45 @@ To-add:
 - High quality distance matrix plotting (?)
 """
 
+def visualize_esp(path_to_pdb, path_to_esp, outputpath, options):
+    """
+    Visualize electrostatic potential in proteins by creating a bild file
+    for Chimera/ChimeraX input
+    Takes:
+        path_to_pdb: Path to the PDB file of the protein
+        path_to_esp: Path to the corresponding ESP file
+        options: Options dictionary
+    """
+    
+    if "visualization" in options.keys():
+        cutoff = options["visualization"]["cutoff"] if "cutoff" in options["visualization"] else 0
+        sparsify_factor = options["visualization"]["sparsify_factor"] if "sparsify_factor" in options["visualization"] else 1
+    else:
+        cutoff = 0
+        sparsify_factor = 1
+
+    name = path_to_pdb.split("/")[-1].split(".")[0]
+
+    bild_path = outputpath + "/" + name
+
+    # Generate bild file
+    (
+        sample_density_array,
+        volume_box_array,
+        center_array,
+        basis_matrix_array,
+        field_array,
+    ) = process_field_file(path_to_esp)
+    transformed_field_array = transform_field(
+        field_array, center_array, basis_matrix_array
+        )
+    tip_to_tail_vectors = generate_tip_tail_vectors(
+        transformed_field_array.copy(), sample_density_array, volume_box_array
+    )
+    generate_bild_file(
+        tip_to_tail_vectors, transformed_field_array, cutoff, sparsify_factor, bild_path, path_to_efield
+    )
+    return "Bild file saved for {}".format(name)
 
 def visualize_field(path_to_pdb, path_to_efield, outputpath, options, display=False):
     """
@@ -59,14 +98,6 @@ def visualize_field(path_to_pdb, path_to_efield, outputpath, options, display=Fa
     generate_bild_file(
         tip_to_tail_vectors, transformed_field_array, cutoff, sparsify_factor, bild_path, path_to_efield
     )
-
-    # Display in ChimeraX, still in development
-    """
-    if display:
-        run("open " + path_to_pdb)
-        run("open " + bild_path + ".bild")
-    """
-
     return "Bild file saved for {}".format(name)
 
 

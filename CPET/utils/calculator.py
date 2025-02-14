@@ -332,6 +332,20 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q):
     return E
 
 
+def calculate_esp_c_shared_full(x_0, x, Q):
+    """
+    Computes electrostatic potential at a point given positions of charges
+    Takes
+        x_0(array) - position to compute field at of shape (1,3)
+        x(array) - positions of charges of shape (N,3)
+        Q(array) - magnitude and sign of charges of shape (N,1)
+    Returns
+        ESP(float) - electrostatic potential at the point
+    """
+    ESP = Math.calc_esp_base(x_0=x_0, x=x, Q=Q)
+    return ESP
+
+
 def calculate_electric_field_c_shared_full(x_0, x, Q):
     """
     Computes electric field at a point given positions of charges
@@ -451,7 +465,7 @@ def compute_field_on_grid(grid_coords, x, Q):
 
     # Calculate the electric field at each point in the meshgrid
     for i, x_0 in enumerate(reshaped_meshgrid):
-        E[i] = calculate_electric_field_dev_c_shared(x_0, x, Q)
+        E[i] = calculate_electric_field_c_shared_full(x_0, x, Q)
         if x_0[0] == 0 and x_0[1] == 0 and x_0[2] == 0:
             print(f"Center field: {E[i]}")
 
@@ -479,15 +493,13 @@ def compute_ESP_on_grid(grid_coords, x, Q):
 
     # Calculate the electric field at each point in the meshgrid
     for i, x_0 in enumerate(reshaped_meshgrid):
-        # Create matrix R
-        R = nb_subtract(x_0, x)
-        r_mag = np.sqrt(np.einsum("ij,ij->i", R, R)).reshape(-1, 1)  # Has shape (N,1)
-        ESP[i] = np.sum(Q / r_mag) * 14.3996451
+        ESP[i] = calculate_esp_c_shared_full(x_0, x, Q)
+        if x_0[0] == 0 and x_0[1] == 0 and x_0[2] == 0:
+            print(f"Center esp: {ESP[i]}")
 
     point_ESP_concat = np.concatenate((reshaped_meshgrid, ESP), axis=1)
-
+    
     return point_ESP_concat.astype(np.half)
-
 
 def calculate_field_at_point(x, Q, x_0=np.array([0, 0, 0])):
     """
@@ -880,12 +892,15 @@ def make_fields(field_files):
     return fields
 
 
-def make_single_4d_tensor(field_file, N = [0,0,0], type = 'field', init=False):
+def make_single_4d_tensor(field_file, uniques=None, N = [0,0,0], type = 'field', init=False):
     with open(field_file, 'r') as file:
         lines = file.readlines()
 
     # Skip the first 7 lines (header)
-    data_lines = lines[7:]
+    if type == 'field':
+        data_lines = lines[7:]
+    elif type == 'esp':
+        data_lines = lines[:]
 
     # Initialize lists to store the parsed data
     x_coords, y_coords, z_coords = [], [], []
@@ -897,6 +912,7 @@ def make_single_4d_tensor(field_file, N = [0,0,0], type = 'field', init=False):
     # Loop through the remaining lines and extract the data
     for line in data_lines:
         cols = line.split()
+        #print(cols)
         x_coords.append(float(cols[0]))
         y_coords.append(float(cols[1]))
         z_coords.append(float(cols[2]))
@@ -926,20 +942,25 @@ def make_single_4d_tensor(field_file, N = [0,0,0], type = 'field', init=False):
             tensor_4d = np.zeros((N[0], N[1], N[2], 3))
         elif type == 'esp':
             tensor_4d = np.zeros((N[0], N[1], N[2], 1))
+        unique_x, unique_y, unique_z = uniques
     else:
         # Find unique values of X, Y, Z to determine grid dimensions
         unique_x = np.unique(x_coords)
         unique_y = np.unique(y_coords)
         unique_z = np.unique(z_coords)
+        print(unique_x, unique_y, unique_z)
 
+        if N == [0,0,0]:
+            print("Init is true, ignoring N=[0,0,0] and writing from input field/esp file")
         # Determine grid dimensions
         Nx, Ny, Nz = len(unique_x), len(unique_y), len(unique_z)
 
         # Initialize a 4D tensor of shape [Nx, Ny, Nz, 3] for (Ex, Ey, Ez)
         if type == 'field':
-            tensor_4d = np.zeros((N[0], N[1], N[2], 3))
+            tensor_4d = np.zeros((Nx, Ny, Nz, 3))
         elif type == 'esp':
-            tensor_4d = np.zeros((N[0], N[1], N[2], 1))
+            tensor_4d = np.zeros((Nx, Ny, Nz, 1))
+            print(tensor_4d.shape)
 
     # Populate the tensor with the field data
     for i in range(len(x_coords)):
@@ -955,7 +976,7 @@ def make_single_4d_tensor(field_file, N = [0,0,0], type = 'field', init=False):
             tensor_4d[ix, iy, iz, 0] = e[i]  # ESP
 
     if init==True:
-        return tensor_4d, [Nx, Ny, Nz]
+        return tensor_4d, [Nx, Ny, Nz], (unique_x, unique_y, unique_z)
     
     return tensor_4d
 
@@ -968,10 +989,11 @@ def make_5d_tensor(field_files, type='field'):
         for i, field_file in enumerate(field_files):
             tensor_5d[i] = make_single_4d_tensor(field_file, N=N, type='field')
     elif type == 'esp':
-        _, N = make_single_4d_tensor(first_field, init=True)
+        _, N, uniques = make_single_4d_tensor(first_field, type='esp', init=True)
         tensor_5d = np.zeros((len(field_files), N[0], N[1], N[2], 1))
         for i, field_file in enumerate(field_files):
-            tensor_5d[i] = make_single_4d_tensor(field_file, N=N, type='esp')
+            print(i)
+            tensor_5d[i] = make_single_4d_tensor(field_file, uniques=uniques, N=N, type='esp')
     else:
         ValueError("Please provide the correct type of tensor clustering method, either 'field' or 'esp'")
 
@@ -1092,7 +1114,7 @@ def reduce_tensor(tensor, rank):
     return cp_tensor, relative_error
 
 
-def determine_rank(tensor_5d, threshold=0.05, max_rank=50):
+def determine_rank(tensor_5d, threshold, max_rank):
     errors = []
     ranks = list(range(1, max_rank+1))
 
@@ -1114,15 +1136,15 @@ def determine_rank(tensor_5d, threshold=0.05, max_rank=50):
     optimal_rank = 50 #Just some default value
 
 
-    # Check if the reconstruction error at the elbow rank is less than 0.001
-    if errors[elbow_rank - 1] > 0.001:
-        print(f"Reconstruction error at elbow rank {elbow_rank} is {errors[elbow_rank - 1]}, which is > 0.001")
-        print("Searching for the lowest rank with error < 0.001...")
+    # Check if the reconstruction error at the elbow rank is less than tensor_threshold
+    if errors[elbow_rank - 1] > threshold:
+        print(f"Reconstruction error at elbow rank {elbow_rank} is {errors[elbow_rank - 1]}, which is > {threshold}")
+        print(f"Searching for the lowest rank with error < {threshold}...")
     
     
-    # Find the lowest rank where the reconstruction error is < 0.001
+    # Find the lowest rank where the reconstruction error is < tensor_threshold
         for i, error in enumerate(errors):
-            if error < 0.001:
+            if error < threshold:
                 optimal_rank = ranks[i]
                 print(f"Found optimal rank {optimal_rank} with reconstruction error {error}")
                 break

@@ -5,6 +5,7 @@ import seaborn as sns
 import json
 import psutil
 import time
+import os
 
 from sklearn.cluster import AffinityPropagation, HDBSCAN
 from sklearn_extra.cluster import KMedoids
@@ -51,7 +52,7 @@ class cluster:
         self.outputpath = options["outputpath"]
 
         # Cluster Specific Options
-        if not options["cluster_method"]:
+        if "cluster_method" not in options.keys():
             print("No cluster method specified, defaulting to K-Medoids")
             self.cluster_method = "kmeds"
         else:
@@ -69,13 +70,13 @@ class cluster:
             options["defined_n_clusters"] if "defined_n_clusters" in options else None
         )
         self.tensor_threshold = (
-            options["tensor_threshold"] if "tensor_threshold" in options else 0.05
+            options["tensor_threshold"] if "tensor_threshold" in options else 0.001
         )
         self.rank = (
             options["rank"] if "rank" in options else None
         )
         self.max_rank = (
-            options["max_rank"] if "max_rank" in options else 50
+            options["max_rank"] if "max_rank" in options else 30
         )
         # Make sure the provided value for n_clusters and rank is an integer, not a string
         assert self.defined_n_clusters == None or isinstance(
@@ -109,9 +110,14 @@ class cluster:
             )
         else:
             self.file_list = []
-            for file in glob(self.inputpath + f"/*.{method_dict[options['CPET_method']][1]}"):
+            print(method_dict[options['CPET_method']][1])
+            for file in glob(self.inputpath + f"/*{method_dict[options['CPET_method']][1]}"):
                 self.file_list.append(file)
+            if len(self.file_list) == 0:
+                print("No files found for clustering method {}".format(options["CPET_method"]))
+                exit()
             self.file_list.sort()
+            print(len(self.file_list))
             topo_file_name = self.outputpath + f"/{list_file}"
             with open(topo_file_name, "w") as file_list:
                 for i in self.file_list:
@@ -132,15 +138,22 @@ class cluster:
                 self.distance_matrix = construct_distance_matrix_volume(self.fields)
             elif options["CPET_method"] == "cluster_volume_tensor":
                 self.full_tensor = make_5d_tensor(self.file_list)
+                np.save(self.outputpath + "/5d_tensor.npy", self.full_tensor)
                 if self.rank == None:
                     self.rank = determine_rank(self.full_tensor, self.tensor_threshold, self.max_rank) #Time-limiting step (and probably memory)
                 self.reduced_tensor, _ = reduce_tensor(self.full_tensor, self.rank)
                 self.distance_matrix = construct_distance_matrix_tensor(self.reduced_tensor)
             elif options["CPET_method"] == "cluster_volume_esp_tensor":
-                self.full_tensor = make_5d_tensor(self.file_list) #Try to use same fxn as above, to be efficient
+                #Skip 5d tensor if already made
+                if os.path.exists(self.outputpath + "/5d_tensor.npy"):
+                    print("5d tensor already found in output directory, skipping")
+                    self.full_tensor = np.load(self.outputpath + "/5d_tensor.npy")
+                else:
+                    self.full_tensor = make_5d_tensor(self.file_list, type='esp') #Try to use same fxn as above, to be efficient
+                np.save(self.outputpath + "/5d_tensor.npy", self.full_tensor)
                 if self.rank == None:
-                    self.rank = determine_rank(self.full_tensor, self.tensor_threshold)
-                self.reduced_tensor = reduce_tensor(self.full_tensor, self.rank)
+                    self.rank = determine_rank(self.full_tensor, self.tensor_threshold, self.max_rank) #Time-limiting step (and probably memory)
+                self.reduced_tensor, self.reconstruction_error = reduce_tensor(self.full_tensor, self.rank)
                 self.distance_matrix = construct_distance_matrix_tensor(self.reduced_tensor)
             np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
 

@@ -3,6 +3,7 @@ import time
 from multiprocessing import Pool
 from torch.profiler import profile, ProfilerActivity
 import torch
+import logging
 
 
 from CPET.utils.io import parse_pdb
@@ -139,16 +140,20 @@ class calculator:
                     == atom_res
                 ]
             else:
+                print(options["center"]["atoms"])
                 centering_atoms = [
-                    (element, options["center"]["atoms"][element])
-                    for element in options["center"]["atoms"]
+                    (k, v)
+                    for atom_dict in options["center"]["atoms"]
+                    for k, v in atom_dict.items()
                 ]
+                print("centering atoms for center: ", centering_atoms)
+                atom_set = set(centering_atoms)
                 pos_considered = [
                     pos
-                    for atom_res in centering_atoms
-                    for idx, pos in enumerate(self.x)
-                    if (self.atom_type[idx], self.residue_number[idx]) == atom_res
+                    for (atype, rnum), pos in zip(zip(self.atom_type, self.residue_number), self.x)
+                    if (atype, rnum) in atom_set
                 ]
+            print("pos considered for center: ", pos_considered)
             self.center = calculate_center(pos_considered, method=method)
         else:
             raise ValueError("center must be a list or dict")
@@ -189,15 +194,18 @@ class calculator:
                 ]
             else:
                 centering_atoms = [
-                    (element, options["x"]["atoms"][element])
-                    for element in options["x"]["atoms"]
+                    (k, v)
+                    for atom_dict in options["x"]["atoms"]
+                    for k, v in atom_dict.items()
                 ]
+                print("centering atoms for x: ", centering_atoms)
+                atom_set = set(centering_atoms)
                 pos_considered = [
                     pos
-                    for atom_res in centering_atoms
-                    for idx, pos in enumerate(self.x)
-                    if (self.atom_type[idx], self.residue_number[idx]) == atom_res
+                    for (atype, rnum), pos in zip(zip(self.atom_type, self.residue_number), self.x)
+                    if (atype, rnum) in atom_set
                 ]
+            print("pos considered for x: ", pos_considered)
             self.x_vec_pt = calculate_center(pos_considered, method=method)
             compute_y = True
         else:
@@ -236,15 +244,18 @@ class calculator:
                 ]
             else:
                 centering_atoms = [
-                    (element, options["y"]["atoms"][element])
-                    for element in options["y"]["atoms"]
+                    (k, v)
+                    for atom_dict in options["y"]["atoms"]
+                    for k, v in atom_dict.items()
                 ]
+                print("centering atoms for y: ", centering_atoms)
+                atom_set = set(centering_atoms)
                 pos_considered = [
                     pos
-                    for atom_res in centering_atoms
-                    for idx, pos in enumerate(self.x)
-                    if (self.atom_type[idx], self.residue_number[idx]) == atom_res
+                    for (atype, rnum), pos in zip(zip(self.atom_type, self.residue_number), self.x)
+                    if (atype, rnum) in atom_set
                 ]
+            print("pos considered for y: ", pos_considered)
             self.y_vec_pt = calculate_center(pos_considered, method=method)
         else:
             raise ValueError("Since you have provided x, y must be a list or dict")

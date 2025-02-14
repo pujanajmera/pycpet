@@ -1,7 +1,7 @@
 # include <stdio.h>
 # include <stdlib.h>
 # include <stdbool.h>
-# include<omp.h>
+# include <omp.h>
 # include <math.h>
 //#include <gsl/gsl_vector.h>
 //#include <gsl/gsl_blas.h>
@@ -328,6 +328,42 @@ void calc_field_base(float E[3], float x_init[3], int n_charges, float x[n_charg
         E[0] += E_temp[i][0];
         E[1] += E_temp[i][1];
         E[2] += E_temp[i][2];
+    }
+}
+
+
+void calc_esp_base(float ESP[1], float x_init[3], int n_charges, float x[n_charges][3], float Q[n_charges]){
+    // calculate the electrostatic potential
+
+    // subtract x_init from x
+    float R[3];
+    float r_mag[n_charges];
+    //float r_sq[n_charges][3];
+    //float r_mag_sq[n_charges];
+    float r_mag_inv;
+    float factor = 14.3996451;
+    float r_norm;
+    float ESP_temp[n_charges][3];
+
+    //# pragma omp parallel for shared(E, x_init, n_charges, x, Q) private(r_mag_cube, r_norm, R)
+    # pragma omp parallel for
+    for (int i = 0; i < n_charges; i++)
+    {
+        //get difference of x and x_init
+        R[0] = x_init[0] - x[i][0];
+        R[1] = x_init[1] - x[i][1];
+        R[2] = x_init[2] - x[i][2]; 
+
+        r_norm = sqrt(pow(R[0], 2) + pow(R[1], 2) + pow(R[2], 2));
+        r_mag_inv = pow(r_norm, -1);
+        //r_mag[i] = pow(r_norm, -3);
+
+        ESP_temp[i][0] = factor * r_mag_inv * Q[i];
+    }
+
+    for (int i = 0; i < n_charges; i++)
+    {
+        ESP[0] += ESP_temp[i][0];
     }
 }
 

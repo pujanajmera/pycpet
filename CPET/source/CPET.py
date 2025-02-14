@@ -54,7 +54,7 @@ class CPET:
             self.run_cluster()
         elif self.m == "box_check":
             self.run_box_check()
-        elif self.m == "visualize_field":
+        elif self.m == "visualize_field" or self.m == "visualize_esp":
             self.run_visualize_efield()
         elif self.m == "pca" or self.m == "pca_compare":
             self.run_pca()
@@ -275,7 +275,10 @@ class CPET:
     def run_visualize_efield(self):
         print("Visualizing the electric field. This module will load a ChimeraX session with the first protein and the electric field, and requires the electric field to be computed first.")
         files_input_pdb = glob(self.inputpath + "/*.pdb")
-        files_input_efield = glob(self.inputpath + "/*_efield.dat")
+        if self.m == "visualize_field":
+            files_input_efield = glob(self.inputpath + "/*_efield.dat")
+        elif self.m == "visualize_esp":
+            files_input_esp = glob(self.inputpath + "/*_esp.dat")
         if len(files_input_pdb) == 0:
             raise ValueError("No pdb files found in the input directory")
         if len(files_input_pdb) > 1:
@@ -286,23 +289,31 @@ class CPET:
         
         #Check to make sure each pdb file has a corresponding electric field file in the input path while visualizing fields
         for i in range(len(files_input_pdb)):
-            #Modify efield file list to just have file name, not _efield.dat
-            files_input_efield = [efield.split("/")[-1].split("_efield")[0] for efield in files_input_efield]
-            #Efield list is unsorted, so just check if the protein file is anywhere in the efield list
-            if not any(files_input_pdb[i].split("/")[-1].split(".")[0] in efield for efield in files_input_efield):
-                raise ValueError("No electric field file found for protein: {}".format(files_input_pdb[i].split("/")[-1]))
-
-            #Automatically visualize the electric field for the first protein, in dev mode for now
-            """
-            if i==0:
-                print("Visualizing the electric field for the protein: {}".format(files_input_pdb[i].split("/")[-1]))
-                visualize.visualize_field(path_to_pdb = files_input_pdb[i], path_to_efield = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_efield.dat", options = self.options, display = True)
-            else:
+            if self.m == "visualize_field":
+                #Modify efield file list to just have file name, not _efield.dat
+                files_input_efield = [efield.split("/")[-1].split("_efield")[0] for efield in files_input_efield]
+                #Efield list is unsorted, so just check if the protein file is anywhere in the efield list
+                if not any(files_input_pdb[i].split("/")[-1].split(".")[0] in efield for efield in files_input_efield):
+                    raise ValueError("No electric field file found for protein: {}".format(files_input_pdb[i].split("/")[-1]))
                 print("Generating .bild file for the protein: {}".format(files_input_pdb[i].split("/")[-1]))
-                visualize.visualize_field(path_to_pdb = files_input_pdb[i], path_to_efield = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_efield.dat", options = self.options)
-            """
-            print("Generating .bild file for the protein: {}".format(files_input_pdb[i].split("/")[-1]))
-            visualize.visualize_field(path_to_pdb = files_input_pdb[i], path_to_efield = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_efield.dat", outputpath = self.outputpath, options = self.options)
+                visualize.visualize_field(path_to_pdb = files_input_pdb[i], 
+                                          path_to_efield = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_efield.dat", 
+                                          outputpath = self.outputpath, 
+                                          options = self.options, 
+                )
+            elif self.m == "visualize_esp":
+                #Modify esp file list to just have file name, not _esp.dat
+                files_input_esp = [esp.split("/")[-1].split("_esp")[0] for esp in files_input_esp]
+                #Esp list is unsorted, so just check if the protein file is anywhere in the esp list
+                if not any(files_input_pdb[i].split("/")[-1].split(".")[0] in esp for esp in files_input_esp):
+                    raise ValueError("No ESP file found for protein: {}".format(files_input_pdb[i].split("/")[-1]))
+                print("Generating .bild file for the protein: {}".format(files_input_pdb[i].split("/")[-1]))
+                visualize.visualize_esp(path_to_pdb = files_input_pdb[i], 
+                                path_to_efield = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_efield.dat", 
+                                outputpath = self.outputpath, 
+                                options = self.options, 
+                )
+            #To-do: automatically visualize the electric field for the first protein, in dev mode for now
 
 
     def run_pca(self):
