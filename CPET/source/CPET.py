@@ -177,7 +177,7 @@ class CPET:
 
                 save_numpy_as_dat(
                     name=self.outputpath + "/{}_efield.dat".format(protein),
-                    field=field_box,
+                    volume=field_box,
                     meta_data=meta_data,
                 )
 
@@ -231,14 +231,22 @@ class CPET:
             files_input.remove(file)
             print("protein file: {}".format(protein))
             files_done = [
-                x for x in os.listdir(self.outputpath) if x[-11:] == "_efield.dat"
+                x for x in os.listdir(self.outputpath) if x[-11:] == "_esp.dat"
             ]
-            if protein + ".top" not in files_done:
-                field_box = self.calculator.compute_box_ESP()
-                np.savetxt(
-                    self.outputpath + "/{}_esp.dat".format(protein),
-                    field_box,
-                    fmt="%.3f",
+            if protein + "_esp.dat" not in files_done:
+                esp_box, mesh_shape = self.calculator.compute_box_ESP()
+                print(esp_box.shape)
+                meta_data = {
+                    "dimensions": self.dimensions,
+                    "step_size": [self.step_size, self.step_size, self.step_size],
+                    "num_steps": [mesh_shape[0], mesh_shape[1], mesh_shape[2]],
+                    "transformation_matrix": self.calculator.transformation_matrix,
+                    "center": self.calculator.center,
+                }
+                save_numpy_as_dat(
+                    name=self.outputpath + "/{}_esp.dat".format(protein),
+                    volume=esp_box,
+                    meta_data=meta_data,
                 )
 
 

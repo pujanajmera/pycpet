@@ -44,16 +44,17 @@ def visualize_esp(path_to_pdb, path_to_esp, outputpath, options):
         volume_box_array,
         center_array,
         basis_matrix_array,
-        field_array,
-    ) = process_field_file(path_to_esp)
-    transformed_field_array = transform_field(
-        field_array, center_array, basis_matrix_array
-        )
-    tip_to_tail_vectors = generate_tip_tail_vectors(
-        transformed_field_array.copy(), sample_density_array, volume_box_array
-    )
+        esp_array,
+    ) = process_field_file(path_to_esp, type='esp')
+
+    # ESP is a scalar field, so no need to transform or generate vectors
     generate_bild_file(
-        tip_to_tail_vectors, transformed_field_array, cutoff, sparsify_factor, bild_path, path_to_efield
+        None, 
+        esp_array, 
+        cutoff, 
+        sparsify_factor, 
+        bild_path, 
+        path_to_esp
     )
     return "Bild file saved for {}".format(name)
 
@@ -101,9 +102,9 @@ def visualize_field(path_to_pdb, path_to_efield, outputpath, options, display=Fa
     return "Bild file saved for {}".format(name)
 
 
-def process_field_file(file_path):
+def process_field_file(file_path, type='field'):
     """
-    This function processes all data from the field file
+    This function processes all data from the field/esp file
     Inputs:
         file_path: Path to the field file
     Outputs:
@@ -119,6 +120,7 @@ def process_field_file(file_path):
     center = []
     basis_matrix = []
     field = []
+    esp = []
 
     # Read the file
     reading_basis_matrix = False
@@ -154,48 +156,64 @@ def process_field_file(file_path):
                     reading_basis_matrix = False
             elif not line.startswith("#"):
                 try:
-                    field.append([float(x) for x in line.split()])
+                    if type == 'field':
+                        field.append([float(x) for x in line.split()])
+                    elif type == 'esp':
+                        esp.append([float(x) for x in line.split()])
                 except:
                     raise ValueError(
-                        f"Field line not formatted correctly; field list of length {len(field)}"
+                        f"Field/esp line not formatted correctly; field/esp list of length {len(field)}"
                     )
     if not sample_density:
         warnings.warn("Sample density not found, ignoring for checking")
-    if not field:
-        raise ValueError("No field data found at all, exiting...")
+    if not field and not esp:
+        raise ValueError("No field/esp data found at all, exiting...")
     if not center or not basis_matrix:
         warnings.warn(
             "Center or basis matrix not found, no transformation will be made"
         )
     if sample_density:
-        check_field(np.array(field), np.array(sample_density))
+        if type == 'field':
+            check_field(np.array(field), np.array(sample_density), type)
+        elif type == 'esp':
+            check_field(np.array(esp), np.array(sample_density), type)
     # print(np.array(basis_matrix))
-    return (
-        np.array(sample_density),
-        np.array(volume_box),
-        np.array(center),
-        np.array(basis_matrix),
-        np.array(field),
-    )
+    if type == 'field':
+        return (
+            np.array(sample_density),
+            np.array(volume_box),
+            np.array(center),
+            np.array(basis_matrix),
+            np.array(field),
+        )
+    elif type == 'esp':
+        return (
+            np.array(sample_density),
+            np.array(volume_box),
+            np.array(center),
+            np.array(basis_matrix),
+            np.array(esp),
+        )
 
 
-def check_field(field_array, sample_density_array):
+def check_field(elec_array, sample_density_array, type='field'):
     """
     This function checks if the field provided matches the sample density
     Inputs:
-        field_array: Field array
+        elec_array: Field/esp array
         sample_density_array: Sample density array
+        type: Type of field, either 'field' or 'esp'
     Outputs:
         None
     """
     # print(sample_density_array)
     # print(field_array.shape)
-    if field_array.shape[0] != np.product(sample_density_array, axis=0):
+    if elec_array.shape[0] != np.product(sample_density_array, axis=0):
         raise ValueError(
-            f"Field provided does not match sample density, field of shape {field_array.shape[0]} does not match expected sample amount of {np.product(sample_density_array, axis=0)}"
+            f"{type} provided does not match sample density, {type} of shape {elec_array.shape[0]} does not match expected sample amount of {np.product(sample_density_array, axis=0)}"
         )
     else:
-        print("Field matches sample density, check passed, continuing...")
+        print(f"{type} matches sample density, check passed, continuing...")
 
 
 def transform_field(field_array, center_array, basis_matrix_array):

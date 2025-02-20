@@ -23,7 +23,7 @@ def write_field_to_file(grid_points, field_points, filename):
         np.savetxt(f, data, fmt=format_str)
 
 
-def save_numpy_as_dat(meta_data, field, name):
+def save_numpy_as_dat(meta_data, volume, name):
     """
     Saves np array in original format from cpet output
     Takes:
@@ -65,10 +65,9 @@ def save_numpy_as_dat(meta_data, field, name):
     field = np.concatenate((transformed_field_coords, transformed_field_vecs), axis=1)
     """
 
-    # write as
     np.savetxt(
         name,
-        field,
+        volume,
         fmt="%.3f",
     )
 

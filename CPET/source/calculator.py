@@ -143,8 +143,7 @@ class calculator:
                 print(options["center"]["atoms"])
                 centering_atoms = [
                     (k, v)
-                    for atom_dict in options["center"]["atoms"]
-                    for k, v in atom_dict.items()
+                    for k, v in options["center"]["atoms"].items()
                 ]
                 print("centering atoms for center: ", centering_atoms)
                 atom_set = set(centering_atoms)
@@ -195,8 +194,7 @@ class calculator:
             else:
                 centering_atoms = [
                     (k, v)
-                    for atom_dict in options["x"]["atoms"]
-                    for k, v in atom_dict.items()
+                    for k, v in options["x"]["atoms"].items()
                 ]
                 print("centering atoms for x: ", centering_atoms)
                 atom_set = set(centering_atoms)
@@ -243,10 +241,21 @@ class calculator:
                     == atom_res
                 ]
             else:
+                """
+                Centering json structure:
+                "center": {
+                    "method": "mean",
+                    "atoms": {
+                        "C7": 378,
+                        "O9": 378
+                    }
+                },
+                --> centering_atoms = [("C7", 378), ("O9", 378)]
+                """
+                #Obtain the atom name and residue number for each list of atoms, in above format
                 centering_atoms = [
                     (k, v)
-                    for atom_dict in options["y"]["atoms"]
-                    for k, v in atom_dict.items()
+                    for k, v in options["y"]["atoms"].items()
                 ]
                 print("centering atoms for y: ", centering_atoms)
                 atom_set = set(centering_atoms)
@@ -684,7 +693,7 @@ class calculator:
         print("Transformation matrix: {}".format(self.transformation_matrix))
         print("Center: {}".format(self.center))
         field_box = compute_ESP_on_grid(self.mesh, self.x, self.Q)
-        return field_box
+        return field_box, self.mesh.shape
 
     def compute_point_mag(self):
         print("... > Computing Point Magnitude!")
