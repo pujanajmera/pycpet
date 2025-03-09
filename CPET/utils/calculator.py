@@ -621,7 +621,7 @@ def Inside_Box(local_point, dimensions):
 
 def make_histograms(topo_files, plot=False):
     histograms = []
-    """
+    
     # First pass: Calculate total number of data points
     len_list = np.zeros(len(topo_files), dtype=int)
     start_time = time.time()
@@ -701,13 +701,6 @@ def make_histograms(topo_files, plot=False):
     print(f"Min distance: {min_distance}")
     print(f"Max curvature: {max_curvature}")
     print(f"Min curvature: {min_curvature}")
-    """
-    distance_binres = 0.032748
-    curv_binres = 0.014065
-    max_distance = 3.072607
-    min_distance = 0.01
-    max_curvature = 83.996368
-    min_curvature = 0.00057532
 
     # Calculate number of bins
     distance_nbins = int((max_distance - min_distance) / distance_binres)
@@ -728,14 +721,11 @@ def make_histograms(topo_files, plot=False):
                 curvatures.append(float(line[1]))
 
         # Compute the 2D histogram
-        a, b, c, q = plt.hist2d(
+        a, b, c = np.histogram2d(
             distances,
             curvatures,
-            bins=(distance_nbins, curvature_nbins),
+            bins=[distance_nbins, curvature_nbins],
             range=[[min_distance, max_distance], [min_curvature, max_curvature]],
-            norm=matplotlib.colors.LogNorm(),
-            density=True,
-            cmap="jet",
         )
         del distances
         del curvatures
@@ -743,8 +733,6 @@ def make_histograms(topo_files, plot=False):
         actual = a / NormConstant
 
         histograms.append(actual.flatten())
-        if plot:
-            plt.show()
     end_time = time.time()
     print(
         f"Time taken to parse topology files into histograms: {end_time - start_time:.2f} seconds"
@@ -1167,7 +1155,7 @@ def report_inside_box(calculator_object):
 
     for i in np.where(outside_sphere)[0]:
         #Check to see if atom is in box
-        if not Inside_Box(calc_obj_copy.x[i], calc_obj_copy.dimensions):
+        if Inside_Box(calc_obj_copy.x[i], calc_obj_copy.dimensions):
             print(
                 "Atom record {}_{}_{}_{} found inside box".format(
                     calculator_object.atom_number[i],

@@ -605,10 +605,10 @@ def parse_pqr(path_to_pqr):
     return (
         np.array(x),
         np.array(Q).reshape(-1, 1),
-        ret_atom_num,
-        res_name,
-        res_num,
-        atom_type,
+        np.array(ret_atom_num),
+        np.array(res_name),
+        np.array(res_num),
+        np.array(atom_type),
     )
 
 
@@ -675,6 +675,45 @@ def parse_pdb(pdb_file_path, get_charges=False, float32=True):
         np.array(atom_type),
         np.array(chains),
     )
+
+
+def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="center"):
+    if chains is not None:
+        if type(chains) != list:
+            raise ValueError("chains must be a list")
+        if len(chains) != len(options[seltype]["atoms"].keys()):
+            raise ValueError("chains must be the same length as atoms")
+        centering_atoms = [
+            (element, options[seltype]["atoms"][element], chain)
+            for element, chain in zip(options["center"]["atoms"], chains)
+        ]
+        pos_considered = [
+            pos
+            for atom_res in centering_atoms
+            for idx, pos in enumerate(x)
+            if (
+                atom_type[idx],
+                residue_number[idx],
+                chains[idx],
+            )
+            == atom_res
+        ]
+    else:
+        print(options[seltype]["atoms"])
+        centering_atoms = [
+            (k, v)
+            for atom_dict in options[seltype]["atoms"]
+            for k, v in atom_dict.items()
+        ]
+        print(f"centering atoms for {seltype}: ", centering_atoms)
+        atom_set = set(centering_atoms)
+        pos_considered = [
+            pos
+            for (atype, rnum), pos in zip(zip(atom_type, residue_number), x)
+            if (atype, rnum) in atom_set
+        ]
+    print("pos considered for center: ", pos_considered)
+    return pos_considered
 
 
 def calculate_center(coordinates, method):

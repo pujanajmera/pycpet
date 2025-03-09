@@ -317,7 +317,7 @@ class CPET:
                     raise ValueError("No ESP file found for protein: {}".format(files_input_pdb[i].split("/")[-1]))
                 print("Generating .bild file for the protein: {}".format(files_input_pdb[i].split("/")[-1]))
                 visualize.visualize_esp(path_to_pdb = files_input_pdb[i], 
-                                path_to_efield = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_efield.dat", 
+                                path_to_esp = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_esp.dat", 
                                 outputpath = self.outputpath, 
                                 options = self.options, 
                 )

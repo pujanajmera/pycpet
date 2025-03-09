@@ -6,7 +6,6 @@ import torch
 import logging
 
 
-from CPET.utils.io import parse_pdb
 from CPET.utils.parallel import task, task_batch, task_base, task_complete_thread
 from CPET.utils.calculator import (
     initialize_box_points_random,
@@ -18,6 +17,7 @@ from CPET.utils.calculator import (
 from CPET.utils.io import (
     parse_pdb,
     parse_pqr,
+    get_atoms_for_axes,
     filter_radius,
     filter_radius_whole_residue,
     filter_residue,
@@ -119,40 +119,7 @@ class calculator:
         elif type(options["center"]) == dict:
             method = options["center"]["method"]
             chains = options["center"]["chains"] if "chains" in options["center"].keys() else None
-            if chains is not None:
-                if type(chains) != list:
-                    raise ValueError("chains must be a list")
-                if len(chains) != len(options["center"]["atoms"].keys()):
-                    raise ValueError("chains must be the same length as atoms")
-                centering_atoms = [
-                    (element, options["center"]["atoms"][element], chain)
-                    for element, chain in zip(options["center"]["atoms"], chains)
-                ]
-                pos_considered = [
-                    pos
-                    for atom_res in centering_atoms
-                    for idx, pos in enumerate(self.x)
-                    if (
-                        self.atom_type[idx],
-                        self.residue_number[idx],
-                        self.chains[idx],
-                    )
-                    == atom_res
-                ]
-            else:
-                print(options["center"]["atoms"])
-                centering_atoms = [
-                    (k, v)
-                    for k, v in options["center"]["atoms"].items()
-                ]
-                print("centering atoms for center: ", centering_atoms)
-                atom_set = set(centering_atoms)
-                pos_considered = [
-                    pos
-                    for (atype, rnum), pos in zip(zip(self.atom_type, self.residue_number), self.x)
-                    if (atype, rnum) in atom_set
-                ]
-            print("pos considered for center: ", pos_considered)
+            pos_considered = get_atoms_for_axes(self.x, self.atom_type, self.residue_number, chains, options, seltype="center")
             self.center = calculate_center(pos_considered, method=method)
         else:
             raise ValueError("center must be a list or dict")
@@ -171,39 +138,7 @@ class calculator:
         elif type(options["x"]) == dict:
             method = options["x"]["method"]
             chains = options["x"]["chains"] if "chains" in options["x"].keys() else None
-            if chains is not None:
-                if type(chains) != list:
-                    raise ValueError("chains must be a list")
-                if len(chains) != len(options["x"]["atoms"].keys()):
-                    raise ValueError("chains must be the same length as atoms")
-                centering_atoms = [
-                    (element, options["x"]["atoms"][element], chain)
-                    for element, chain in zip(options["x"]["atoms"], chains)
-                ]
-                pos_considered = [
-                    pos
-                    for atom_res in centering_atoms
-                    for idx, pos in enumerate(self.x)
-                    if (
-                        self.atom_type[idx],
-                        self.residue_number[idx],
-                        self.chains[idx],
-                    )
-                    == atom_res
-                ]
-            else:
-                centering_atoms = [
-                    (k, v)
-                    for k, v in options["x"]["atoms"].items()
-                ]
-                print("centering atoms for x: ", centering_atoms)
-                atom_set = set(centering_atoms)
-                pos_considered = [
-                    pos
-                    for (atype, rnum), pos in zip(zip(self.atom_type, self.residue_number), self.x)
-                    if (atype, rnum) in atom_set
-                ]
-            print("pos considered for x: ", pos_considered)
+            pos_considered = get_atoms_for_axes(self.x, self.atom_type, self.residue_number, chains, options, seltype="x")
             self.x_vec_pt = calculate_center(pos_considered, method=method)
             compute_y = True
         else:
@@ -220,51 +155,7 @@ class calculator:
         elif type(options["y"]) == dict:
             method = options["y"]["method"]
             chains = options["y"]["chains"] if "chains" in options["y"].keys() else None
-            if chains is not None:
-                if type(chains) != list:
-                    raise ValueError("chains must be a list")
-                if len(chains) != len(options["y"]["atoms"].keys()):
-                    raise ValueError("chains must be the same length as atoms")
-                centering_atoms = [
-                    (element, options["y"]["atoms"][element], chain)
-                    for element, chain in zip(options["y"]["atoms"], chains)
-                ]
-                pos_considered = [
-                    pos
-                    for atom_res in centering_atoms
-                    for idx, pos in enumerate(self.x)
-                    if (
-                        self.atom_type[idx],
-                        self.residue_number[idx],
-                        self.chains[idx],
-                    )
-                    == atom_res
-                ]
-            else:
-                """
-                Centering json structure:
-                "center": {
-                    "method": "mean",
-                    "atoms": {
-                        "C7": 378,
-                        "O9": 378
-                    }
-                },
-                --> centering_atoms = [("C7", 378), ("O9", 378)]
-                """
-                #Obtain the atom name and residue number for each list of atoms, in above format
-                centering_atoms = [
-                    (k, v)
-                    for k, v in options["y"]["atoms"].items()
-                ]
-                print("centering atoms for y: ", centering_atoms)
-                atom_set = set(centering_atoms)
-                pos_considered = [
-                    pos
-                    for (atype, rnum), pos in zip(zip(self.atom_type, self.residue_number), self.x)
-                    if (atype, rnum) in atom_set
-                ]
-            print("pos considered for y: ", pos_considered)
+            pos_considered = get_atoms_for_axes(self.x, self.atom_type, self.residue_number, chains, options, seltype="y")
             self.y_vec_pt = calculate_center(pos_considered, method=method)
         else:
             raise ValueError("Since you have provided x, y must be a list or dict")

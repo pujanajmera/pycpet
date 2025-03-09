@@ -47,9 +47,15 @@ def visualize_esp(path_to_pdb, path_to_esp, outputpath, options):
         esp_array,
     ) = process_field_file(path_to_esp, type='esp')
 
-    # ESP is a scalar field, so no need to transform or generate vectors
-    generate_bild_file(
-        None, 
+    esp_array = transform_esp(esp_array, center_array, basis_matrix_array)
+
+    esp_radii = generate_radii(esp_array.copy(), 
+                               sample_density_array, 
+                               volume_box_array)
+
+    # ESP is a scalar field, so no need to transform or generate vectors, represent as spheres
+    generate_bild_file_esp(
+        esp_radii, 
         esp_array, 
         cutoff, 
         sparsify_factor, 
@@ -239,6 +245,26 @@ def transform_field(field_array, center_array, basis_matrix_array):
     return transformed_field_array
 
 
+def transform_esp(esp_array, center_array, basis_matrix_array):
+    """
+    This function transforms the ESP array to the new basis and new center
+    Inputs:
+        esp_array: ESP array
+        center_array: Center array
+        basis_matrix_array: Basis matrix array
+    Outputs:
+        transformed_esp_array: Transformed ESP array
+    """
+    esp_coords = esp_array[:, 0:3]
+    # Need to transform and recenter field coords, but only transform field vecs
+    transformed_esp_coords = esp_coords @ basis_matrix_array.T
+    transformed_esp_coords = transformed_esp_coords + center_array
+    transformed_esp_array = np.concatenate(
+        (transformed_esp_coords, np.array(esp_array[:, 3]).reshape(-1, 1)), axis=1
+    )
+    return transformed_esp_array
+
+
 def generate_tip_tail_vectors(field_array, sample_density_array, volume_box_array):
     """
     This function generates the tip and tail vectors for the field
@@ -271,6 +297,28 @@ def generate_tip_tail_vectors(field_array, sample_density_array, volume_box_arra
     tip_to_tail_vectors = np.concatenate((tail_vecs, tip_vecs), axis=1)
 
     return tip_to_tail_vectors
+
+
+def generate_radii(esp_array, sample_density_array, volume_box_array):
+    """
+    This function generates the radii for the ESP field
+    Inputs:
+        esp_array: ESP array of shape (N,4) (x,y,z,esp)
+        sample_density_array: Sample density array
+        volume_box_array: Volume box array
+    Outputs:
+        radii: Radii for each point of the ESP field
+    """
+    print(sample_density_array, volume_box_array)
+
+    #Normalize esp_array (only esp values)
+    zero_min_esps = np.abs(esp_array[:,3])-np.min(esp_array[:,3])
+    esps_norm = zero_min_esps/np.max(zero_min_esps)
+
+    #Generate radii based on grid and esp values
+    radii = 0.5 * np.min(2 * volume_box_array / sample_density_array) * np.abs(esps_norm)
+
+    return radii
 
 
 def fac(num, f):
@@ -495,7 +543,7 @@ def generate_bild_file(
 
     with open(f"{output}.bild", "w") as bild:
         bild.write(".transparency 0.25\n")
-        # for i in range(tip_to_tail_vectors.shape[0]):
+
         for i in range(len(tip_to_tail_vectors)):
             if field_mags[i] > percentile_cutoff:
                 bild.write(f".color {r[i]} {g[i]} {b[i][0]}\n")
@@ -503,3 +551,49 @@ def generate_bild_file(
                     f".arrow {tip_to_tail_vectors[i, 0]} {tip_to_tail_vectors[i, 1]} {tip_to_tail_vectors[i, 2]} {tip_to_tail_vectors[i, 3]} {tip_to_tail_vectors[i, 4]} {tip_to_tail_vectors[i, 5]} 0.01 {0.04*field_mags[i]*sparsify_factor*2.5*min(dim1,dim2,dim3)} 0.001\n"
                 )
     bild.close()
+
+
+def generate_bild_file_esp(
+    radii, esp_array, percentile, sparsify_factor, output, file_path
+):
+    """
+    This function generates the BILD file for the ESP field
+    Inputs:
+        radii: Radii for the ESP field
+        esp_array: ESP array
+        percentile: Percentile cutoff for sparsifying the field
+        sparsify_factor: Sparsification factor for the field
+    Outputs:
+        None
+    """
+
+    esp_array_mags = np.abs(esp_array[:, 3])
+    percentile_cutoff = np.percentile(esp_array_mags, percentile)
+
+    """
+    Make red positive and blue negative.
+    For positive esp values, values range from (0,0,0) to (1,0,0)
+    For negative esp values, values range from (0,0,0) to (0,0,1)
+    (0,0,0) is for esp values of 0
+    (1,0,0) is for the most positive esp value
+    (0,0,1) is for the most negative esp value
+    """
+
+    r = np.zeros((len(esp_array), 1))
+    g = np.zeros((len(esp_array), 1))
+    b = np.zeros((len(esp_array), 1))
+
+    for i in range(len(esp_array)):
+        if esp_array[i, 3] > 0:
+            r[i] = esp_array[i, 3] / np.max(esp_array[:, 3])
+        elif esp_array[i, 3] < 0:
+            b[i] = esp_array[i, 3] / np.min(esp_array[:,3])
+    
+    with open(f"{output}.bild", "w") as bild:
+        bild.write(".transparency 0.25\n")
+        for i in range(len(esp_array)):
+            if esp_array_mags[i] > percentile_cutoff:
+                bild.write(f".color {r[i][0]} {g[i][0]} {b[i][0]}\n")
+                bild.write(
+                    f".sphere {esp_array[i, 0]} {esp_array[i, 1]} {esp_array[i, 2]} {radii[i]}\n"
+                )

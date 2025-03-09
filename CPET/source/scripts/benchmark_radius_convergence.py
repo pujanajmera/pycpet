@@ -31,8 +31,8 @@ def main():
     if "benchmark_radii" in options:
         benchmark_radii = options["benchmark_radii"]
     else:
-        print("No benchmark radii specified, using default values: [None,50,40,30,20]")
-        benchmark_radii = [None,50,40,30,20]
+        print("No benchmark radii specified, using default values: [None,70,60,50,40,30,20]")
+        benchmark_radii = [None,70,60,50,40,30,20,10]
 
     for radius in benchmark_radii:
         print(f"Running for radius: {radius}")

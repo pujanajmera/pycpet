@@ -8,7 +8,8 @@ Ajmera, P., Vargas, S., Chaturvedi, S., Hennefarth, M. & Alexandrova, A. PyCPET 
 
 ## Requirements and Installation
 System requirements:
-- gcc (if you want to optimize speed)
+- gcc (to compile C-shared libraries)
+- anaconda (preferred, not required)
 
 Follow these steps to install PyCPET
 
@@ -20,6 +21,8 @@ git clone https://github.com/pujanajmera/CPET-python.git
 
 conda env create -f CPET_ENV.yml -p PATH_TO_ENVIRONMENT_LOCATION
 
+If you do not create the environment/this environment file doesn't work for you, you will have to install the required python packages yourself (see CPET_ENV.yml)
+
 3. In the current directory, do the following (if you are using CPET_ENV, make sure to be in 
 the environment when running this step):
 
@@ -29,8 +32,9 @@ pip install .
 
 From here, the executable cpet.py will be available in your path (or in your environment if using conda)
 
-4. To compile the C math modules, head over to CPET/utils and run:
+4. To compile the C math modules, go to CPET/utils and run:
 
+cd CPET/utils
 gcc -fopenmp math_module.c -o math_module.so -shared -fPIC -O3 -march=native -funroll-loops -ffast-math
 
 5. When running, we advise you set the following:
@@ -61,8 +65,15 @@ These are the following available features, and their corresponding options file
 
 Several examples are in the ```examples``` directory. Most of these are designed for single calculations, but can be extended to high-throughput with almost no changes.
 
+## Specialized Scripts
 
-## Formatting
+For features unavailable from the cpet.py script mentioned above, we offer scripts in ```source/scripts``` for the following. Please note that these are not rigorously tested for all cases, but showcase the scripting ability of the pycpet library:
+
+- residue_breakdown_analysis.py: Residue contribution to topology over dynamics, ranked. Requires completed topology calculations for an MD
+- tensor_based_cluster_double.py: Electrostatic potential/electric field-based clustering for two sets of electric fields/electrostatic potentials. Assumes that all field calculations have been completed for both sets of directories.
+
+
+## Formatting of PDB/PQR files
 
 Most of the code here requires well-formated PDB or PQR files. The formatting is as follows (see io.py for more details):
 
