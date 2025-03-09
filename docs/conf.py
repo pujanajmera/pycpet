@@ -29,6 +29,7 @@ author = 'Pujan Ajmera, Santiago Vargas, Matthew Hennefarth, Alexandrova Group'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx_book_theme',
     'sphinx.ext.autodoc',	     # To generate autodocs
     'sphinx.ext.mathjax',           # autodoc with maths
     'sphinx.ext.napoleon'           # For auto-doc configuration
