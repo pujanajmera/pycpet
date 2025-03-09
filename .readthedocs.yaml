@@ -35,4 +35,5 @@ sphinx:
 #     - requirements: docs/requirements.txt
 
 dependencies:
-  - sphinx_book_theme
+  - pip:
+    - sphinx_book_theme
