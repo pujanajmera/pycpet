@@ -1,6 +1,6 @@
 {
         "CPET_method": "volume",
-        "inputpath": "./pdb",
+        "inputpath": "../1A_point-field/pdb",
         "center": {
                 "method": "mean",
                 "atoms": {
