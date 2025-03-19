@@ -180,6 +180,9 @@ def default_options_initializer(options):
     if "concur_slip" not in options.keys():
         options["concur_slip"] = 4
 
+    if "initializer" not in options.keys():
+        options["initializer"] = "uniform"
+
     if "dtype" not in options.keys():
         options["dtype"] = "float32"
 

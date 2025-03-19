@@ -3,22 +3,22 @@
         "inputpath": "../1A_point-field/pdb",
         "center": {
                 "method": "mean",
-                "atoms": {
-                        "C7": 378,
-                        "O9": 378
-                }
+                "atoms": [
+                        {"C7": 378},
+                        {"O9": 378}
+                ]
         },
         "x": {
                 "method": "first",
-                "atoms": {
-                        "O9": 378
-                }
+                "atoms": [
+                        {"O9": 378}
+                ]
         },
         "y": {
                 "method": "first",
-                "atoms": {
-                        "N8": 378
-                }
+                "atoms": [
+                        {"N8": 378}
+                ]
         },
         "filter_resnum_andname": [
                 {"378":"CF1"}

@@ -30,9 +30,16 @@ def visualize_esp(path_to_pdb, path_to_esp, outputpath, options):
     if "visualization" in options.keys():
         cutoff = options["visualization"]["cutoff"] if "cutoff" in options["visualization"] else 0
         sparsify_factor = options["visualization"]["sparsify_factor"] if "sparsify_factor" in options["visualization"] else 1
+
     else:
         cutoff = 0
         sparsify_factor = 1
+
+    max_p_esp = options["max_p_esp"] if "max_p_esp" in options else None
+    min_p_esp = options["min_p_esp"] if "min_p_esp" in options else None
+    max_n_esp = options["max_n_esp"] if "max_n_esp" in options else None
+    min_n_esp = options["min_n_esp"] if "min_n_esp" in options else None
+    
 
     name = path_to_pdb.split("/")[-1].split(".")[0]
 
@@ -58,9 +65,11 @@ def visualize_esp(path_to_pdb, path_to_esp, outputpath, options):
         esp_radii, 
         esp_array, 
         cutoff, 
-        sparsify_factor, 
-        bild_path, 
-        path_to_esp
+        max_p_esp, 
+        min_p_esp,
+        max_n_esp,
+        min_n_esp,
+        bild_path
     )
     return "Bild file saved for {}".format(name)
 
@@ -430,7 +439,7 @@ def scale_tip_to_tail_vectors(
     for i in range(len(tip_to_tail_vectors)):
 
         # use field mag as scaling factor
-        m = 5 * sparsify_factor * field_mags[i] * min_dim
+        m = 1.0 * sparsify_factor * field_mags[i] * min_dim
 
         xA = tip_to_tail_vectors[i][0]
         yA = tip_to_tail_vectors[i][1]
@@ -510,6 +519,10 @@ def generate_bild_file(
     # field_mags_max = 0.10
     # field_mags_min = 0.001
     field_mags_min = np.min(field_mags)
+
+    print("Max field magnitude: ", field_mags_max)
+    print("Min field magnitude: ", field_mags_min)
+
     field_mags = (field_mags - field_mags_min) / field_mags_max
     percentile_cutoff = np.percentile(field_mags, percentile)
     r = sparsify_vec_field(
@@ -554,7 +567,14 @@ def generate_bild_file(
 
 
 def generate_bild_file_esp(
-    radii, esp_array, percentile, sparsify_factor, output, file_path
+    radii, 
+    esp_array, 
+    percentile, 
+    max_p_esp, 
+    min_p_esp,
+    max_n_esp,
+    min_n_esp, 
+    output
 ):
     """
     This function generates the BILD file for the ESP field
@@ -579,15 +599,44 @@ def generate_bild_file_esp(
     (0,0,1) is for the most negative esp value
     """
 
-    r = np.zeros((len(esp_array), 1))
-    g = np.zeros((len(esp_array), 1))
-    b = np.zeros((len(esp_array), 1))
+
+    #Max p esp is highest magnitude positive esp, min p esp is lowest magnitude positive esp
+    #Max n esp is highest magnitude negative esp, min n esp is lowest magnitude negative esp
+
+    max_p_esp = max_p_esp
+    min_p_esp = min_p_esp
+    max_n_esp = max_n_esp
+    min_n_esp = min_n_esp
+    esp_temp_positive = esp_array[esp_array[:, 3] > 0]
+    esp_temp_negative = esp_array[esp_array[:, 3] < 0]
+    if max_p_esp == None:
+        #Make max_p_esp None if esp_temp_positive is empty
+        max_p_esp = np.max(esp_temp_positive[:, 3]) if len(esp_temp_positive) > 0 else None
+    if min_p_esp == None:
+        min_p_esp = np.min(esp_temp_positive[:, 3]) if len(esp_temp_positive) > 0 else None
+    if max_n_esp == None:
+        max_n_esp = np.max(esp_temp_negative[:, 3]) if len(esp_temp_negative) > 0 else None
+    if min_n_esp == None:
+        min_n_esp = np.min(esp_temp_negative[:, 3]) if len(esp_temp_negative) > 0 else None
+
+    print(f"Max P ESP: {max_p_esp}, Min P ESP: {min_p_esp}")
+    print(f"Max N ESP: {max_n_esp}, Min N ESP: {min_n_esp}")
+
+    r = np.ones((len(esp_array), 1))
+    g = np.ones((len(esp_array), 1))
+    b = np.ones((len(esp_array), 1))
 
     for i in range(len(esp_array)):
         if esp_array[i, 3] > 0:
-            r[i] = esp_array[i, 3] / np.max(esp_array[:, 3])
+            g[i] = 1 - (esp_array[i, 3]-min_p_esp) / (max_p_esp-min_p_esp)
+            b[i] = 1 - (esp_array[i, 3]-min_p_esp) / (max_p_esp-min_p_esp)
         elif esp_array[i, 3] < 0:
-            b[i] = esp_array[i, 3] / np.min(esp_array[:,3])
+            g[i] = 1 - (esp_array[i, 3]-min_p_esp) / (max_p_esp-min_p_esp)
+            r[i] = 1 - (esp_array[i, 3]-max_n_esp) / (min_n_esp-max_n_esp)
+        else:
+            r[i] = 1
+            g[i] = 1
+            b[i] = 1
     
     with open(f"{output}.bild", "w") as bild:
         bild.write(".transparency 0.25\n")

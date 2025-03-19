@@ -3,10 +3,10 @@
         "inputpath": "./pdb",
         "center": {
                 "method": "mean",
-                "atoms": {
-                        "C7": 378,
-                        "O9": 378
-                }
+                "atoms": [
+                        {"C7": 378},
+                        {"O9": 378}
+                ]
         },
         "filter_resnum_andname": [
                 {"378":"CF1"}
