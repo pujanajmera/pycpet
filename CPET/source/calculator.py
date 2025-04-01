@@ -49,11 +49,22 @@ class calculator:
 
         self.profile = options["profile"]
         self.path_to_pdb = path_to_pdb
+
+        """
+        Options regarding the electric field calculation.
+        Note: step_size is used for both field calculations (the density of the field grid)
+        and the topology calculations (the step size of the stremalines), but always has the same
+        units and represents accuracy
+        """
         self.step_size = options["step_size"] if "step_size" in options.keys() else None
-        self.n_samples = options["n_samples"] if "n_samples" in options.keys() else None
         self.dimensions = (
             np.array(options["dimensions"]) if "dimensions" in options.keys() else None
         )
+
+        """
+        Options regarding streamline distribution calculations
+        """
+        self.n_samples = options["n_samples"] if "n_samples" in options.keys() else None
         self.concur_slip = options["concur_slip"]
         self.GPU_batch_freq = options["GPU_batch_freq"]
         self.dtype = options["dtype"]
@@ -62,9 +73,18 @@ class calculator:
             if "max_streamline_init" in options.keys()
             else "true_rand"
         )
+
+        """
+        Options regarding test outputs, for debugging and/or visualization
+        """
         self.write_transformed_pdb = (
             options["write_transformed_pdb"]
             if "write_transformed_pdb" in options.keys()
+            else False
+        )
+        self.strip_filter = (
+            options["strip_filter"]
+            if "strip_filter" in options.keys()
             else False
         )
 
@@ -111,15 +131,14 @@ class calculator:
             ]
 
         print(self.chains)
-        ##################### define center axis
+        ##################### define center
 
         if type(options["center"]) == list:
             self.center = np.array(options["center"])
 
         elif type(options["center"]) == dict:
             method = options["center"]["method"]
-            chains = options["center"]["chains"] if "chains" in options["center"].keys() else None
-            pos_considered = get_atoms_for_axes(self.x, self.atom_type, self.residue_number, chains, options, seltype="center")
+            pos_considered = get_atoms_for_axes(self.x, self.atom_type, self.residue_number, self.chains, options, seltype="center")
             self.center = calculate_center(pos_considered, method=method)
         else:
             raise ValueError("center must be a list or dict")
@@ -137,8 +156,7 @@ class calculator:
             compute_y = True
         elif type(options["x"]) == dict:
             method = options["x"]["method"]
-            chains = options["x"]["chains"] if "chains" in options["x"].keys() else None
-            pos_considered = get_atoms_for_axes(self.x, self.atom_type, self.residue_number, chains, options, seltype="x")
+            pos_considered = get_atoms_for_axes(self.x, self.atom_type, self.residue_number, self.chains, options, seltype="x")
             self.x_vec_pt = calculate_center(pos_considered, method=method)
             compute_y = True
         else:
@@ -154,18 +172,16 @@ class calculator:
 
         elif type(options["y"]) == dict:
             method = options["y"]["method"]
-            chains = options["y"]["chains"] if "chains" in options["y"].keys() else None
-            pos_considered = get_atoms_for_axes(self.x, self.atom_type, self.residue_number, chains, options, seltype="y")
+            pos_considered = get_atoms_for_axes(self.x, self.atom_type, self.residue_number, self.chains, options, seltype="y")
             self.y_vec_pt = calculate_center(pos_considered, method=method)
         else:
             raise ValueError("Since you have provided x, y must be a list or dict")
 
-        if self.write_transformed_pdb == True:
-            self.x_copy = self.x
-            self.residue_number_copy = self.residue_number
-            self.resids_copy = self.resids
-            self.atom_number_copy = self.atom_number
-            self.atom_type_copy = self.atom_type
+        self.x_copy = self.x
+        self.residue_number_copy = self.residue_number
+        self.resids_copy = self.resids
+        self.atom_number_copy = self.atom_number
+        self.atom_type_copy = self.atom_type
         
 
         # Any sort of filtering related to atom identity information
@@ -175,55 +191,66 @@ class calculator:
                 self.x, self.Q, self.ID, options["filter_IDs"]
             )
 
-        # Any sort of filtering related to radius information
+            if hasattr(self, "chains"):
+                self.atom_number = [self.ID[i][0] for i in range(len(self.x))]
+                self.atom_type = [self.ID[i][1] for i in range(len(self.x))]
+                self.resids = [self.ID[i][2] for i in range(len(self.x))]
+                self.residue_number = [self.ID[i][3] for i in range(len(self.x))]
+                self.chains = [self.ID[i][4] for i in range(len(self.x))]
+            else:
+                self.atom_number = [self.ID[i][0] for i in range(len(self.x))]
+                self.atom_type = [self.ID[i][1] for i in range(len(self.x))]
+                self.resids = [self.ID[i][2] for i in range(len(self.x))]
+                self.residue_number = [self.ID[i][3] for i in range(len(self.x))]
 
-        if "filter_resids" in options.keys():
-            # print("filtering residues: {}".format(options["filter_resids"]))
-            (
-                self.x, 
-                self.Q, 
-                self.residue_number, 
-                self.resids, 
-                self.atom_number, 
-                self.atom_type
-            ) = filter_residue(
-                self.x,
-                self.Q,
-                self.residue_number,
-                self.resids,
-                self.atom_number,
-                self.atom_type,
-                filter_list=options["filter_resids"],
-            )
+        else:
+            if "filter_resids" in options.keys():
+                # print("filtering residues: {}".format(options["filter_resids"]))
+                (
+                    self.x, 
+                    self.Q, 
+                    self.residue_number, 
+                    self.resids, 
+                    self.atom_number, 
+                    self.atom_type
+                ) = filter_residue(
+                    self.x,
+                    self.Q,
+                    self.residue_number,
+                    self.resids,
+                    self.atom_number,
+                    self.atom_type,
+                    filter_list=options["filter_resids"],
+                )
 
-        if "filter_resnum" in options.keys():
-            # print("filtering residues: {}".format(options["filter_resids"]))
-            self.x, self.Q, self.residue_number, self.resids = filter_resnum(
-                self.x,
-                self.Q,
-                self.residue_number,
-                self.resids,
-                filter_list=options["filter_resnum"],
-            )
+            if "filter_resnum" in options.keys():
+                # print("filtering residues: {}".format(options["filter_resids"]))
+                self.x, self.Q, self.residue_number, self.resids = filter_resnum(
+                    self.x,
+                    self.Q,
+                    self.residue_number,
+                    self.resids,
+                    filter_list=options["filter_resnum"],
+                )
 
-        if "filter_resnum_andname" in options.keys():
-            # print("filtering residues: {}".format(options["filter_resids"]))
-            (
-                self.x,
-                self.Q,
-                self.residue_number,
-                self.resids,
-                self.atom_number,
-                self.atom_type,
-            ) = filter_resnum_andname(
-                self.x,
-                self.Q,
-                self.residue_number,
-                self.resids,
-                self.atom_number,
-                self.atom_type,
-                filter_list=options["filter_resnum_andname"],
-            )
+            if "filter_resnum_andname" in options.keys():
+                # print("filtering residues: {}".format(options["filter_resids"]))
+                (
+                    self.x,
+                    self.Q,
+                    self.residue_number,
+                    self.resids,
+                    self.atom_number,
+                    self.atom_type,
+                ) = filter_resnum_andname(
+                    self.x,
+                    self.Q,
+                    self.residue_number,
+                    self.resids,
+                    self.atom_number,
+                    self.atom_type,
+                    filter_list=options["filter_resnum_andname"],
+                )
 
         if "filter_radius" in options.keys():
             print("filtering by radius: {} Ang".format(options["filter_radius"]))
@@ -354,16 +381,24 @@ class calculator:
         self.atom_type_copy = self.atom_type
         """
         if self.write_transformed_pdb == True:
+            print("Writing transformed pdb file, ignoring chains")
+            if self.strip_filter == True:
+                print("Stripping filtered residues for transformed pdb file")
+                self.x_copy = self.x
+                self.residue_number_copy = self.residue_number
+                self.resids_copy = self.resids
+                self.atom_number_copy = self.atom_number
+                self.atom_type_copy = self.atom_type
             self.x_copy = (self.x_copy - self.center) @ np.linalg.inv(
                 self.transformation_matrix
             )
             chain_id = "A"
             with open(f"transform_{path_to_pdb.split('/')[-1][:-4]}.pdb", "w") as f:
                 for i in range(len(self.x_copy)):
-                    atom_number = int(self.atom_number_copy[i])
+                    atom_number = int(float(self.atom_number_copy[i]))
                     atom_name = self.atom_type_copy[i]  # The atom name (like 'CA', 'O')
                     residue_name = self.resids_copy[i]  # Residue name (like 'ALA')
-                    residue_number = self.residue_number_copy[i]
+                    residue_number = int(float(self.residue_number_copy[i]))
                     x, y, z = self.x_copy[i]
 
                     # PDB format: ATOM or HETATM, atom number, atom name, residue name, chain (default 'A'),

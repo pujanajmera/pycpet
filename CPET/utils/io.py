@@ -681,15 +681,20 @@ def parse_pdb(pdb_file_path, get_charges=False, float32=True):
 
 
 def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="center"):
-    if chains is not None:
-        if type(chains) != list:
+    if options[seltype]["chains"] is not None:
+        if type(options[seltype]["chains"]) != list:
             raise ValueError("chains must be a list")
-        if len(chains) != len(options[seltype]["atoms"].keys()):
+        if len(options[seltype]["chains"]) != len(options[seltype]["atoms"]):
             raise ValueError("chains must be the same length as atoms")
         centering_atoms = [
-            (element, options[seltype]["atoms"][element], chain)
-            for element, chain in zip(options["center"]["atoms"], chains)
+            (k, v, chain)
+            for atom_dict, chain in zip(options[seltype]["atoms"], options[seltype]["chains"])
+            for k, v in atom_dict.items()
         ]
+        print(len(chains))
+        print(len(atom_type))
+        print(len(residue_number))
+        print(len(x))
         pos_considered = [
             pos
             for atom_res in centering_atoms
