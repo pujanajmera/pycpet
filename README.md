@@ -26,9 +26,7 @@ If you do not create the environment/this environment file doesn't work for you,
 3. In the current directory, do the following (if you are using CPET_ENV, make sure to be in 
 the environment when running this step):
 
-pip install .
-
-(Developer version) pip install -e .
+pip install -e .
 
 From here, the executable cpet.py will be available in your path (or in your environment if using conda)
 

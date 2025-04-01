@@ -681,7 +681,7 @@ def parse_pdb(pdb_file_path, get_charges=False, float32=True):
 
 
 def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="center"):
-    if options[seltype]["chains"] is not None:
+    if "chains" in options[seltype].keys():
         if type(options[seltype]["chains"]) != list:
             raise ValueError("chains must be a list")
         if len(options[seltype]["chains"]) != len(options[seltype]["atoms"]):
