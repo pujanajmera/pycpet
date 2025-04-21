@@ -7,6 +7,11 @@ for example in $(ls -d */); do
     if ! cpet.py -o options/options.json > cpet.out; then
         echo "Error running example: $example"
         exit 1
+    else
+        echo "Successfully ran example: $example"
+        #Remove any output files or log files
+        rm -f outdir/*.out
+        rm -f cpet.out
     fi
     cd ..
 done

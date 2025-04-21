@@ -1,9 +1,10 @@
+print("Importing...")
 from CPET.source.CPET import CPET
+print("Importing done!")
 import json
 import os
 import argparse
 import logging
-
 
 
 def main():

@@ -121,6 +121,27 @@ class Math_ops:
             self.array_1d_float,
         ]
 
+        self.math.compute_batched_field.restype = None
+        self.math.compute_batched_field.argtypes = [
+            ctypes.c_int,  # total_points
+            ctypes.c_int,  # batch_size
+            ctypes.c_int,  # n_charges
+            self.array_2d_float,  # x_0
+            self.array_2d_float,  # x
+            self.array_1d_float,  # Q
+            self.array_2d_float,  # E
+        ]
+
+        self.math.compute_looped_field.restype = None
+        self.math.compute_looped_field.argtypes = [
+            ctypes.c_int,  # total_points
+            ctypes.c_int,  # n_charges
+            self.array_2d_float,  # x_0
+            self.array_2d_float,  # x
+            self.array_1d_float,  # Q
+            self.array_2d_float,  # E
+        ]
+
     def sparse_dot(self, A, B):
         # b is just a single vector, not a sparse matrix
         # a is a full sparse matrix
@@ -208,6 +229,37 @@ class Math_ops:
             np.array(R, dtype="float32"),
             res,
         )
+        return res
+
+    def compute_looped_field(self, x_0, x, Q):
+        res = np.zeros_like(x_0, dtype="float32")
+        self.math.compute_looped_field.restype = None
+        Q = Q.reshape(-1)
+        self.math.compute_looped_field(
+            int(x_0.shape[0]),
+            len(Q),
+            np.array(x_0, dtype="float32"),
+            np.array(x, dtype="float32"),
+            np.array(Q, dtype="float32"),
+            res,
+        )
+
+        return res
+    
+    def compute_batch_field(self, x_0, x, Q, batch_size):
+        res = np.zeros_like(x_0, dtype="float32")
+        self.math.compute_batched_field.restype = None
+        Q = Q.reshape(-1)
+        self.math.compute_batched_field(
+            int(x_0.shape[0]),
+            batch_size,
+            len(Q),
+            np.array(x_0, dtype="float32"),
+            np.array(x, dtype="float32"),
+            np.array(Q, dtype="float32"),
+            res,
+        )
+
         return res
 
     def thread_operation(self, x_0, n_iter, x, Q, step_size, dimensions):

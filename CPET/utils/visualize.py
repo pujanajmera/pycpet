@@ -1,5 +1,4 @@
 import numpy as np
-from glob import glob
 import warnings
 import math
 # from chimerax.core.commands import run
@@ -439,7 +438,7 @@ def scale_tip_to_tail_vectors(
     for i in range(len(tip_to_tail_vectors)):
 
         # use field mag as scaling factor
-        m = 1.0 * sparsify_factor * field_mags[i] * min_dim
+        m = 4.0 * sparsify_factor * field_mags[i] * min_dim
 
         xA = tip_to_tail_vectors[i][0]
         yA = tip_to_tail_vectors[i][1]
@@ -523,7 +522,8 @@ def generate_bild_file(
     print("Max field magnitude: ", field_mags_max)
     print("Min field magnitude: ", field_mags_min)
 
-    field_mags = (field_mags - field_mags_min) / field_mags_max
+    field_mags = (field_mags - field_mags_min) / (field_mags_max-field_mags_min)
+    print(max(field_mags), min(field_mags))
     percentile_cutoff = np.percentile(field_mags, percentile)
     r = sparsify_vec_field(
         (1 - field_mags), sparsify_factor, nx, ny, nz, dim1, dim2, dim3

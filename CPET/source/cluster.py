@@ -78,6 +78,9 @@ class cluster:
         self.max_rank = (
             options["max_rank"] if "max_rank" in options else 30
         )
+        self.min_rank = (
+            options["min_rank"] if "min_rank" in options else 1
+        )
         # Make sure the provided value for n_clusters and rank is an integer, not a string
         assert self.defined_n_clusters == None or isinstance(
             self.defined_n_clusters, int
@@ -89,8 +92,8 @@ class cluster:
         method_dict = {
             "cluster": ["topo_file_list.txt","top"],
             "cluster_volume": ["field_file_list.txt","_efield.dat"],
-            "cluster_volume_tensor": ["field_file_list.txt","_efield.dat"], ##DEV
-            "cluster_volume_esp_tensor": ["esp_file_list.txt","_esp.dat"], ##DEV
+            "cluster_volume_tensor": ["field_file_list.txt","_efield.dat"],
+            "cluster_volume_esp_tensor": ["esp_file_list.txt","_esp.dat"],
         }
         list_file = method_dict[options["CPET_method"]][0]
         if self.cluster_reload:
@@ -152,7 +155,7 @@ class cluster:
                     self.full_tensor = make_5d_tensor(self.file_list, type='esp') #Try to use same fxn as above, to be efficient
                 np.save(self.outputpath + "/5d_tensor.npy", self.full_tensor)
                 if self.rank == None:
-                    self.rank = determine_rank(self.full_tensor, self.tensor_threshold, self.max_rank) #Time-limiting step (and probably memory)
+                    self.rank = determine_rank(self.full_tensor, self.tensor_threshold, self.max_rank, self.min_rank) #Time-limiting step (and probably memory)
                 self.reduced_tensor, self.reconstruction_error = reduce_tensor(self.full_tensor, self.rank)
                 self.distance_matrix = construct_distance_matrix_tensor(self.reduced_tensor)
             np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)

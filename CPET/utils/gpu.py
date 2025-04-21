@@ -1,10 +1,7 @@
-import numpy as np
 import time
 import torch
-import torch.jit as jit
 from typing import Tuple
-from CPET.utils.io import parse_pqr
-from torch.profiler import profile, record_function, ProfilerActivity
+from torch.profiler import profile
 
 """
 Universal variable notation for GPU streamline computation:

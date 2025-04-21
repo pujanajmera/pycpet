@@ -1,34 +1,27 @@
 import numpy as np
 import torch
 import pkg_resources
-import matplotlib
 import matplotlib.pyplot as plt
 import warnings
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.metrics import mean_squared_error
 from scipy.spatial.distance import pdist, squareform
 from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
 from scipy.stats import iqr
 import time
-import psutil
-from multiprocessing import Pool
-from numba import njit, prange
-import numba as nb
 from tqdm import tqdm
 import gc
 import sys
 import os
 from kneed import KneeLocator
 import tensorly as tl
-from tensorly.decomposition import parafac, tucker
+from tensorly.decomposition import parafac
 
 package_name = "pycpet"
 package = pkg_resources.get_distribution(package_name)
 package_path = package.location
 # import cupy as cp
 
-from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
+from CPET.utils.fastmath import nb_subtract, nb_norm, nb_cross
 from CPET.utils.c_ops import Math_ops
 
 Math = Math_ops(shared_loc=package_path + "/CPET/utils/math_module.so")
@@ -245,25 +238,6 @@ def initialize_box_points_uniform(
     return local_coords, transformation_matrix
 
 
-def calculate_electric_field(x_0, x, Q):
-    """
-    Computes electric field at a point given positions of charges
-    Takes
-        x_0(array) - position to compute field at of shape (1,3)
-        x(array) - positions of charges of shape (N,3)
-        Q(array) - magnitude and sign of charges of shape (N,1)
-    Returns
-        E(array) - electric field at the point of shape (1,3)
-    """
-    # Create matrix R
-    R = nb_subtract(x_0, x)
-    R_sq = R**2
-    r_mag_sq = np.einsum("ij->i", R_sq).reshape(-1, 1)
-    r_mag_cube = np.power(r_mag_sq, 3 / 2)
-    E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
-    return E
-
-
 def calculate_electric_field_base(x_0, x, Q):
     """
     Computes electric field at a point given positions of charges
@@ -275,33 +249,10 @@ def calculate_electric_field_base(x_0, x, Q):
         E(array) - electric field at the point of shape (1,3)
     """
     # Create matrix R
-    R = nb_subtract(x_0, x)
-    denom = np.linalg.norm(R, axis=1) ** 3
-    E_vec = R * (1 / denom).reshape(-1, 1) * Q * 14.3996451
-    E_vec = np.sum(E_vec, axis=0)
+    R = np.subtract(x_0, x) #Shape (1, N, 3)
+    denom = np.linalg.norm(R) ** 3 #Shape (1, N)
+    E_vec = R * (1 / denom).reshape(-1, 1) * Q * 14.3996451 #Shape (1, N, 3)
     return E_vec
-
-
-def calculate_electric_field_dev_python(x_0, x, Q):
-    """
-    Computes electric field at a point given positions of charges
-    Takes
-        x_0(array) - position to compute field at of shape (1,3)
-        x(array) - positions of charges of shape (N,3)
-        Q(array) - magnitude and sign of charges of shape (N,1)
-    Returns
-        E(array) - electric field at the point of shape (1,3)
-    """
-    # Create matrix R
-    R = nb_subtract(x_0, x)
-    R_sq = R**2
-    r_mag_sq = np.einsum("ij->i", R_sq).reshape(-1, 1)
-    # print(R_sq.shape, r_mag_sq.shape)
-    r_mag_cube = np.power(r_mag_sq, 3 / 2)
-    recip_dim = 1 / r_mag_cube
-    # print(R.shape, recip_dim.shape, Q.shape)
-    E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
-    return E
 
 
 def calculate_electric_field_dev_c_shared(x_0, x, Q):
@@ -332,20 +283,6 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q):
     return E
 
 
-def calculate_esp_c_shared_full(x_0, x, Q):
-    """
-    Computes electrostatic potential at a point given positions of charges
-    Takes
-        x_0(array) - position to compute field at of shape (1,3)
-        x(array) - positions of charges of shape (N,3)
-        Q(array) - magnitude and sign of charges of shape (N,1)
-    Returns
-        ESP(float) - electrostatic potential at the point
-    """
-    ESP = Math.calc_esp_base(x_0=x_0, x=x, Q=Q)
-    return ESP
-
-
 def calculate_electric_field_c_shared_full(x_0, x, Q):
     """
     Computes electric field at a point given positions of charges
@@ -374,6 +311,20 @@ def calculate_electric_field_c_shared_full_alt(x_0, x, Q):
     return E
 
 
+def calculate_esp_c_shared_full(x_0, x, Q):
+    """
+    Computes electrostatic potential at a point given positions of charges
+    Takes
+        x_0(array) - position to compute field at of shape (1,3)
+        x(array) - positions of charges of shape (N,3)
+        Q(array) - magnitude and sign of charges of shape (N,1)
+    Returns
+        ESP(float) - electrostatic potential at the point
+    """
+    ESP = Math.calc_esp_base(x_0=x_0, x=x, Q=Q)
+    return ESP
+
+
 def calculate_thread_c_shared(x_0, n_iter, x, Q, step_size, dimensions):
     result = Math.thread_operation(
         x_0=x_0, n_iter=n_iter, x=x, Q=Q, step_size=step_size, dimensions=dimensions
@@ -393,17 +344,14 @@ def calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q):
     """
     R_list = [nb_subtract(x_0, x) for x_0 in x_0_list]
     batch_size = len(R_list)
-    R_list = np.array(R_list, dtype="float32")
-    R_sq_list = np.array([R**2 for R in R_list], dtype="float32")
-    r_mag_sq_list = Math.einsum_ij_i_batch(R_sq_list)  # .reshape(-1, 1)
-    # print("rmag: {}".format(r_mag_sq_list))
-    # print("rmag len: {}".format(len(r_mag_sq_list)))
-    # print("rmag 1 size: {}".format(r_mag_sq_list[0].shape))
-    r_mag_cube_list = np.power(r_mag_sq_list, 3 / 2)
-    recip_r_mag_list = [1 / val for val in r_mag_cube_list]
+    R_list = np.array(R_list, dtype="float32") #Shape (n, N, 3)
+    R_sq = np.array([R**2 for R in R_list], dtype="float32") #Shape (n, N, 3)
+    r_mag_sq = Math.einsum_ij_i_batch(R_sq)  # .reshape(-1, 1)
+    r_mag_cube = np.power(r_mag_sq, 3 / 2)
+    recip_r_mag = 1/r_mag_cube #Shape (n, N)
     # print("recip r {}".format(recip_r_mag_list))
     E_list = (
-        Math.einsum_operation_batch(R_list, recip_r_mag_list, Q, batch_size)
+        Math.einsum_operation_batch(R_list, recip_r_mag, Q, batch_size)
         * 14.3996451
     )
     # print("passed einsum op")
@@ -837,7 +785,6 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
             curvatures,
             bins=(distance_nbins, curvature_nbins),
             range=[[min_distance, max_distance], [min_curvature, max_curvature]],
-            norm=matplotlib.colors.LogNorm(),
             density=True,
             cmap="jet",
         )
@@ -972,10 +919,10 @@ def make_single_4d_tensor(field_file, uniques=None, N = [0,0,0], type = 'field',
 def make_5d_tensor(field_files, type='field'):
     first_field = field_files[0]
     if type == 'field':
-        _, N = make_single_4d_tensor(first_field, init=True)
+        _, N, uniques = make_single_4d_tensor(first_field, init=True)
         tensor_5d = np.zeros((len(field_files), N[0], N[1], N[2], 3))
         for i, field_file in enumerate(field_files):
-            tensor_5d[i] = make_single_4d_tensor(field_file, N=N, type='field')
+            tensor_5d[i] = make_single_4d_tensor(field_file, uniques=uniques, N=N, type='field')
     elif type == 'esp':
         _, N, uniques = make_single_4d_tensor(first_field, type='esp', init=True)
         tensor_5d = np.zeros((len(field_files), N[0], N[1], N[2], 1))
@@ -1019,6 +966,7 @@ def construct_distance_matrix_mem(hist_file_list):
 
 
 def construct_distance_matrix(histograms):
+    from sklearn.metrics.pairwise import pairwise_distances
     start_time = time.time()
     n = len(histograms)
     matrix = pairwise_distances(histograms, metric=distance_numpy, n_jobs=-1)
@@ -1088,7 +1036,7 @@ def construct_distance_matrix_tensor(cp_tensor):
 
 def reduce_tensor(tensor, rank):
     # Perform CP decomposition
-    cp_tensor = parafac(tensor, rank=rank, init='random', tol=1e-6)
+    cp_tensor = parafac(tensor, rank=rank, init='random', tol=1e-6, random_state=42)
 
     # Reconstruct the tensor from the CP decomposition
     reconstructed_tensor = tl.cp_to_tensor(cp_tensor)
@@ -1102,9 +1050,9 @@ def reduce_tensor(tensor, rank):
     return cp_tensor, relative_error
 
 
-def determine_rank(tensor_5d, threshold, max_rank):
+def determine_rank(tensor_5d, threshold, max_rank, min_rank):
     errors = []
-    ranks = list(range(1, max_rank+1))
+    ranks = list(range(min_rank, max_rank+1))
 
     # Loop over possible ranks and compute errors
     for rank in ranks:

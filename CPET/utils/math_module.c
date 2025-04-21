@@ -3,6 +3,7 @@
 # include <stdbool.h>
 # include <omp.h>
 # include <math.h>
+# include <string.h>
 //#include <gsl/gsl_vector.h>
 //#include <gsl/gsl_blas.h>
 //# include <mpi.h>
@@ -136,7 +137,6 @@ void einsum_operation_batch(int batch, int rows, float r_mag[batch][rows], float
     int j;
     int k;
     int provided = 0;
-    float sum[3] = {0.0, 0.0, 0.0};
     float factor = 14.3996451;
     float r_0;
     float r_1;
@@ -149,6 +149,7 @@ void einsum_operation_batch(int batch, int rows, float r_mag[batch][rows], float
     //#pragma omp parallel shared(R, r_mag, Q, result) private(i,j,k)
     {
         for(k=0; k < batch; k++){
+            float sum[3] = {0.0, 0.0, 0.0};
             for(i=0; i < rows; i++){
                 r_0 = R[k][i][0];
                 r_1 = R[k][i][1];
@@ -331,6 +332,85 @@ void calc_field_base(float E[3], float x_init[3], int n_charges, float x[n_charg
     }
 }
 
+// Compute electric field by giving batches of 100
+void compute_batched_field(int total_points, int batch_size, int n_charges, float x_0[total_points][3], float x[n_charges][3], float Q[n_charges], float E[total_points][3]) {
+    for(int start = 0; start < total_points; start += batch_size) {
+        int current_batch_size = batch_size;
+        if (start + current_batch_size > total_points)
+            current_batch_size = total_points - start;
+
+        float (*R)[n_charges][3] = malloc(current_batch_size * sizeof(*R));
+        float (*r_mag)[n_charges] = malloc(current_batch_size * sizeof(*r_mag));
+        float (*E_batch)[3] = malloc(current_batch_size * sizeof(*E_batch));
+
+        for(int k = 0; k < current_batch_size; k++){
+            for(int i = 0; i < n_charges; i++){
+                float sum_sq = 0.0;
+                for(int d = 0; d < 3; d++){
+                    float diff = x_0[start + k][d] - x[i][d];
+                    R[k][i][d] = diff;
+                    sum_sq += diff * diff;
+                }
+                r_mag[k][i] = 1.0f / powf(sqrtf(sum_sq), 3);
+            }
+        }
+
+        einsum_operation_batch(current_batch_size, n_charges, r_mag, Q, R, E_batch);
+        memcpy(&E[start], E_batch, current_batch_size * sizeof(*E_batch));
+
+        free(R);
+        free(r_mag);
+        free(E_batch);
+    }
+}
+
+void compute_looped_field(int total_points, int n_charges, float x_0[total_points][3], float x[n_charges][3], float Q[n_charges], float E[total_points][3]) {
+    
+    float epsilon = 1e-6f;  // Softening factor to avoid singularity
+    
+    float R[n_charges][3];
+    float r_mag[n_charges];
+
+    float factor = 14.3996451;
+    
+    for (int start = 0; start < total_points; start++) {
+        
+        float E_temp[3] = {0.0f, 0.0f, 0.0f};
+        
+        // Compute displacement vectors R = x_0[start] - x[i]
+        for (int i = 0; i < n_charges; i++) {
+            float dx = x_0[start][0] - x[i][0];
+            float dy = x_0[start][1] - x[i][1];
+            float dz = x_0[start][2] - x[i][2];
+            
+            R[i][0] = dx;
+            R[i][1] = dy;
+            R[i][2] = dz;
+            
+            r_mag[i] = dx*dx + dy*dy + dz*dz;  // Squared distance
+        }
+        
+        // Compute inverse r^3 safely
+        for (int i = 0; i < n_charges; i++) {
+            float safe_r2 = fmaxf(r_mag[i], epsilon);  // Avoid r=0
+            float rinv = 1.0f / sqrtf(safe_r2);
+            r_mag[i] = rinv * rinv * rinv;  // Equivalent to r^-3
+        }
+        
+        // Compute Electric Field Sum
+        for (int i = 0; i < n_charges; i++) {
+            float scale = factor * Q[i] * r_mag[i];
+            E_temp[0] += scale * R[i][0];
+            E_temp[1] += scale * R[i][1];
+            E_temp[2] += scale * R[i][2];
+        }
+        
+        // Store result
+        E[start][0] = E_temp[0];
+        E[start][1] = E_temp[1];
+        E[start][2] = E_temp[2];
+    }
+}
 
 void calc_esp_base(float ESP[1], float x_init[3], int n_charges, float x[n_charges][3], float Q[n_charges]){
     // calculate the electrostatic potential

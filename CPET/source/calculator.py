@@ -1,7 +1,6 @@
 import numpy as np
 import time
 from multiprocessing import Pool
-from torch.profiler import profile, ProfilerActivity
 import torch
 import logging
 
@@ -18,7 +17,6 @@ from CPET.utils.io import (
     parse_pdb,
     parse_pqr,
     get_atoms_for_axes,
-    filter_radius,
     filter_radius_whole_residue,
     filter_residue,
     filter_in_box,
