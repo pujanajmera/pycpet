@@ -1,10 +1,10 @@
-# pycpet
+# *PyCPET*
 
-Python-based Computation of Protein Electric Field Topology, built for high-throughput accelerated calculations of several electrostatic properties of enzyme active sites from simulations.
+Python-based Computation of Protein Electric Field Topology, built for high-throughput accelerated calculations of several electrostatic properties of enzyme active sites from simulations. This program is incredibly flexible and scriptable for virtually any analysis of classical electric fields and electrostatic potentials.
 
 ## Cite
-To cite your use of pycpet, please use the following:
-Ajmera, P., Vargas, S., Chaturvedi, S., Hennefarth, M. & Alexandrova, A. PyCPET - Computing Heterogeneous 3D Protein Electric Fields and Their Dynamics. Journal of Chemical Theory and Computation (2025). doi:10.1021/acs.jctc.5c00138
+To cite your use of *PyCPET*, please use the following:
+Ajmera, P., Vargas, S., Chaturvedi, S., Hennefarth, M. & Alexandrova, A. *PyCPET* - Computing Heterogeneous 3D Protein Electric Fields and Their Dynamics. Journal of Chemical Theory and Computation (2025). doi:10.1021/acs.jctc.5c00138
 
 ## Requirements and Installation
 System requirements:
@@ -37,10 +37,13 @@ gcc -fopenmp math_module.c -o math_module.so -shared -fPIC -O3 -march=native -fu
 
 5. When running, we advise you set the following:
 
-CPU multithreading: 
+CPU multithreading (available for topologies): 
     export OMP_NUM_THREADS=1
-GPU-accelerated code:
+GPU-accelerated code (available for topologies, fields in dev):
     export CUDA_VISIBILE_DEVICES=N (where N is the GPU number, only needed for non-HPC setups)
+
+## Documentation
+Almost all use of *PyCPET* is either scripting with the objects provided (requires in-depth knowledge of the code) or using the cpet.py script with an options file. We are developing in-depth documentation of how to format and use the options file, examples, and cookbooks at (), but key features and explanation of example files are noted below.
 
 ## Features
 
@@ -67,11 +70,10 @@ Several examples are in the ```examples``` directory. Most of these are designed
 
 For features unavailable from the cpet.py script mentioned above, we offer scripts in ```source/scripts``` for the following. Please note that these are not rigorously tested for all cases, but showcase the scripting ability of the pycpet library:
 
-- residue_breakdown_analysis.py: Residue contribution to topology over dynamics, ranked. Requires completed topology calculations for an MD
-- tensor_based_cluster_double.py: Electrostatic potential/electric field-based clustering for two sets of electric fields/electrostatic potentials. Assumes that all field calculations have been completed for both sets of directories.
+- residue_breakdown_analysis.py: Residue contribution to topology over dynamics, ranked. Requires completed topology calculations for an MD **IN BETA**
+- tensor_based_cluster_double.py: Electrostatic potential/electric field-based clustering for two sets of electric fields/electrostatic potentials. Assumes that all field calculations have been completed for both sets of directories. **IN BETA**
 
-
-## Formatting of PDB/PQR files
+## Note: Formatting of PDB/PQR files
 
 Most of the code here requires well-formated PDB or PQR files. The formatting is as follows (see io.py for more details):
 

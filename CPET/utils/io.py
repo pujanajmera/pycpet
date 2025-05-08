@@ -182,27 +182,39 @@ def default_options_initializer(options):
     Returns
         options(dict) - dictionary of options with default values
     """
+    #Directories:
+    if "input_path" not in options.keys():
+        options["input_path"] = "./inpdir"
+    if "output_path" not in options.keys():
+        options["output_path"] = "./outdir"
 
-    if "concur_slip" not in options.keys():
-        options["concur_slip"] = 4
-
-    if "initializer" not in options.keys():
-        options["initializer"] = "uniform"
-
-    if "dtype" not in options.keys():
-        options["dtype"] = "float32"
-
-    if "GPU_batch_freq" not in options.keys():
-        options["GPU_batch_freq"] = 100
-
-    if "step_size" not in options.keys():
-        options["step_size"] = 0.1
-
-    if "n_samples" not in options.keys():
-        options["n_samples"] = 10000
-
+    #Developer Options:
     if "profile" not in options.keys():
         options["profile"] = False
+
+    #Debugging Options:
+    if "write_transformed_pdb" not in options.keys():
+        options["write_transformed_pdb"] = False
+
+    #Box options (all 3D calcs):
+    if "dimensions" not in options.keys():
+        options["dimensions"] = None
+    if "step_size" not in options.keys(): #Both for topology/box
+        options["step_size"] = None
+    if "initializer" not in options.keys():
+        options["initializer"] = "uniform"
+    if "box_shift" not in options.keys():
+        options["box_shift"] = [0, 0, 0]
+
+    #Topology options
+    if "concur_slip" not in options.keys():
+        options["concur_slip"] = 4
+    if "dtype" not in options.keys():
+        options["dtype"] = "float32"
+    if "GPU_batch_freq" not in options.keys():
+        options["GPU_batch_freq"] = 100
+    if "n_samples" not in options.keys():
+        options["n_samples"] = None
 
     return options
 

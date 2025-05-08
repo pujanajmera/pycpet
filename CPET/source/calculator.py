@@ -36,15 +36,21 @@ from CPET.utils.gpu import (
 
 class calculator:
     def __init__(self, options, path_to_pdb=None):
-        """
-        Initialize the calculator object with the following parameters:
-        Takes:
-            options: dict, from options.json
-            path_to_pdb: str, path to the operational pdb file
+        """Initialize the calculator object with the following parameters
+        
+        Parameters
+        ----------
+        options : dict                           
+        Dictionary from input options.json file
+        path_to_pdb : str, optional
+        Path to the PDB file, by default None
+        
+        Returns
+        -------
+        None
         """
         # self.efield_calc = calculator(math_loc=math_loc)
-        self.options = default_options_initializer(options)
-
+        options = default_options_initializer(options) # Double in case calculator is called outside of CPET.py
         self.profile = options["profile"]
         self.path_to_pdb = path_to_pdb
 
@@ -54,15 +60,15 @@ class calculator:
         and the topology calculations (the step size of the stremalines), but always has the same
         units and represents accuracy
         """
-        self.step_size = options["step_size"] if "step_size" in options.keys() else None
+        self.step_size = options["step_size"]
         self.dimensions = (
-            np.array(options["dimensions"]) if "dimensions" in options.keys() else None
+            np.array(options["dimensions"]) if options["dimensions"] is not None else None
         )
 
         """
         Options regarding streamline distribution calculations
         """
-        self.n_samples = options["n_samples"] if "n_samples" in options.keys() else None
+        self.n_samples = options["n_samples"]
         self.concur_slip = options["concur_slip"]
         self.GPU_batch_freq = options["GPU_batch_freq"]
         self.dtype = options["dtype"]
@@ -75,11 +81,7 @@ class calculator:
         """
         Options regarding test outputs, for debugging and/or visualization
         """
-        self.write_transformed_pdb = (
-            options["write_transformed_pdb"]
-            if "write_transformed_pdb" in options.keys()
-            else False
-        )
+        self.write_transformed_pdb = options["write_transformed_pdb"]
         self.strip_filter = (
             options["strip_filter"] if "strip_filter" in options.keys() else False
         )

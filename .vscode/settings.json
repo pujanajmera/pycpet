@@ -1,8 +1,0 @@
-{
-  "files.associations": {
-    "*.rmd": "markdown",
-    "gsl_math.h": "c",
-    "gsl_vector.h": "c"
-  },
-  "git.mergeEditor": true
-}

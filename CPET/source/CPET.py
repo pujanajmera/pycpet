@@ -1,9 +1,11 @@
 from CPET.source.calculator import calculator
 from CPET.source.cluster import cluster
-import CPET.utils.visualize as visualize
 from CPET.source.pca import pca_pycpet
-from CPET.utils.io import save_numpy_as_dat
+
+import CPET.utils.visualize as visualize
+from CPET.utils.io import save_numpy_as_dat, default_options_initializer
 from CPET.utils.calculator import report_inside_box
+
 from glob import glob
 from random import choice
 import os
@@ -15,32 +17,20 @@ import logging
 class CPET:
     def __init__(self, options):
         # Logistics
-        self.options = options
+        self.options = default_options_initializer(options)
         self.logger = logging.getLogger(__name__)  # Inherit logger from cpet.py
         self.m = self.options["CPET_method"]
         self.logger.info("Instantiating CPET, running method: {}".format(self.m))
-        self.inputpath = (
-            self.options["inputpath"] if "inputpath" in self.options else "./inpdir"
-        )
-        self.outputpath = (
-            self.options["outputpath"] if "outputpath" in self.options else "./outdir"
-        )
         if not os.path.exists(self.outputpath):
             print(
-                "Output directory does not exist, creating: \n{}".format(
+                "Output directory does not exist in current directory, creating: \n{}".format(
                     self.outputpath
                 )
             )
             os.makedirs(self.outputpath)
-        self.profile = self.options["profile"] if "profile" in self.options else False
 
         # Calculation-specific settings
-        self.step_size = (
-            self.options["step_size"] if "step_size" in self.options else None
-        )
-        self.dimensions = (
-            self.options["dimensions"] if "dimensions" in self.options else None
-        )
+        self.dimensions = self.options["dimensions"]
 
     def run(self):
         if self.m == "topo":
@@ -394,9 +384,9 @@ class CPET:
                 from CPET.utils.io import pull_mats_from_MD_folder
 
                 # Pull all field files from all variants
-                all_fields = []
+                all_field_files = []
                 for i in range(len(self.options["inputpath_list"])):
-                    all_fields.extend(
+                    all_field_files.extend(
                         pull_mats_from_MD_folder(self.options["inputpath_list"][i])
                     )
                 all_fields = np.concatenate(all_field_files, axis=0)
