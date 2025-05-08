@@ -43,13 +43,13 @@ class calculator:
     path_to_pdb : str, optional
         Path to the PDB file, by default None
     
-    Attributes
-    -------
-    .. rubric:: Development parameters
+    Development Attributes
+    ----------
     self.profile : Bool
         If True, the calculator will profile the code (development, intended for GPU)
 
-    .. rubric:: Input parameters
+    Input Attributes
+    ----------
     self.path_to_pdb : str
         Path to the PDB file
     
