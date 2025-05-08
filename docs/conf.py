@@ -53,6 +53,13 @@ autodoc_default_options = {
     'show-inheritance': True,
 }
 
+autodoc_mock_imports = [
+    "CPET.utils.parallel",
+    "CPET.utils.calculator",
+    "CPET.utils.io",
+    "CPET.utils.gpu"
+]
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
