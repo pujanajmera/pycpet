@@ -35,47 +35,22 @@ from CPET.utils.gpu import (
 
 
 class calculator:
-    """Exceptions are documented in the same way as classes.
-
-    The __init__ method may be documented in either the class level
-    docstring, or as a docstring on the __init__ method itself.
-
-    Either form is acceptable, but the two should not be mixed. Choose one
-    convention to document the __init__ method and be consistent with it.
-
-    Note
-    ----
-    Do not include the `self` parameter in the ``Parameters`` section.
-
+    """Initialize the calculator object with the following parameters
+    
     Parameters
     ----------
-    msg : str
-        Human readable string describing the exception.
-    code : :obj:`int`, optional
-        Numeric error code.
-
+    options : dict                           
+    Dictionary from input options.json file
+    path_to_pdb : str, optional
+    Path to the PDB file, by default None
+    
     Attributes
-    ----------
-    msg : str
-        Human readable string describing the exception.
-    code : int
-        Numeric error code.
-
+    -------
+    self.profile : Bool
+    If True, the calculator will profile the code (development, intended for GPU)
     """
     def __init__(self, options, path_to_pdb=None):
-        """Initialize the calculator object with the following parameters
-        
-        Parameters
-        ----------
-        options : dict                           
-        Dictionary from input options.json file
-        path_to_pdb : str, optional
-        Path to the PDB file, by default None
-        
-        Returns
-        -------
-        None
-        """
+
         # self.efield_calc = calculator(math_loc=math_loc)
         options = default_options_initializer(options) # Double in case calculator is called outside of CPET.py
         self.profile = options["profile"]

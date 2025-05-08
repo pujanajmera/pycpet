@@ -6,7 +6,7 @@ calculator module
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: calculator
+.. autoclass:: CPET.source.calculator.calculator
    :members:
    :undoc-members:
    :show-inheritance:
