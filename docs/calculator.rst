@@ -1,7 +1,7 @@
 calculator module
 =================
 
-.. automodule:: calculator
+.. automodule:: CPET.source.calculator
    :members:
    :undoc-members:
    :show-inheritance:
