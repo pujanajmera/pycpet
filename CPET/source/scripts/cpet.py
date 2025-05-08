@@ -1,5 +1,6 @@
 print("Importing...")
 from CPET.source.CPET import CPET
+
 print("Importing done!")
 import json
 import os
@@ -19,41 +20,42 @@ def main():
     )
 
     parser.add_argument(
-        '-v', '--verbose',
+        "-v",
+        "--verbose",
         help="Be verbose",
-        action="store_const", 
-        dest="loglevel", 
+        action="store_const",
+        dest="loglevel",
         const=logging.INFO,
     )
 
-    #Overrides to the options file
+    # Overrides to the options file
 
     parser.add_argument(
         "-i",
         type=str,
         help="Input path. Overrides the input path in the options file",
-        default=None
+        default=None,
     )
 
     parser.add_argument(
         "-d",
         type=str,
         help="Output path. Overrides the output path in the options file",
-        default=None
+        default=None,
     )
 
     parser.add_argument(
         "-m",
         type=str,
         help="pyCPET method. Overrides the method in the options file",
-        default=None
+        default=None,
     )
 
     parser.add_argument(
         "--units",
         type=str,
         help="Units for the output files. Default is V/Angstrom. Overrides the units in the options file",
-        default=None
+        default=None,
     )
 
     args = parser.parse_args()
@@ -77,6 +79,7 @@ def main():
 
     cpet = CPET(options)
     cpet.run()
+
 
 if __name__ == "__main__":
     main()

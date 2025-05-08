@@ -11,11 +11,12 @@ import numpy as np
 import warnings
 import logging
 
+
 class CPET:
     def __init__(self, options):
-        #Logistics
+        # Logistics
         self.options = options
-        self.logger = logging.getLogger(__name__) #Inherit logger from cpet.py
+        self.logger = logging.getLogger(__name__)  # Inherit logger from cpet.py
         self.m = self.options["CPET_method"]
         self.logger.info("Instantiating CPET, running method: {}".format(self.m))
         self.inputpath = (
@@ -25,11 +26,15 @@ class CPET:
             self.options["outputpath"] if "outputpath" in self.options else "./outdir"
         )
         if not os.path.exists(self.outputpath):
-            print("Output directory does not exist, creating: \n{}".format(self.outputpath))
+            print(
+                "Output directory does not exist, creating: \n{}".format(
+                    self.outputpath
+                )
+            )
             os.makedirs(self.outputpath)
         self.profile = self.options["profile"] if "profile" in self.options else False
 
-        #Calculation-specific settings
+        # Calculation-specific settings
         self.step_size = (
             self.options["step_size"] if "step_size" in self.options else None
         )
@@ -50,7 +55,12 @@ class CPET:
             self.run_point_field()
         elif self.m == "point_mag":
             self.run_point_mag()
-        elif self.m == "cluster" or self.m == "cluster_volume" or self.m == "cluster_volume_tensor" or self.m == "cluster_volume_esp_tensor":
+        elif (
+            self.m == "cluster"
+            or self.m == "cluster_volume"
+            or self.m == "cluster_volume_tensor"
+            or self.m == "cluster_volume_esp_tensor"
+        ):
             self.run_cluster()
         elif self.m == "box_check":
             self.run_box_check()
@@ -63,7 +73,6 @@ class CPET:
                 "You have reached the limit of this package's capabilities at the moment, we do not support the function called as of yet"
             )
             exit()
-
 
     def run_topo(self, num=100000, benchmarking=False):
         files_input = glob(self.inputpath + "/*.pdb")
@@ -102,7 +111,6 @@ class CPET:
             else:
                 print("Already done for protein: {}, skipping...".format(protein))
 
-
     def run_topo_GPU(self, num=100000, benchmarking=False):
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
@@ -136,7 +144,6 @@ class CPET:
                         ),
                         hist,
                     )
-
 
     def run_volume(self, num=100000):
         """
@@ -181,7 +188,6 @@ class CPET:
                     meta_data=meta_data,
                 )
 
-
     def run_point_field(self):
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
@@ -197,7 +203,6 @@ class CPET:
                 point_field = self.calculator.compute_point_field()
                 f.write("{}:{}\n".format(protein, point_field))
 
-
     def run_point_mag(self):
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
@@ -212,7 +217,6 @@ class CPET:
                 print("protein file: {}".format(protein))
                 point_field = self.calculator.compute_point_mag()
                 f.write("{}:{}\n".format(protein, point_field))
-
 
     def run_volume_ESP(self, num=100000):
         files_input = glob(self.inputpath + "/*.pdb")
@@ -249,7 +253,6 @@ class CPET:
                     meta_data=meta_data,
                 )
 
-
     def run_box_check(self, num=100000):
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
@@ -257,10 +260,7 @@ class CPET:
         if len(files_input) == 1:
             warnings.warn("Only one pdb file found in the input directory")
         for file in files_input:
-            if (
-                "filter_radius" in self.options
-                or "filter_resnum" in self.options
-            ):
+            if "filter_radius" in self.options or "filter_resnum" in self.options:
                 # Error out, radius not compatible
                 raise ValueError(
                     "filter_radius/filter_resnum is not compatible with box_check. Please remove from options"
@@ -273,15 +273,15 @@ class CPET:
             report_inside_box(self.calculator)
         print("No more files to process!")
 
-
     def run_cluster(self):
         print("Running the cluster analysis. Method type: {}".format(self.m))
         self.cluster = cluster(self.options)
         self.cluster.Cluster()
 
-
     def run_visualize_efield(self):
-        print("Visualizing the electric field. This module will load a ChimeraX session with the first protein and the electric field, and requires the electric field to be computed first.")
+        print(
+            "Visualizing the electric field. This module will load a ChimeraX session with the first protein and the electric field, and requires the electric field to be computed first."
+        )
         files_input_pdb = glob(self.inputpath + "/*.pdb")
         if self.m == "visualize_field":
             files_input_efield = glob(self.inputpath + "/*_efield.dat")
@@ -290,71 +290,120 @@ class CPET:
         if len(files_input_pdb) == 0:
             raise ValueError("No pdb files found in the input directory")
         if len(files_input_pdb) > 1:
-            warnings.warn("More than one pdb file found in the input directory. Only the first will be visualized, .bild files will be generated for all of them though.")
+            warnings.warn(
+                "More than one pdb file found in the input directory. Only the first will be visualized, .bild files will be generated for all of them though."
+            )
 
-        #Sort list of pdbs and efields
+        # Sort list of pdbs and efields
         files_input_pdb.sort()
-        
-        #Check to make sure each pdb file has a corresponding electric field file in the input path while visualizing fields
+
+        # Check to make sure each pdb file has a corresponding electric field file in the input path while visualizing fields
         for i in range(len(files_input_pdb)):
             if self.m == "visualize_field":
-                #Modify efield file list to just have file name, not _efield.dat
-                files_input_efield = [efield.split("/")[-1].split("_efield")[0] for efield in files_input_efield]
-                #Efield list is unsorted, so just check if the protein file is anywhere in the efield list
-                if not any(files_input_pdb[i].split("/")[-1].split(".")[0] in efield for efield in files_input_efield):
-                    raise ValueError("No electric field file found for protein: {}".format(files_input_pdb[i].split("/")[-1]))
-                print("Generating .bild file for the protein: {}".format(files_input_pdb[i].split("/")[-1]))
-                visualize.visualize_field(path_to_pdb = files_input_pdb[i], 
-                                          path_to_efield = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_efield.dat", 
-                                          outputpath = self.outputpath, 
-                                          options = self.options, 
+                # Modify efield file list to just have file name, not _efield.dat
+                files_input_efield = [
+                    efield.split("/")[-1].split("_efield")[0]
+                    for efield in files_input_efield
+                ]
+                # Efield list is unsorted, so just check if the protein file is anywhere in the efield list
+                if not any(
+                    files_input_pdb[i].split("/")[-1].split(".")[0] in efield
+                    for efield in files_input_efield
+                ):
+                    raise ValueError(
+                        "No electric field file found for protein: {}".format(
+                            files_input_pdb[i].split("/")[-1]
+                        )
+                    )
+                print(
+                    "Generating .bild file for the protein: {}".format(
+                        files_input_pdb[i].split("/")[-1]
+                    )
+                )
+                visualize.visualize_field(
+                    path_to_pdb=files_input_pdb[i],
+                    path_to_efield=self.inputpath
+                    + "/"
+                    + files_input_pdb[i].split("/")[-1].split(".")[0]
+                    + "_efield.dat",
+                    outputpath=self.outputpath,
+                    options=self.options,
                 )
             elif self.m == "visualize_esp":
-                #Modify esp file list to just have file name, not _esp.dat
-                files_input_esp = [esp.split("/")[-1].split("_esp")[0] for esp in files_input_esp]
-                #Esp list is unsorted, so just check if the protein file is anywhere in the esp list
-                if not any(files_input_pdb[i].split("/")[-1].split(".")[0] in esp for esp in files_input_esp):
-                    raise ValueError("No ESP file found for protein: {}".format(files_input_pdb[i].split("/")[-1]))
-                print("Generating .bild file for the protein: {}".format(files_input_pdb[i].split("/")[-1]))
-                visualize.visualize_esp(path_to_pdb = files_input_pdb[i], 
-                                path_to_esp = self.inputpath + "/" + files_input_pdb[i].split("/")[-1].split(".")[0] + "_esp.dat", 
-                                outputpath = self.outputpath, 
-                                options = self.options, 
+                # Modify esp file list to just have file name, not _esp.dat
+                files_input_esp = [
+                    esp.split("/")[-1].split("_esp")[0] for esp in files_input_esp
+                ]
+                # Esp list is unsorted, so just check if the protein file is anywhere in the esp list
+                if not any(
+                    files_input_pdb[i].split("/")[-1].split(".")[0] in esp
+                    for esp in files_input_esp
+                ):
+                    raise ValueError(
+                        "No ESP file found for protein: {}".format(
+                            files_input_pdb[i].split("/")[-1]
+                        )
+                    )
+                print(
+                    "Generating .bild file for the protein: {}".format(
+                        files_input_pdb[i].split("/")[-1]
+                    )
                 )
-            #To-do: automatically visualize the electric field for the first protein, in dev mode for now
-
+                visualize.visualize_esp(
+                    path_to_pdb=files_input_pdb[i],
+                    path_to_esp=self.inputpath
+                    + "/"
+                    + files_input_pdb[i].split("/")[-1].split(".")[0]
+                    + "_esp.dat",
+                    outputpath=self.outputpath,
+                    options=self.options,
+                )
+            # To-do: automatically visualize the electric field for the first protein, in dev mode for now
 
     def run_pca(self):
         if self.m == "pca":
             self.pca = pca_pycpet(self.options)
             self.pca.fit_and_transform()
         elif self.m == "pca_compare":
-            #Check for provided directories list for comparison
+            # Check for provided directories list for comparison
             if "inputpath_list" not in self.options:
-                raise ValueError("No inputpath_list provided for PCA comparison mode. Please provide a list of directories that contain field files in the output file, or use the 'pca' method instead.")
+                raise ValueError(
+                    "No inputpath_list provided for PCA comparison mode. Please provide a list of directories that contain field files in the output file, or use the 'pca' method instead."
+                )
             if "outputpath_list" not in self.options:
-                warnings.warn("No outputpath_list provided. Using default outputpath_list based on inputpath_list")
-                #Add 'pca_out' to the end of each input path
-                self.options["outputpath_list"] = [path + "/pca_out" for path in self.options["inputpath_list"]]
+                warnings.warn(
+                    "No outputpath_list provided. Using default outputpath_list based on inputpath_list"
+                )
+                # Add 'pca_out' to the end of each input path
+                self.options["outputpath_list"] = [
+                    path + "/pca_out" for path in self.options["inputpath_list"]
+                ]
             if self.options["pca_combined_only"] == False:
-                #Run PCA for each individual variant
-                for inputpath, outputpath in zip(self.options["inputpath_list"], self.options["outputpath_list"]):
+                # Run PCA for each individual variant
+                for inputpath, outputpath in zip(
+                    self.options["inputpath_list"], self.options["outputpath_list"]
+                ):
                     self.options["inputpath"] = inputpath
                     self.options["outputpath"] = outputpath
-                    print("Running PCA for variant: {}".format(inputpath.split("/")[-1]))
+                    print(
+                        "Running PCA for variant: {}".format(inputpath.split("/")[-1])
+                    )
                     self.pca = pca_pycpet(self.options)
                     self.pca.fit_and_transform()
             else:
                 from CPET.utils.io import pull_mats_from_MD_folder
-                #Pull all field files from all variants
+
+                # Pull all field files from all variants
                 all_fields = []
                 for i in range(len(self.options["inputpath_list"])):
-                    all_fields.extend(pull_mats_from_MD_folder(self.options["inputpath_list"][i]))
+                    all_fields.extend(
+                        pull_mats_from_MD_folder(self.options["inputpath_list"][i])
+                    )
                 all_fields = np.concatenate(all_field_files, axis=0)
 
-                #Make a directory called 'pca_combined' in the current directory
+                # Make a directory called 'pca_combined' in the current directory
                 if not os.path.exists("pca_combined"):
                     os.makedirs("pca_combined")
                 self.options["outputpath"] = "./pca_combined"
-            #PCA for combined set of variants
-            #TBD            
+            # PCA for combined set of variants
+            # TBD

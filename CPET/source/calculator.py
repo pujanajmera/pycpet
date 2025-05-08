@@ -81,9 +81,7 @@ class calculator:
             else False
         )
         self.strip_filter = (
-            options["strip_filter"]
-            if "strip_filter" in options.keys()
-            else False
+            options["strip_filter"] if "strip_filter" in options.keys() else False
         )
 
         # Be very careful with the box_shift option. The box needs to be centered at the origin and therefore, the code will shift protein in the opposite direction of the provided box vector
@@ -108,24 +106,30 @@ class calculator:
                 self.resids,
                 self.residue_number,
                 self.atom_type,
-                self.chains
+                self.chains,
             ) = parse_pdb(self.path_to_pdb, get_charges=True)
 
         # Make ID list that has all information besides coordinates and charges
         if hasattr(self, "chains"):
             self.ID = [
-                (self.atom_number[i],
-                 self.atom_type[i],
-                 self.resids[i],
-                 self.residue_number[i],
-                 self.chains[i]) for i in range(len(self.x))
+                (
+                    self.atom_number[i],
+                    self.atom_type[i],
+                    self.resids[i],
+                    self.residue_number[i],
+                    self.chains[i],
+                )
+                for i in range(len(self.x))
             ]
         else:
             self.ID = [
-                (self.atom_number[i],
-                 self.atom_type[i],
-                 self.resids[i],
-                 self.residue_number[i]) for i in range(len(self.x))
+                (
+                    self.atom_number[i],
+                    self.atom_type[i],
+                    self.resids[i],
+                    self.residue_number[i],
+                )
+                for i in range(len(self.x))
             ]
 
         print(self.chains)
@@ -136,7 +140,14 @@ class calculator:
 
         elif type(options["center"]) == dict:
             method = options["center"]["method"]
-            pos_considered = get_atoms_for_axes(self.x, self.atom_type, self.residue_number, self.chains, options, seltype="center")
+            pos_considered = get_atoms_for_axes(
+                self.x,
+                self.atom_type,
+                self.residue_number,
+                self.chains,
+                options,
+                seltype="center",
+            )
             self.center = calculate_center(pos_considered, method=method)
         else:
             raise ValueError("center must be a list or dict")
@@ -154,7 +165,14 @@ class calculator:
             compute_y = True
         elif type(options["x"]) == dict:
             method = options["x"]["method"]
-            pos_considered = get_atoms_for_axes(self.x, self.atom_type, self.residue_number, self.chains, options, seltype="x")
+            pos_considered = get_atoms_for_axes(
+                self.x,
+                self.atom_type,
+                self.residue_number,
+                self.chains,
+                options,
+                seltype="x",
+            )
             self.x_vec_pt = calculate_center(pos_considered, method=method)
             compute_y = True
         else:
@@ -170,7 +188,14 @@ class calculator:
 
         elif type(options["y"]) == dict:
             method = options["y"]["method"]
-            pos_considered = get_atoms_for_axes(self.x, self.atom_type, self.residue_number, self.chains, options, seltype="y")
+            pos_considered = get_atoms_for_axes(
+                self.x,
+                self.atom_type,
+                self.residue_number,
+                self.chains,
+                options,
+                seltype="y",
+            )
             self.y_vec_pt = calculate_center(pos_considered, method=method)
         else:
             raise ValueError("Since you have provided x, y must be a list or dict")
@@ -180,10 +205,9 @@ class calculator:
         self.resids_copy = self.resids
         self.atom_number_copy = self.atom_number
         self.atom_type_copy = self.atom_type
-        
 
         # Any sort of filtering related to atom identity information
-        #NEED TO MAKE MORE ROBUST
+        # NEED TO MAKE MORE ROBUST
         if "filter_IDs" in options.keys():
             self.x, self.Q, self.ID = filter_IDs(
                 self.x, self.Q, self.ID, options["filter_IDs"]
@@ -205,12 +229,12 @@ class calculator:
             if "filter_resids" in options.keys():
                 # print("filtering residues: {}".format(options["filter_resids"]))
                 (
-                    self.x, 
-                    self.Q, 
-                    self.residue_number, 
-                    self.resids, 
-                    self.atom_number, 
-                    self.atom_type
+                    self.x,
+                    self.Q,
+                    self.residue_number,
+                    self.resids,
+                    self.atom_number,
+                    self.atom_type,
                 ) = filter_residue(
                     self.x,
                     self.Q,
@@ -352,7 +376,11 @@ class calculator:
             or options["CPET_method"] == "point_mag"
             or options["CPET_method"] == "box_check"
         ) and hasattr(self, "y_vec_pt"):
-            (_, _, self.transformation_matrix,) = initialize_box_points_uniform(
+            (
+                _,
+                _,
+                self.transformation_matrix,
+            ) = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,
@@ -421,7 +449,6 @@ class calculator:
                 self.dimensions = self.dimensions.astype(np.float32)
 
         print("... > Initialized Calculator!")
-
 
     def compute_topo_base(self):
         print("... > Computing Topo!")

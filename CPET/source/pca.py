@@ -23,12 +23,12 @@ class pca_pycpet:
 
         Notes:
         - Default mode is to take an arbitrary file list and obtain principal components. To
-        compare datasets and produce both individual and total PCs, change method from pca to 
+        compare datasets and produce both individual and total PCs, change method from pca to
         pca_compare
 
         """
 
-        #Note: need to figure out what this means:
+        # Note: need to figure out what this means:
         self.pca_reload = options["pca_reload"] if "pca_reload" in options else False
         self.save_pca_tf = options["save_pca"] if "save_pca" in options else False
         self.whitening = options["whitening"] if "whitening" in options else False
@@ -37,7 +37,9 @@ class pca_pycpet:
         self.inputpath = options["inputpath"]
         self.outputpath = options["outputpath"]
         if "n_pca_components" not in options:
-            warnings.warn("No number of PCA components specified, using default value of 10")
+            warnings.warn(
+                "No number of PCA components specified, using default value of 10"
+            )
         self.components = (
             options["n_pca_components"] if "n_pca_components" in options else 10
         )
@@ -47,7 +49,7 @@ class pca_pycpet:
         else:
             self.pca_obj = None
 
-        # user should also be able to specify list of files alternatively 
+        # user should also be able to specify list of files alternatively
         if "field_file_list" not in options:
             # load dataset and metadata
             self.field_file_list = []
@@ -168,8 +170,9 @@ class pca_pycpet:
         mat = mat.reshape(len(mat), shape[1], shape[2], shape[3], shape[4])
         return mat
 
-
-    def plot_hist_along_component(x_list, pca_obj, label_list, components, loc, plot, type='png'):
+    def plot_hist_along_component(
+        x_list, pca_obj, label_list, components, loc, plot, type="png"
+    ):
         if type(components) is list:
             fig, axs = plt.subplots(len(components), 1)
             names = ["PC {}".format(str(temp)) for temp in components]
@@ -187,7 +190,15 @@ class pca_pycpet:
                     axs[ind].plot(
                         xs_list[i],
                         density_list[i],
-                        color=["#1f77b4", "#ff7f0e", "#2ca02c","#d62728","#9467bd","#8c564b","#e377c2"][i],
+                        color=[
+                            "#1f77b4",
+                            "#ff7f0e",
+                            "#2ca02c",
+                            "#d62728",
+                            "#9467bd",
+                            "#8c564b",
+                            "#e377c2",
+                        ][i],
                         label=label_list[i],
                     )
 
@@ -201,9 +212,17 @@ class pca_pycpet:
             # fig.show()
             if plot:
                 fig.show()
-            if type == 'png':
-                fig.savefig("./pca_comps_alcdehydro/{}/pca_{}-{}.png".format(loc, components[0], components[-1]))
-            elif type == 'svg':
-                fig.savefig("./pca_comps_alcdehydro/{}/pca_{}-{}.svg".format(loc, components[0], components[-1]))
+            if type == "png":
+                fig.savefig(
+                    "./pca_comps_alcdehydro/{}/pca_{}-{}.png".format(
+                        loc, components[0], components[-1]
+                    )
+                )
+            elif type == "svg":
+                fig.savefig(
+                    "./pca_comps_alcdehydro/{}/pca_{}-{}.svg".format(
+                        loc, components[0], components[-1]
+                    )
+                )
             else:
                 raise ValueError("Invalid plot format")

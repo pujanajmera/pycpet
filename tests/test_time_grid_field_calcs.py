@@ -4,23 +4,22 @@ import warnings
 import time
 import matplotlib.pyplot as plt
 import json
-warnings.filterwarnings(action='ignore')
+
+warnings.filterwarnings(action="ignore")
 import torch
 import pkg_resources
 
 from CPET.utils.calculator import (
-    calculate_field_at_point, 
+    calculate_field_at_point,
     calculate_electric_field_dev_c_shared,
     calculate_electric_field_base,
     calculate_electric_field_dev_c_shared,
     calculate_electric_field_c_shared_full_alt,
     calculate_electric_field_c_shared_full,
-    calculate_electric_field_gpu_for_test, 
-    )
-
-from CPET.utils.gpu import (
-    calculate_electric_field_torch_batch_gpu
+    calculate_electric_field_gpu_for_test,
 )
+
+from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
 
 from CPET.utils.c_ops import Math_ops
 
@@ -28,6 +27,7 @@ package_name = "pycpet"
 package = pkg_resources.get_distribution(package_name)
 package_path = package.location
 Math = Math_ops(shared_loc=package_path + "/CPET/utils/math_module.so")
+
 
 def grid_field_simult_base(x_0, x, Q):
     """
@@ -40,19 +40,23 @@ def grid_field_simult_base(x_0, x, Q):
     Returns:
         field(array) - (L, 1) array of electric field
     """
-    field = np.zeros_like(x_0) #Shape (L, 3)
-    batch_size = 100  #Batching L points into batch_size quantities at a time
+    field = np.zeros_like(x_0)  # Shape (L, 3)
+    batch_size = 100  # Batching L points into batch_size quantities at a time
     for i in range(0, len(x_0), batch_size):
-        x_0_batch = x_0[i:i + batch_size] #Shape (batch_size, 3)
-        x_0_batch_expanded = np.expand_dims(x_0_batch, axis=1) #Shape (batch_size, 1, 3)
-        x_expanded = np.expand_dims(x, axis=0) #Shape (1, N, 3)
+        x_0_batch = x_0[i : i + batch_size]  # Shape (batch_size, 3)
+        x_0_batch_expanded = np.expand_dims(
+            x_0_batch, axis=1
+        )  # Shape (batch_size, 1, 3)
+        x_expanded = np.expand_dims(x, axis=0)  # Shape (1, N, 3)
         # Calculate the difference between x_0 and x
-        R = np.subtract(x_0_batch_expanded, x_expanded) #Shape (batch_size, N, 3)
+        R = np.subtract(x_0_batch_expanded, x_expanded)  # Shape (batch_size, N, 3)
         # Calculate the magnitude of R
-        R_mag = np.linalg.norm(R, axis=2)**3 #Shape (batch_size, N)
+        R_mag = np.linalg.norm(R, axis=2) ** 3  # Shape (batch_size, N)
         # Calculate the electric field
-        E_vec_batched = R * (1 / R_mag)[:,:,np.newaxis] * Q[np.newaxis,:,:] * 14.3996451 #Shape (batch_size, N, 3)
-        field[i:i + batch_size] = E_vec_batched.sum(axis=1) #Shape (batch_size, 3)
+        E_vec_batched = (
+            R * (1 / R_mag)[:, :, np.newaxis] * Q[np.newaxis, :, :] * 14.3996451
+        )  # Shape (batch_size, N, 3)
+        field[i : i + batch_size] = E_vec_batched.sum(axis=1)  # Shape (batch_size, 3)
     return field
 
 
@@ -67,21 +71,23 @@ def grid_field_simult_c_shared_part(x_0, x, Q):
     Returns:
         field(array) - (L, 1) array of electric field
     """
-    field = np.zeros_like(x_0) #Shape (L, 3)
-    batch_size = 100  #Batching L points into batch_size quantities at a time
+    field = np.zeros_like(x_0)  # Shape (L, 3)
+    batch_size = 100  # Batching L points into batch_size quantities at a time
     for i in range(0, len(x_0), batch_size):
-        x_0_batch = x_0[i:i + batch_size] #Shape (batch_size, 3)
-        x_0_batch_expanded = np.expand_dims(x_0_batch, axis=1) #Shape (batch_size, 1, 3)
-        x_expanded = np.expand_dims(x, axis=0) #Shape (1, N, 3)
+        x_0_batch = x_0[i : i + batch_size]  # Shape (batch_size, 3)
+        x_0_batch_expanded = np.expand_dims(
+            x_0_batch, axis=1
+        )  # Shape (batch_size, 1, 3)
+        x_expanded = np.expand_dims(x, axis=0)  # Shape (1, N, 3)
         # Calculate the difference between x_0 and x
-        R = np.subtract(x_0_batch_expanded, x_expanded) #Shape (batch_size, N, 3)
+        R = np.subtract(x_0_batch_expanded, x_expanded)  # Shape (batch_size, N, 3)
         # Calculate the magnitude of R
-        R_mag = np.linalg.norm(R, axis=2)**3 #Shape (batch_size, N)
-        #Take care of last batch, where R_mag is not a multiple of batch_size
+        R_mag = np.linalg.norm(R, axis=2) ** 3  # Shape (batch_size, N)
+        # Take care of last batch, where R_mag is not a multiple of batch_size
         if len(R_mag) != batch_size:
             batch_size = len(R_mag)
         E_vec_batched = Math.einsum_operation_batch(R, (1 / R_mag), Q, batch_size)
-        field[i:i + batch_size] = E_vec_batched #Shape (batch_size, 3)
+        field[i : i + batch_size] = E_vec_batched  # Shape (batch_size, 3)
     return field
 
 
@@ -125,6 +131,7 @@ def test_specific_field_grid_simult(x_0, x, Q, field_func):
     dt = end - start
     return dt, field
 
+
 def test_specific_field_grid_loop(x_0, x, Q, field_func):
     """
     Test the electric field calculation using a specific electric field function
@@ -137,10 +144,11 @@ def test_specific_field_grid_loop(x_0, x, Q, field_func):
     dt = end - start
     return dt, total_field
 
+
 def main():
     """
     Loop over several electric field functions and test them, the following functions/parameters are tested:
-    
+
     - Individual Fields:
         - calculate_electric_field_dev_c_shared
         - calculate_electric_field_base
@@ -161,33 +169,32 @@ def main():
 
     grid_type = "simult"
 
-    radius_filter_dict = {
-        "tiny": 12,
-        "small": 30,
-        "medium": None,
-        "large": None
-    }
+    radius_filter_dict = {"tiny": 12, "small": 30, "medium": None, "large": None}
 
     results = []
     function_list_single = [
-        #calculate_electric_field_base,
+        # calculate_electric_field_base,
         calculate_electric_field_dev_c_shared,
         calculate_electric_field_c_shared_full_alt,
         calculate_electric_field_c_shared_full,
-        #calculate_electric_field_gpu_for_test, 1
-        #calculate_field_at_point,
+        # calculate_electric_field_gpu_for_test, 1
+        # calculate_field_at_point,
     ]
     function_list_grid = [
-        #grid_field_simult_base, 1
+        # grid_field_simult_base, 1
         calculate_electric_field_torch_batch_gpu,
-        #grid_field_simult_c_shared_part, 1
+        # grid_field_simult_c_shared_part, 1
         loop_field_simult_c_shared_full,
-        grid_field_simult_c_shared_full
+        grid_field_simult_c_shared_full,
     ]
 
     function_list = function_list_single + function_list_grid
 
-    for i in ["tiny", "small", "medium"]: #Skipping large for now, not benchmarking on systems this large
+    for i in [
+        "tiny",
+        "small",
+        "medium",
+    ]:  # Skipping large for now, not benchmarking on systems this large
         "Running tests for {} system".format(i)
         # Load the PDB file
         pdb_file = "./test_files/test.pdb"
@@ -203,7 +210,9 @@ def main():
         step_size = calc.step_size
 
         n_charges = len(Q)
-        print(f"Number of charges: {n_charges} by radius filter {radius_filter_dict[i]}")
+        print(
+            f"Number of charges: {n_charges} by radius filter {radius_filter_dict[i]}"
+        )
 
         # Test the electric field functions, shuffle their order to avoid bias in timing
         function_list_shuffled = np.random.permutation(function_list)
@@ -221,11 +230,14 @@ def main():
                     dt = np.mean([dt1, dt2, dt3])
                     dt_std = np.std([dt1, dt2, dt3])
                     print(f"Field computed: {field}")
-                    print(f"Time taken for {j} on {i} system: {dt:.4f}+-{dt_std:.4f} seconds")
+                    print(
+                        f"Time taken for {j} on {i} system: {dt:.4f}+-{dt_std:.4f} seconds"
+                    )
                 except Exception as e:
                     print(f"Error in {j} on {i} system: {e}")
                     # Print the traceback to see where the error occurred
                     import traceback
+
                     traceback.print_exc()
                     exit()
             elif j in function_list_grid:
@@ -246,17 +258,20 @@ def main():
                     dt = np.mean([dt1, dt2, dt3])
                     dt_std = np.std([dt1, dt2, dt3])
                     print(f"Field computed: {field}")
-                    print(f"Time taken for {j} on {i} system: {dt:.4f}+-{dt_std:.4f} seconds")
+                    print(
+                        f"Time taken for {j} on {i} system: {dt:.4f}+-{dt_std:.4f} seconds"
+                    )
                 except Exception as e:
                     print(f"Error in {j} on {i} system: {e}")
                     # Print the traceback to see where the error occurred
                     import traceback
+
                     traceback.print_exc()
                     exit()
-            #Store the results of time, only related to quantifiable parameters
+            # Store the results of time, only related to quantifiable parameters
             results.append([j, i, dt, dt_std, n_charges, dimensions, step_size])
 
-    #Only setting up plotting for n_charges vs time across different field functions
+    # Only setting up plotting for n_charges vs time across different field functions
     if plot:
         # Plot all time vs n_charges for each field function, overlayed
         plt.figure(figsize=(10, 6))
@@ -270,19 +285,22 @@ def main():
                     times.append(result[2])
                     times_std.append(result[3])
                     n_charges.append(result[4])
-            
-            color = next(plt.gca()._get_lines.prop_cycler)['color']
+
+            color = next(plt.gca()._get_lines.prop_cycler)["color"]
             # Plotting errorbars and points simultaneously
-            plt.plot(n_charges, times, '-o', label=func, color=color)
-            plt.errorbar(n_charges, times, yerr=times_std, fmt='-o', capsize=5, color=color)
-        #plt.xscale("log")
-        #plt.yscale("log")
+            plt.plot(n_charges, times, "-o", label=func, color=color)
+            plt.errorbar(
+                n_charges, times, yerr=times_std, fmt="-o", capsize=5, color=color
+            )
+        # plt.xscale("log")
+        # plt.yscale("log")
         plt.xlabel("Number of Charges (n_charges)")
         plt.ylabel("Time (seconds)")
         plt.title("Performance Comparison of Electric Field Calculator Functions")
         plt.legend()
         plt.grid(True)
         plt.show()
-        
+
+
 if __name__ == "__main__":
     main()

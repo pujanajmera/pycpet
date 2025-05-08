@@ -4,7 +4,7 @@ Python-based Computation of Protein Electric Field Topology, built for high-thro
 
 ## Cite
 To cite your use of pycpet, please use the following:
-Ajmera, P., Vargas, S., Chaturvedi, S., Hennefarth, M. & Alexandrova, A. PyCPET - Computing Heterogeneous 3D Protein Electric Fields and Their Dynamics. ChemRxiv (2024). doi:10.26434/chemrxiv-2024-r3thp
+Ajmera, P., Vargas, S., Chaturvedi, S., Hennefarth, M. & Alexandrova, A. PyCPET - Computing Heterogeneous 3D Protein Electric Fields and Their Dynamics. Journal of Chemical Theory and Computation (2025). doi:10.1021/acs.jctc.5c00138
 
 ## Requirements and Installation
 System requirements:

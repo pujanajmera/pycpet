@@ -245,7 +245,7 @@ class Math_ops:
         )
 
         return res
-    
+
     def compute_batch_field(self, x_0, x, Q, batch_size):
         res = np.zeros_like(x_0, dtype="float32")
         self.math.compute_batched_field.restype = None
@@ -284,7 +284,6 @@ class Math_ops:
         # print(res)
 
         return res
-    
 
     def calc_esp_base(self, x_0, x, Q):
         """
@@ -302,7 +301,6 @@ class Math_ops:
         self.math.calc_esp_base(res, x_0, len(Q), x, Q.reshape(len(Q)))
 
         return res
-
 
     def calc_field_base(self, x_0, x, Q):
         """

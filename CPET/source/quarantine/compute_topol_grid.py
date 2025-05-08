@@ -5,7 +5,8 @@ import time
 import torch
 from CPET.utils.io import parse_pqr
 
-#@profile
+
+# @profile
 def calculate_electric_field_torch(x_0, x, Q):
     """
     Computes electric field at multiple points given positions of charges
@@ -18,7 +19,7 @@ def calculate_electric_field_torch(x_0, x, Q):
     """
     # Compute the difference between every point in x_0 and every point in x
     # R will be of shape (N, L, 3)
-    R = x_0.unsqueeze(1)-x.unsqueeze(0)
+    R = x_0.unsqueeze(1) - x.unsqueeze(0)
     r_mag = torch.norm(R, dim=-1)
     r_mag_cube = (r_mag**3).unsqueeze(-1)
 
@@ -29,8 +30,9 @@ def calculate_electric_field_torch(x_0, x, Q):
     E = torch.einsum("ijk,ijk,ijk->ik", R, 1 / r_mag_cube, Q_reshaped) * 14.3996451
     return E
 
-#@profile
-def propagate_topo_matrix(path_matrix,i, x, Q, step_size):
+
+# @profile
+def propagate_topo_matrix(path_matrix, i, x, Q, step_size):
     """
     Propagates position based on normalized electric field at a given point
     Takes
@@ -45,8 +47,9 @@ def propagate_topo_matrix(path_matrix,i, x, Q, step_size):
     E = calculate_electric_field_torch(path_matrix_prior, x, Q)  # Compute field
     E_norm = torch.norm(E, dim=-1).unsqueeze(-1)
     E_normalized = E / E_norm
-    path_matrix[i+1] = path_matrix_prior + step_size*E_normalized
+    path_matrix[i + 1] = path_matrix_prior + step_size * E_normalized
     return path_matrix
+
 
 def curv_mat(v_prime, v_prime_prime):
     """
@@ -57,10 +60,16 @@ def curv_mat(v_prime, v_prime_prime):
     Returns
         curvature(float) - the curvature
     """
-    curvature = torch.norm(torch.cross(v_prime, v_prime_prime), dim=-1) / torch.norm(v_prime, dim=-1) ** 3
+    curvature = (
+        torch.norm(torch.cross(v_prime, v_prime_prime), dim=-1)
+        / torch.norm(v_prime, dim=-1) ** 3
+    )
     return curvature
 
-def compute_curv_and_dist_mat(x_init,x_init_plus,x_init_plus_plus,x_0,x_0_plus,x_0_plus_plus):
+
+def compute_curv_and_dist_mat(
+    x_init, x_init_plus, x_init_plus_plus, x_0, x_0_plus, x_0_plus_plus
+):
     """
     Computes mean curvature at beginning and end of streamline and the Euclidian distance between beginning and end of streamline
     Takes
@@ -74,12 +83,15 @@ def compute_curv_and_dist_mat(x_init,x_init_plus,x_init_plus_plus,x_0,x_0_plus,x
         dist(float) - Euclidian distance between beginning and end of streamline
         curv_mean(float) - mean curvature between beginning and end of streamline
     """
-    curv_init = curv_mat(x_init_plus - x_init, x_init_plus_plus - 2 * x_init_plus + x_init)
+    curv_init = curv_mat(
+        x_init_plus - x_init, x_init_plus_plus - 2 * x_init_plus + x_init
+    )
     curv_final = curv_mat(x_0_plus - x_0, x_0_plus_plus - 2 * x_0_plus + x_0)
     curv_mean = (curv_init + curv_final) / 2
     dist = torch.norm(x_init - x_0, dim=-1)
     return dist, curv_mean
-    
+
+
 def Inside_Box(local_points, dimensions):
     """
     Checks if a streamline point is inside a box
@@ -93,11 +105,15 @@ def Inside_Box(local_points, dimensions):
     half_length, half_width, half_height = dimensions
     # Check if the point lies within the dimensions of the box
     is_inside = (
-        (local_points[..., 0] >= -half_length) & (local_points[..., 0] <= half_length) &
-        (local_points[..., 1] >= -half_width) & (local_points[..., 1] <= half_width) &
-        (local_points[..., 2] >= -half_height) & (local_points[..., 2] <= half_height)
+        (local_points[..., 0] >= -half_length)
+        & (local_points[..., 0] <= half_length)
+        & (local_points[..., 1] >= -half_width)
+        & (local_points[..., 1] <= half_width)
+        & (local_points[..., 2] >= -half_height)
+        & (local_points[..., 2] <= half_height)
     )
     return is_inside
+
 
 def initialize_streamline_grid(center, x, y, dimensions, n_samples, step_size):
     """
@@ -114,7 +130,7 @@ def initialize_streamline_grid(center, x, y, dimensions, n_samples, step_size):
         random_max_samples(array) - array of maximum sample number for each streamline of shape (n_samples, 1)
         transformation_matrix(array) - matrix that contains the basis vectors for the box of shape (3,3)
     """
-    N=n_samples
+    N = n_samples
     # Convert lists to numpy arrays
     x = x - center  # Translate to origin
     y = y - center  # Translate to origin
@@ -141,23 +157,25 @@ def initialize_streamline_grid(center, x, y, dimensions, n_samples, step_size):
     max_distance = 2 * np.linalg.norm(
         np.array(dimensions)
     )  # Define maximum sample limit as 2 times the diagonal
-    M = round(max_distance/step_size)
+    M = round(max_distance / step_size)
     random_max_samples = np.random.randint(1, M, N)
-    path_matrix = np.zeros((M+2,N,3))
+    path_matrix = np.zeros((M + 2, N, 3))
     path_matrix[0] = random_points_local
-    path_filter = generate_path_filter(random_max_samples,M)
-    print(M,N)
-    return path_matrix, transformation_matrix, M, path_filter,random_max_samples
+    path_filter = generate_path_filter(random_max_samples, M)
+    print(M, N)
+    return path_matrix, transformation_matrix, M, path_filter, random_max_samples
+
 
 def generate_path_filter(arr, M):
     # Initialize the matrix with zeros
-    mat = np.zeros((len(arr), M+2), dtype=int)
+    mat = np.zeros((len(arr), M + 2), dtype=int)
 
     # Iterate over the array
     for i, value in enumerate(arr):
         # Set the values to 1 up to and including 2 after the entry value
-        mat[i, :value+2] = 1
-    return np.expand_dims(mat.T,axis=2)
+        mat[i, : value + 2] = 1
+    return np.expand_dims(mat.T, axis=2)
+
 
 def first_false_index(arr):
     """
@@ -165,10 +183,10 @@ def first_false_index(arr):
     Args:
     - arr (numpy.ndarray): An array of shape (M, N, 1) of booleans
     Returns:
-    - numpy.ndarray: An array of shape (N,) containing the first index where the value is False in each column of arr. 
+    - numpy.ndarray: An array of shape (N,) containing the first index where the value is False in each column of arr.
                      If no False value is found in a column, the value is set to -1 for that column.
     """
-    
+
     # Find where the tensor is False
     false_indices = torch.nonzero(arr == False, as_tuple=True)
     row_indices, col_indices = false_indices
@@ -181,37 +199,47 @@ def first_false_index(arr):
     for col in unique_cols:
         # Find the minimum row index for that column where the value is False
         min_row_for_col = torch.min(row_indices[col_indices == col])
-        result[col] = min_row_for_col 
+        result[col] = min_row_for_col
     return result
 
-def filter_Inside_Box(path_matrix, dimensions,M,path_filter):
-    _, N, _ = path_matrix.shape
-    #First, get new path_matrix by multiplying the maximum path length randomly generated for each streamline
-    print("filtering by maximum path length")
-    filtered_path_matrix = path_matrix * path_filter #Elementwise multiplication to zero values
 
-    #Next, generate the "inside box" matrix operator and apply it
+def filter_Inside_Box(path_matrix, dimensions, M, path_filter):
+    _, N, _ = path_matrix.shape
+    # First, get new path_matrix by multiplying the maximum path length randomly generated for each streamline
+    print("filtering by maximum path length")
+    filtered_path_matrix = (
+        path_matrix * path_filter
+    )  # Elementwise multiplication to zero values
+
+    # Next, generate the "inside box" matrix operator and apply it
     print("filtering by inside box: 1")
     inside_box_mat = Inside_Box(path_matrix, dimensions)
     print("filtering by inside box: 2")
     first_false = first_false_index(inside_box_mat).cpu().numpy()
     print("filtering by inside box: 3")
-    outside_box_filter = generate_path_filter(first_false,M)
+    outside_box_filter = generate_path_filter(first_false, M)
     print("filtering by inside box: 4")
-    filtered_path_matrix = filtered_path_matrix.cpu().numpy()*outside_box_filter
+    filtered_path_matrix = filtered_path_matrix.cpu().numpy() * outside_box_filter
 
-    #Find last 3 non-zero values for each row
+    # Find last 3 non-zero values for each row
     final_mat = np.zeros((3, N, 3))
 
     for j in range(N):
-        non_zero_indices = np.where(np.any(filtered_path_matrix[:, j, :] != [0, 0, 0], axis=-1))[0]
+        non_zero_indices = np.where(
+            np.any(filtered_path_matrix[:, j, :] != [0, 0, 0], axis=-1)
+        )[0]
         # If there are fewer than 3 non-zero elements, handle that case
-        last_three_indices = non_zero_indices[-3:] if len(non_zero_indices) >= 3 else non_zero_indices
-        final_mat[:len(last_three_indices), j, :] = filtered_path_matrix[last_three_indices, j, :]
+        last_three_indices = (
+            non_zero_indices[-3:] if len(non_zero_indices) >= 3 else non_zero_indices
+        )
+        final_mat[: len(last_three_indices), j, :] = filtered_path_matrix[
+            last_three_indices, j, :
+        ]
 
     return final_mat, filtered_path_matrix
 
-#@profile
+
+# @profile
 def main():
     options = {
         "path_to_pqr": "./1_wt_run1_0.pqr",
@@ -223,39 +251,52 @@ def main():
         "step_size": 0.01,
     }
     x, Q = parse_pqr(options["path_to_pqr"])
-    Q=torch.tensor(Q).cuda()
+    Q = torch.tensor(Q).cuda()
     center = np.array(options["center"])
     x_vec_pt = np.array(options["x"])
     y_vec_pt = np.array(options["y"])
     dimensions = np.array(options["dimensions"])
     step_size = options["step_size"]
     n_samples = options["n_samples"]
-    path_matrix, transformation_matrix, M, path_filter, random_max_samples = initialize_streamline_grid(center, x_vec_pt, y_vec_pt, dimensions, n_samples, step_size)
-    path_matrix_torch=torch.tensor(path_matrix).cuda()
-    path_filter=torch.tensor(path_filter).cuda()
-    x = (x-center)@np.linalg.inv(transformation_matrix)
-    x=torch.tensor(x).cuda()
-    j=0
+    path_matrix, transformation_matrix, M, path_filter, random_max_samples = (
+        initialize_streamline_grid(
+            center, x_vec_pt, y_vec_pt, dimensions, n_samples, step_size
+        )
+    )
+    path_matrix_torch = torch.tensor(path_matrix).cuda()
+    path_filter = torch.tensor(path_filter).cuda()
+    x = (x - center) @ np.linalg.inv(transformation_matrix)
+    x = torch.tensor(x).cuda()
+    j = 0
     start_time = time.time()
     for i in range(len(path_matrix)):
-      print(j)
-      if j == len(path_matrix)-1:
-        break
-      path_matrix_torch = propagate_topo_matrix(path_matrix_torch,i, x, Q, step_size)
-      j+=1
-    init_matrix=path_matrix_torch[0:3,:,:]
-    final_matrix,_=filter_Inside_Box(path_matrix_torch,dimensions,M,path_filter)
+        print(j)
+        if j == len(path_matrix) - 1:
+            break
+        path_matrix_torch = propagate_topo_matrix(path_matrix_torch, i, x, Q, step_size)
+        j += 1
+    init_matrix = path_matrix_torch[0:3, :, :]
+    final_matrix, _ = filter_Inside_Box(path_matrix_torch, dimensions, M, path_filter)
     final_matrix = torch.tensor(final_matrix).cuda()
-    distances, curvatures = compute_curv_and_dist_mat(init_matrix[0,:,:], init_matrix[1,:,:], init_matrix[2,:,:],final_matrix[0,:,:],final_matrix[1,:,:],final_matrix[2,:,:])
+    distances, curvatures = compute_curv_and_dist_mat(
+        init_matrix[0, :, :],
+        init_matrix[1, :, :],
+        init_matrix[2, :, :],
+        final_matrix[0, :, :],
+        final_matrix[1, :, :],
+        final_matrix[2, :, :],
+    )
     end_time = time.time()
-    print(f"Time taken for {options['n_samples']} calculations with N~4000: {end_time - start_time:.2f} seconds")
+    print(
+        f"Time taken for {options['n_samples']} calculations with N~4000: {end_time - start_time:.2f} seconds"
+    )
     topology = np.column_stack((distances.cpu().numpy(), curvatures.cpu().numpy()))
     np.savetxt("hist_cpet_mat.txt", topology)
     return topology
 
+
 main()
-'''x = np.array([[0,0,0]])
+"""x = np.array([[0,0,0]])
 x_0 = np.array([[0,0,0.5],[0,0,1],[0.5,0,0]])
 Q = np.array([[1]])
-print(calculate_electric_field(x_0,x,Q))'''
-
+print(calculate_electric_field(x_0,x,Q))"""

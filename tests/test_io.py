@@ -2,9 +2,11 @@ from CPET.utils.io import parse_pqr
 
 import numpy as np
 
+
 def test_mat_parser():
     # TODO: Implement test_mat_parser
     pass
+
 
 def test_pqr_parser():
     """Test the pqr parser"""

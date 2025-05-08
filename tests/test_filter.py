@@ -4,7 +4,7 @@ import pandas as pd
 
 # Import all the filter functions
 from CPET.utils.io import (
-    filter_radius, 
+    filter_radius,
     filter_radius_whole_residue,
     filter_IDs,
     filter_residue,
@@ -13,6 +13,7 @@ from CPET.utils.io import (
     filter_in_box,
     filter_atom_num,
 )
+
 
 class TestFilter:
     @pytest.fixture
@@ -23,23 +24,26 @@ class TestFilter:
         of arrays for convenience.
         """
         # Coordinates
-        x = np.array([
-            [0.0, 0.0, 0.0],   # A
-            [1.5, 0.0, 0.0],   # B
-            [2.1, 1.0, 0.0],   # C
-            [5.0, 5.0, 5.0],   # D
-        ], dtype=float)
+        x = np.array(
+            [
+                [0.0, 0.0, 0.0],  # A
+                [1.5, 0.0, 0.0],  # B
+                [2.1, 1.0, 0.0],  # C
+                [5.0, 5.0, 5.0],  # D
+            ],
+            dtype=float,
+        )
 
         # Charge array
         Q = np.array([+1.0, -0.5, +0.3, +1.2], dtype=float)
 
         # Residue names and numbers
-        resids  = np.array(["WAT", "WAT", "FE",  "NI"])   # Example residue IDs
-        resnums = np.array([  10,   10,   651,   652])    # Example residue numbers
+        resids = np.array(["WAT", "WAT", "FE", "NI"])  # Example residue IDs
+        resnums = np.array([10, 10, 651, 652])  # Example residue numbers
 
         # Atom info
         atom_numbers = np.array([1001, 1002, 2001, 3001])  # Unique identifiers
-        atom_types   = np.array(["O",   "H",   "FE",  "NI"])
+        atom_types = np.array(["O", "H", "FE", "NI"])
 
         # Combine them into a single dictionary to pass around
         data = {
@@ -80,9 +84,9 @@ class TestFilter:
         Test filter_radius_whole_residue: if *any* atom of a residue is
         outside the radius, the entire residue is removed.
         """
-        x       = synthetic_data["x"]
-        Q       = synthetic_data["Q"]
-        resids  = synthetic_data["resids"]
+        x = synthetic_data["x"]
+        Q = synthetic_data["Q"]
+        resids = synthetic_data["resids"]
         resnums = synthetic_data["resnums"]
 
         center = np.array([0.0, 0.0, 0.0], dtype=float)
@@ -120,33 +124,32 @@ class TestFilter:
         # You could also keep chain empty if not used.
         ID = []
         for i in range(len(synthetic_data["x"])):
-            ID.append((
-                synthetic_data["atom_number"][i],
-                synthetic_data["atom_type"][i],
-                synthetic_data["resids"][i],
-                synthetic_data["resnums"][i],
-                "A"  # chain
-            ))
+            ID.append(
+                (
+                    synthetic_data["atom_number"][i],
+                    synthetic_data["atom_type"][i],
+                    synthetic_data["resids"][i],
+                    synthetic_data["resnums"][i],
+                    "A",  # chain
+                )
+            )
 
         # Let's create a filter_dict that tries to remove any FE or NI atoms
         # We need to provide them in lists of equal length. We'll do just 1 filter row.
         filter_dict = {
-            "atom_type": ["FE"],   # remove all atom_type == "FE"
-            "resid":     [""],     # not filtering by resid
-            "resnum":    [""],     # not filtering by resnum
-            "chain":     [""]      # not filtering by chain
+            "atom_type": ["FE"],  # remove all atom_type == "FE"
+            "resid": [""],  # not filtering by resid
+            "resnum": [""],  # not filtering by resnum
+            "chain": [""],  # not filtering by chain
         }
 
         x_filtered, Q_filtered, ID_filtered = filter_IDs(
-            synthetic_data["x"],
-            synthetic_data["Q"],
-            ID,
-            filter_dict
+            synthetic_data["x"], synthetic_data["Q"], ID, filter_dict
         )
 
         # In synthetic_data, we have 4 atoms: O (WAT#10), H (WAT#10), FE(#651), NI(#652)
         # "atom_type":"FE" means we remove the FE entry. But we did NOT specify "NI",
-        # so NI stays. 
+        # so NI stays.
         # Original length was 4, so let's see what's removed:
         #   - FE is removed
         #   - O, H, and NI remain
@@ -170,12 +173,14 @@ class TestFilter:
         """
         # We'll call the function: filter_residue(x, Q, resnums, resids, atom_number, atom_type, filter_list)
         x, Q, resnums, resids, anums, atypes = [
-            synthetic_data[k] for k in ["x","Q","resnums","resids","atom_number","atom_type"]
+            synthetic_data[k]
+            for k in ["x", "Q", "resnums", "resids", "atom_number", "atom_type"]
         ]
 
         filter_list = ["WAT"]  # remove all "WAT" residues
-        (x_filt, Q_filt, resnums_filt, resids_filt,
-         anums_filt, atypes_filt) = filter_residue(x, Q, resnums, resids, anums, atypes, filter_list)
+        (x_filt, Q_filt, resnums_filt, resids_filt, anums_filt, atypes_filt) = (
+            filter_residue(x, Q, resnums, resids, anums, atypes, filter_list)
+        )
 
         # Original data had WAT #10 for the first two items => removed.
         # FE #651, NI #652 remain => we expect 2 items left
@@ -189,12 +194,14 @@ class TestFilter:
         Test filter_resnum by removing e.g. residue #651.
         """
         x, Q, resnums, resids = [
-            synthetic_data[k] for k in ["x","Q","resnums","resids"]
+            synthetic_data[k] for k in ["x", "Q", "resnums", "resids"]
         ]
         filter_list = [651]  # remove residue number 651
-        x_filt, Q_filt, resnums_filt, resids_filt = filter_resnum(x, Q, resnums, resids, filter_list)
+        x_filt, Q_filt, resnums_filt, resids_filt = filter_resnum(
+            x, Q, resnums, resids, filter_list
+        )
 
-        # Residue #651 was the 3rd entry (FE). 
+        # Residue #651 was the 3rd entry (FE).
         # So we remove that => expect 3 left
         assert len(x_filt) == 3
         # Let's check the coordinates are the 1st, 2nd, and 4th from the original
@@ -207,18 +214,17 @@ class TestFilter:
         """
         Test filter_resnum_andname, which removes atoms with a specific (resnum -> resname) mapping.
         """
-        x   = synthetic_data["x"]
-        Q   = synthetic_data["Q"]
-        resnums  = synthetic_data["resnums"]
+        x = synthetic_data["x"]
+        Q = synthetic_data["Q"]
+        resnums = synthetic_data["resnums"]
         resnames = synthetic_data["resids"]  # 'resids' are effectively residue names
-        anums    = synthetic_data["atom_number"]
-        atypes   = synthetic_data["atom_type"]
+        anums = synthetic_data["atom_number"]
+        atypes = synthetic_data["atom_type"]
 
         # Suppose we want to remove the pair { "651":"FE" } from the data
-        filter_list = [{ "651": "FE" }]
-        (x_filt, Q_filt, resnums_filt, resnames_filt,
-         anums_filt, atypes_filt) = filter_resnum_andname(
-            x, Q, resnums, resnames, anums, atypes, filter_list
+        filter_list = [{"651": "FE"}]
+        (x_filt, Q_filt, resnums_filt, resnames_filt, anums_filt, atypes_filt) = (
+            filter_resnum_andname(x, Q, resnums, resnames, anums, atypes, filter_list)
         )
 
         # This should remove whichever row has resnum=651 with resname="FE", i.e. the 3rd row
@@ -258,11 +264,11 @@ class TestFilter:
         """
         Test filter_atom_num, which removes coordinates if their atom_number is in a filter_list.
         """
-        x   = synthetic_data["x"]
-        Q   = synthetic_data["Q"]
+        x = synthetic_data["x"]
+        Q = synthetic_data["Q"]
         anums = synthetic_data["atom_number"]
 
-        # Suppose we want to remove the 2nd and 3rd entries => that corresponds to 
+        # Suppose we want to remove the 2nd and 3rd entries => that corresponds to
         # atom_number=1002, 2001 in our synthetic data.
         filter_list = [1002, 2001]
         x_filt, Q_filt = filter_atom_num(x, Q, anums, filter_list)

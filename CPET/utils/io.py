@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+
 def write_field_to_file(grid_points, field_points, filename):
     """
     Write grid points and field points to a files
@@ -38,7 +39,12 @@ def save_numpy_as_dat(meta_data, volume, name):
     center = meta_data["center"]
 
     first_line = "#Sample Density: {} {} {}; Volume: Box: {} {} {}\n".format(
-        num_steps_list[0], num_steps_list[1], num_steps_list[2], dimensions[0], dimensions[1], dimensions[2]
+        num_steps_list[0],
+        num_steps_list[1],
+        num_steps_list[2],
+        dimensions[0],
+        dimensions[1],
+        dimensions[2],
     )
     second_line = "#Frame 0\n"
     third_line = "#Center: {} {} {}\n".format(center[0], center[1], center[2])
@@ -325,7 +331,7 @@ def filter_IDs(x, Q, ID, filter_dict):
     Takes:
         x(array) - coordinates of charges of shape (N,3)
         Q(array) - magnitude and sign of charges of shape (N,1)
-        ID(list) - identity information of shape (N,), where each value is a tuple of 
+        ID(list) - identity information of shape (N,), where each value is a tuple of
         the form (atom_number, atom_type, atom_resid, atom_resnum, atom_chain)
         filter_dict(dict) - dictionary of identity information to filter out
     Returns:
@@ -339,8 +345,10 @@ def filter_IDs(x, Q, ID, filter_dict):
     # ------------------------------------
     # We'll assume ID is a list of tuples, each (atom_number, atom_type, resid, resnum, chain).
     # Let's create a DataFrame with 5 named columns:
-    df_id = pd.DataFrame(ID, columns=['atom_number', 'atom_type', 'resid', 'resnum', 'chain'])
-    #print(df_id)
+    df_id = pd.DataFrame(
+        ID, columns=["atom_number", "atom_type", "resid", "resnum", "chain"]
+    )
+    # print(df_id)
     N = len(df_id)
     if len(x) != N or len(Q) != N:
         raise ValueError("x, Q, and ID must have the same length.")
@@ -381,7 +389,7 @@ def filter_IDs(x, Q, ID, filter_dict):
             if filter_val != "":
                 # Convert both sides to string if needed (since some data might be numeric)
                 # We compare row-by-row in a vectorized way:
-                local_mask &= (df_id[key].astype(str) == str(filter_val))
+                local_mask &= df_id[key].astype(str) == str(filter_val)
 
         # local_mask is now True for rows that match this filter, and False otherwise
         # Combine it with our global any_filter_mask via logical OR
@@ -399,12 +407,16 @@ def filter_IDs(x, Q, ID, filter_dict):
     # If x, Q, ID are lists, we can do list comprehensions;
     # If they're NumPy arrays, we can just slice them with keep_mask.
     # Example if x, Q are lists:
-    x_filtered  = [val for val, keep in zip(x, keep_mask) if keep]
-    Q_filtered  = [val for val, keep in zip(Q, keep_mask) if keep]
+    x_filtered = [val for val, keep in zip(x, keep_mask) if keep]
+    Q_filtered = [val for val, keep in zip(Q, keep_mask) if keep]
     # For ID, we can slice df_id or the original ID
     ID_filtered = [ID[i] for i, keep in enumerate(keep_mask) if keep]
     print("Length before filtering: {}".format(len(x), len(Q), len(ID)))
-    print("Length after filtering: {}".format(len(x_filtered), len(Q_filtered), len(ID_filtered)))
+    print(
+        "Length after filtering: {}".format(
+            len(x_filtered), len(Q_filtered), len(ID_filtered)
+        )
+    )
     return np.array(x_filtered), np.array(Q_filtered), np.array(ID_filtered)
 
 
@@ -688,7 +700,9 @@ def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="c
             raise ValueError("chains must be the same length as atoms")
         centering_atoms = [
             (k, v, chain)
-            for atom_dict, chain in zip(options[seltype]["atoms"], options[seltype]["chains"])
+            for atom_dict, chain in zip(
+                options[seltype]["atoms"], options[seltype]["chains"]
+            )
             for k, v in atom_dict.items()
         ]
         print(len(chains))

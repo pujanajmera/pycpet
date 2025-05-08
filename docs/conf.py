@@ -12,15 +12,16 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../CPET'))
+
+sys.path.insert(0, os.path.abspath("../CPET"))
 # sys.path.insert(0, os.path.abspath('.'))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'pycpet'
-copyright = '2025, Pujan Ajmera, Santiago Vargas, Matthew Hennefarth, Alexandrova Group'
-author = 'Pujan Ajmera, Santiago Vargas, Matthew Hennefarth, Alexandrova Group'
+project = "pycpet"
+copyright = "2025, Pujan Ajmera, Santiago Vargas, Matthew Hennefarth, Alexandrova Group"
+author = "Pujan Ajmera, Santiago Vargas, Matthew Hennefarth, Alexandrova Group"
 
 
 # -- General configuration ---------------------------------------------------
@@ -29,23 +30,23 @@ author = 'Pujan Ajmera, Santiago Vargas, Matthew Hennefarth, Alexandrova Group'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx_book_theme',
-    'sphinx.ext.autodoc',	     # To generate autodocs
-    'sphinx.ext.mathjax',           # autodoc with maths
-    'sphinx.ext.napoleon'           # For auto-doc configuration
+    "sphinx_book_theme",
+    "sphinx.ext.autodoc",  # To generate autodocs
+    "sphinx.ext.mathjax",  # autodoc with maths
+    "sphinx.ext.napoleon",  # For auto-doc configuration
 ]
 
-napoleon_google_docstring = False   # Turn off googledoc strings
-napoleon_numpy_docstring = True     # Turn on numpydoc strings
-napoleon_use_ivar = True 	     # For maths symbology
+napoleon_google_docstring = False  # Turn off googledoc strings
+napoleon_numpy_docstring = True  # Turn on numpydoc strings
+napoleon_use_ivar = True  # For maths symbology
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -53,9 +54,9 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_book_theme'
+html_theme = "sphinx_book_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]

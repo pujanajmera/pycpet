@@ -21,4 +21,3 @@ lines_sorted = sorted(lines, key=lambda x: x[0], reverse=True)
 
 for i, (self_us, cumulative_us, modname) in enumerate(lines_sorted[:50]):
     print(f"{i+1:2d}. {self_us:8d} us self  | {cumulative_us:8d} us cum  | {modname}")
-
