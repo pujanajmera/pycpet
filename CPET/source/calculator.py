@@ -45,22 +45,33 @@ class calculator:
     
     Attributes
     -------
+    .. rubric:: Development parameters
     self.profile : Bool
         If True, the calculator will profile the code (development, intended for GPU)
+
+    .. rubric:: Input parameters
+    self.path_to_pdb : str
+        Path to the PDB file
+    
+    .. rubric:: Electric field grid parameters
     self.step_size : float
         Step size for the electric field calculation, relevant for the topology calculation or volume field calcs
     self.dimensions : list
         Dimensions of the box for the electric field/topology calculations
+
+    .. rubric:: Topology calculation parameters
     self.n_samples : int
         Number of streamlines used for the topology calculation
+    self.max_streamline_init : str
+        Method for determining when streamlines end
     self.concur_slip : int
         Number of concurrent processes for the CPU-accelerated topology calculation
     self.GPU_batch_freq : int
         Number of batches for the GPU-accelerated topology calculation
+
+    .. rubric:: Extraneous calculation parameters
     self.dtype : str
         Data type for the calculations (float32 or float64)
-    self.max_streamline_init : str
-        Method for initializing the streamlines (random or uniform)
     """
     def __init__(self, options, path_to_pdb=None):
         # self.efield_calc = calculator(math_loc=math_loc)
