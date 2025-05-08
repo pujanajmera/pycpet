@@ -13,7 +13,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../CPET/"))
+sys.path.insert(0, os.path.abspath("../CPET/source/"))
 sys.path.insert(0, os.path.abspath('.'))
 
 
