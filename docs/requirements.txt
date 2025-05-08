@@ -42,7 +42,6 @@ nvidia-nccl-cu12==2.19.3
 nvidia-nvjitlink-cu12==12.2.140
 nvidia-nvtx-cu12==12.1.105
 packaging==24.2
-packmol-memgen==1.2.3rc0
 pandas==1.5.3
 ParmEd==3.4.1
 patsy
