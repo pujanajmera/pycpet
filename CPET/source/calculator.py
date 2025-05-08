@@ -50,7 +50,15 @@ class calculator:
     If True, the calculator will profile the code (development, intended for GPU)
     """
     def __init__(self, options, path_to_pdb=None):
+        """Initialize the calculator.
 
+        Parameters
+        ----------
+        options : dict
+            Dictionary from input options.json file
+        path_to_pdb : str, optional
+            Path to the PDB file, by default None
+        """
         # self.efield_calc = calculator(math_loc=math_loc)
         options = default_options_initializer(options) # Double in case calculator is called outside of CPET.py
         self.profile = options["profile"]
