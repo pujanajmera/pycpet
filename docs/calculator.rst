@@ -1,10 +1,5 @@
-calculator module
+Calculator Class
 =================
-
-.. automodule:: CPET.source.calculator
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 .. autoclass:: CPET.source.calculator.calculator
    :members:
