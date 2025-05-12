@@ -183,10 +183,10 @@ def default_options_initializer(options):
         options(dict) - dictionary of options with default values
     """
     #Directories:
-    if "input_path" not in options.keys():
-        options["input_path"] = "./inpdir"
-    if "output_path" not in options.keys():
-        options["output_path"] = "./outdir"
+    if "inputpath" not in options.keys():
+        options["inputpath"] = "./inpdir"
+    if "outputpath" not in options.keys():
+        options["outputpath"] = "./outdir"
 
     #Developer Options:
     if "profile" not in options.keys():

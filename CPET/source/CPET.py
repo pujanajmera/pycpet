@@ -21,6 +21,9 @@ class CPET:
         self.logger = logging.getLogger(__name__)  # Inherit logger from cpet.py
         self.m = self.options["CPET_method"]
         self.logger.info("Instantiating CPET, running method: {}".format(self.m))
+        self.inputpath = self.options["inputpath"]
+        self.outputpath = self.options["outputpath"]
+        self.step_size = self.options["step_size"]
         if not os.path.exists(self.outputpath):
             print(
                 "Output directory does not exist in current directory, creating: \n{}".format(

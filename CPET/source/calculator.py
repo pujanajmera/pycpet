@@ -79,21 +79,15 @@ class calculator:
         self.profile = options["profile"]
         self.path_to_pdb = path_to_pdb
 
-        """
-        Options regarding the electric field calculation.
-        Note: step_size is used for both field calculations (the density of the field grid)
-        and the topology calculations (the step size of the stremalines), but always has the same
-        units and represents accuracy
-        """
         self.step_size = options["step_size"]
         self.dimensions = (
-            np.array(options["dimensions"]) if options["dimensions"] is not None else None
+            np.array(options["dimensions"]) if "dimensions" in options.keys() else None
         )
 
-        """
-        Options regarding streamline distribution calculations
-        """
-        self.n_samples = options["n_samples"]
+
+
+
+        self.n_samples = options["n_samples"] if "n_samples" in options.keys() else None
         self.concur_slip = options["concur_slip"]
         self.GPU_batch_freq = options["GPU_batch_freq"]
         self.dtype = options["dtype"]
@@ -103,9 +97,6 @@ class calculator:
             else "true_rand"
         )
 
-        """
-        Options regarding test outputs, for debugging and/or visualization
-        """
         self.write_transformed_pdb = options["write_transformed_pdb"]
         self.strip_filter = (
             options["strip_filter"] if "strip_filter" in options.keys() else False
