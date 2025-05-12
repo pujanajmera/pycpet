@@ -461,7 +461,7 @@ def scale_tip_to_tail_vectors(
     for i in range(len(tip_to_tail_vectors)):
 
         # use field mag as scaling factor
-        m = 4.0 * sparsify_factor * field_mags[i] * min_dim
+        m = 0.5 * sparsify_factor * field_mags[i] * min_dim
 
         xA = tip_to_tail_vectors[i][0]
         yA = tip_to_tail_vectors[i][1]
@@ -504,7 +504,6 @@ def generate_bild_file(
     Inputs:
         tip_to_tail_vectors: Tip to tail vectors
         transformed_field_array: Field array
-        chimera_type: Chimera type
         percentile: Percentile cutoff for sparsifying the field
         sparsify_factor: Sparsification factor for the field
     Outputs:
@@ -546,7 +545,7 @@ def generate_bild_file(
     print("Min field magnitude: ", field_mags_min)
 
     field_mags = (field_mags - field_mags_min) / (field_mags_max - field_mags_min)
-    print(max(field_mags), min(field_mags))
+    #print(max(field_mags), min(field_mags)) #Debug, make sure min and max are 0 and 1
     percentile_cutoff = np.percentile(field_mags, percentile)
     r = sparsify_vec_field(
         (1 - field_mags), sparsify_factor, nx, ny, nz, dim1, dim2, dim3
