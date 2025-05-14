@@ -293,6 +293,9 @@ def calculate_electric_field_c_shared_full_alt(x_0, x, Q):
     Returns
         E(array) - electric field at the point of shape (1,3)
     """
+    x_0 = x_0.astype(np.float32)
+    x = x.astype(np.float32)
+    Q = Q.astype(np.float32)
     E = Math.calc_field(x_0=x_0, x=x, Q=Q)
     return E
 
