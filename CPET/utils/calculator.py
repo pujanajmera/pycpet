@@ -240,7 +240,7 @@ def initialize_box_points_uniform(
 
 def calculate_electric_field_base(x_0, x, Q):
     """
-    Computes electric field at a point given positions of charges
+    Computes electric field at a point given positions of charges, basic version
     Takes
         x_0(array) - position to compute field at of shape (1,3)
         x(array) - positions of charges of shape (N,3)
@@ -280,20 +280,6 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q):
     # print(E.shape)
     # print("-")
     # print("end efield calc")
-    return E
-
-
-def calculate_electric_field_c_shared_full(x_0, x, Q):
-    """
-    Computes electric field at a point given positions of charges
-    Takes
-        x_0(array) - position to compute field at of shape (1,3)
-        x(array) - positions of charges of shape (N,3)
-        Q(array) - magnitude and sign of charges of shape (N,1)
-    Returns
-        E(array) - electric field at the point of shape (1,3)
-    """
-    E = Math.calc_field_base(x_0=x_0, x=x, Q=Q)
     return E
 
 
@@ -405,20 +391,12 @@ def compute_field_on_grid(grid_coords, x, Q):
         E(array): Electric field at each point in the meshgrid of shape (M, M, M, 3).
     """
     # Reshape meshgrid to a 2D array of shape (M*M*M, 3)
-    reshaped_meshgrid = grid_coords.reshape(-1, 3)
+    x_0 = grid_coords.reshape(-1, 3)
 
-    # Initialize an array to hold the electric field values
-    E = np.zeros_like(reshaped_meshgrid, dtype=float)
+    # Compute the field using loop c-shared library
+    E = Math.compute_looped_field(x_0, x, Q)
 
-    # Calculate the electric field at each point in the meshgrid
-    for i, x_0 in enumerate(reshaped_meshgrid):
-        E[i] = calculate_electric_field_c_shared_full(x_0, x, Q)
-        if x_0[0] == 0 and x_0[1] == 0 and x_0[2] == 0:
-            print(f"Center field: {E[i]}")
-
-    point_field_concat = np.concatenate((reshaped_meshgrid, E), axis=1)
-
-    return point_field_concat.astype(np.half)
+    return E
 
 
 def compute_ESP_on_grid(grid_coords, x, Q):

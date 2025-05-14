@@ -9,12 +9,8 @@ warnings.filterwarnings(action="ignore")
 
 from CPET.utils.calculator import (
     calculate_field_at_point,
-    calculate_electric_field_dev_c_shared,
     calculate_electric_field_base,
-    calculate_electric_field_dev_c_shared,
     calculate_electric_field_c_shared_full_alt,
-    calculate_electric_field_c_shared_full,
-    calculate_electric_field_gpu_for_test,
 )
 
 
@@ -58,7 +54,6 @@ def main():
         calculate_electric_field_base,
         # calculate_electric_field_dev_c_shared,
         calculate_electric_field_c_shared_full_alt,
-        calculate_electric_field_c_shared_full,
         # calculate_electric_field_gpu_for_test,
         # calculate_field_at_point,
     ]

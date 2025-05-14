@@ -11,12 +11,8 @@ import pkg_resources
 
 from CPET.utils.calculator import (
     calculate_field_at_point,
-    calculate_electric_field_dev_c_shared,
     calculate_electric_field_base,
-    calculate_electric_field_dev_c_shared,
     calculate_electric_field_c_shared_full_alt,
-    calculate_electric_field_c_shared_full,
-    calculate_electric_field_gpu_for_test,
 )
 
 from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
@@ -27,68 +23,6 @@ package_name = "pycpet"
 package = pkg_resources.get_distribution(package_name)
 package_path = package.location
 Math = Math_ops(shared_loc=package_path + "/CPET/utils/math_module.so")
-
-
-def grid_field_simult_base(x_0, x, Q):
-    """
-    Computes the electric field from x_0, x, Q, at all points simultaneously
-    Batched
-    Takes:
-        x_0(array) - (L,3) array of points to compute field at
-        x(np array) - (N,3) array of points to compute field from
-        Q(np array) - (N,1) array of charge values
-    Returns:
-        field(array) - (L, 1) array of electric field
-    """
-    field = np.zeros_like(x_0)  # Shape (L, 3)
-    batch_size = 100  # Batching L points into batch_size quantities at a time
-    for i in range(0, len(x_0), batch_size):
-        x_0_batch = x_0[i : i + batch_size]  # Shape (batch_size, 3)
-        x_0_batch_expanded = np.expand_dims(
-            x_0_batch, axis=1
-        )  # Shape (batch_size, 1, 3)
-        x_expanded = np.expand_dims(x, axis=0)  # Shape (1, N, 3)
-        # Calculate the difference between x_0 and x
-        R = np.subtract(x_0_batch_expanded, x_expanded)  # Shape (batch_size, N, 3)
-        # Calculate the magnitude of R
-        R_mag = np.linalg.norm(R, axis=2) ** 3  # Shape (batch_size, N)
-        # Calculate the electric field
-        E_vec_batched = (
-            R * (1 / R_mag)[:, :, np.newaxis] * Q[np.newaxis, :, :] * 14.3996451
-        )  # Shape (batch_size, N, 3)
-        field[i : i + batch_size] = E_vec_batched.sum(axis=1)  # Shape (batch_size, 3)
-    return field
-
-
-def grid_field_simult_c_shared_part(x_0, x, Q):
-    """
-    Computes the electric field from x_0, x, Q, at all points simultaneously
-    Batched
-    Takes:
-        x_0(array) - (L,3) array of points to compute field at
-        x(np array) - (N,3) array of points to compute field from
-        Q(np array) - (N,1) array of charge values
-    Returns:
-        field(array) - (L, 1) array of electric field
-    """
-    field = np.zeros_like(x_0)  # Shape (L, 3)
-    batch_size = 100  # Batching L points into batch_size quantities at a time
-    for i in range(0, len(x_0), batch_size):
-        x_0_batch = x_0[i : i + batch_size]  # Shape (batch_size, 3)
-        x_0_batch_expanded = np.expand_dims(
-            x_0_batch, axis=1
-        )  # Shape (batch_size, 1, 3)
-        x_expanded = np.expand_dims(x, axis=0)  # Shape (1, N, 3)
-        # Calculate the difference between x_0 and x
-        R = np.subtract(x_0_batch_expanded, x_expanded)  # Shape (batch_size, N, 3)
-        # Calculate the magnitude of R
-        R_mag = np.linalg.norm(R, axis=2) ** 3  # Shape (batch_size, N)
-        # Take care of last batch, where R_mag is not a multiple of batch_size
-        if len(R_mag) != batch_size:
-            batch_size = len(R_mag)
-        E_vec_batched = Math.einsum_operation_batch(R, (1 / R_mag), Q, batch_size)
-        field[i : i + batch_size] = E_vec_batched  # Shape (batch_size, 3)
-    return field
 
 
 def loop_field_simult_c_shared_full(x_0, x, Q):
@@ -167,23 +101,16 @@ def main():
 
     plot = True
 
-    grid_type = "simult"
-
     radius_filter_dict = {"tiny": 12, "small": 30, "medium": None, "large": None}
 
     results = []
     function_list_single = [
-        # calculate_electric_field_base,
-        calculate_electric_field_dev_c_shared,
+        calculate_electric_field_base,
         calculate_electric_field_c_shared_full_alt,
-        calculate_electric_field_c_shared_full,
-        # calculate_electric_field_gpu_for_test, 1
         # calculate_field_at_point,
     ]
     function_list_grid = [
-        # grid_field_simult_base, 1
         calculate_electric_field_torch_batch_gpu,
-        # grid_field_simult_c_shared_part, 1
         loop_field_simult_c_shared_full,
         grid_field_simult_c_shared_full,
     ]

@@ -10,7 +10,7 @@ from CPET.utils.calculator import (
     initialize_box_points_random,
     initialize_box_points_uniform,
     compute_field_on_grid,
-    calculate_electric_field_dev_c_shared,
+    calculate_electric_field_c_shared_full_alt,
     compute_ESP_on_grid,
 )
 from CPET.utils.io import (
@@ -43,23 +43,16 @@ class calculator:
     path_to_pdb : str, optional
         Path to the PDB file, by default None
     
-    Development Attributes
+    Attributes
     ----------
     self.profile : Bool
         If True, the calculator will profile the code (development, intended for GPU)
-
-    Input Attributes
-    ----------
     self.path_to_pdb : str
         Path to the PDB file
-    
-    Electric field grid parameters
     self.step_size : float
         Step size for the electric field calculation, relevant for the topology calculation or volume field calcs
     self.dimensions : list
         Dimensions of the box for the electric field/topology calculations
-
-    Topology calculation parameters
     self.n_samples : int
         Number of streamlines used for the topology calculation
     self.max_streamline_init : str
@@ -68,8 +61,6 @@ class calculator:
         Number of concurrent processes for the CPU-accelerated topology calculation
     self.GPU_batch_freq : int
         Number of batches for the GPU-accelerated topology calculation
-
-    Extraneous calculation parameters
     self.dtype : str
         Data type for the calculations (float32 or float64)
     """
@@ -79,14 +70,13 @@ class calculator:
         self.profile = options["profile"]
         self.path_to_pdb = path_to_pdb
 
+        # Electric field grid parameters
         self.step_size = options["step_size"]
         self.dimensions = (
             np.array(options["dimensions"]) if "dimensions" in options.keys() else None
         )
 
-
-
-
+        #Topology calculation parameters
         self.n_samples = options["n_samples"] if "n_samples" in options.keys() else None
         self.concur_slip = options["concur_slip"]
         self.GPU_batch_freq = options["GPU_batch_freq"]
@@ -468,6 +458,94 @@ class calculator:
 
         print("... > Initialized Calculator!")
 
+    def compute_point_mag(self):
+        """Compute the electric field magnitude at a point defined by the center and the charges Q at positions x.
+        
+        Returns
+        -------
+        point_mag : np.ndarray
+            The computed electric field magnitude at the point
+        """
+        print("... > Computing Point Field (Magnitude)!")
+        print(f"Number of charges: {len(self.Q)}")
+        print("point: {}".format(self.center))
+        print("x shape: {}".format(self.x.shape))
+        print("Q shape: {}".format(self.Q.shape))
+        print("First few lines of x: {}".format(self.x[:5]))
+        start_time = time.time()
+        # Since x and Q are already rotated and translated, need to supply 0 vector as center
+        point_mag = np.norm(
+            calculate_electric_field_c_shared_full_alt(np.array([0, 0, 0]), self.x, self.Q)
+        )
+        end_time = time.time()
+        print(f"{end_time - start_time:.2f}")
+        return point_mag
+
+    def compute_point_field(self):
+        """Compute the electric field at a point defined by the center and the charges Q at positions x.
+
+        Returns
+        -------
+        point_field : np.ndarray
+            The computed electric field at the point
+        """
+        print("... > Computing Point Field (Vector)!")
+        print(f"Number of charges: {len(self.Q)}")
+        print("point: {}".format(self.center))
+        print("x shape: {}".format(self.x.shape))
+        print("Q shape: {}".format(self.Q.shape))
+        print("First few lines of x: {}".format(self.x[:5]))
+        start_time = time.time()
+        # Since x and Q are already rotated and translated, need to supply 0 vector as center
+        point_field = calculate_electric_field_c_shared_full_alt(
+            np.array([0, 0, 0]), self.x, self.Q
+        )
+        end_time = time.time()
+        print(f"{end_time - start_time}")
+        return point_field
+
+    def compute_box(self):
+        """Compute the electric field on a grid defined by the mesh and the charges Q at positions x.
+        
+        Returns
+        -------
+        field_box : np.ndarray
+            The computed electric field on the grid
+        mesh.shape : tuple
+            The shape of the mesh grid
+        """
+        print("... > Computing Box Field!")
+        print(f"Number of charges: {len(self.Q)}")
+        print("mesh shape: {}".format(self.mesh.shape))
+        print("x shape: {}".format(self.x.shape))
+        print("Q shape: {}".format(self.Q.shape))
+        print("First few lines of x: {}".format(self.x[:5]))
+        print("Transformation matrix: {}".format(self.transformation_matrix))
+        field_box = compute_field_on_grid(self.mesh, self.x, self.Q)
+        return field_box, self.mesh.shape
+
+    def compute_box_ESP(self):
+        """Compute the electrostatic potential on a grid defined by the mesh and the charges Q at positions x.
+        
+        Returns
+        -------
+        esp_box : np.ndarray
+            The computed electrostatic potential on the grid
+        mesh.shape : tuple
+            The shape of the mesh grid
+        """
+        print("... > Computing Box ESP!")
+        print(f"Number of charges: {len(self.Q)}")
+        print("mesh shape: {}".format(self.mesh.shape))
+        print("x shape: {}".format(self.x.shape))
+        print("Q shape: {}".format(self.Q.shape))
+        print("First few lines of x: {}".format(self.x[:5]))
+        print("Transformation matrix: {}".format(self.transformation_matrix))
+        print("Center: {}".format(self.center))
+        esp_box = compute_ESP_on_grid(self.mesh, self.x, self.Q)
+        return esp_box, self.mesh.shape
+
+
     def compute_topo_base(self):
         print("... > Computing Topo!")
         print(f"Number of samples: {self.n_samples}")
@@ -642,60 +720,15 @@ class calculator:
         )
         return hist
 
-    def compute_box(self):
-        print("... > Computing Box!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("mesh shape: {}".format(self.mesh.shape))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
-        print("First few lines of x: {}".format(self.x[:5]))
-        print("Transformation matrix: {}".format(self.transformation_matrix))
-        field_box = compute_field_on_grid(self.mesh, self.x, self.Q)
-        return field_box, self.mesh.shape
-
-    def compute_box_ESP(self):
-        print("... > Computing Box!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("mesh shape: {}".format(self.mesh.shape))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
-        print("Transformation matrix: {}".format(self.transformation_matrix))
-        print("Center: {}".format(self.center))
-        field_box = compute_ESP_on_grid(self.mesh, self.x, self.Q)
-        return field_box, self.mesh.shape
-
-    def compute_point_mag(self):
-        print("... > Computing Point Magnitude!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("point: {}".format(self.center))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
-        start_time = time.time()
-        # Since x and Q are already rotated and translated, need to supply 0 vector as center
-        point_mag = np.norm(
-            calculate_electric_field_dev_c_shared(np.array([0, 0, 0]), self.x, self.Q)
-        )
-        end_time = time.time()
-        print(f"{end_time - start_time:.2f}")
-        return point_mag
-
-    def compute_point_field(self):
-        print("... > Computing Point Field!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("point: {}".format(self.center))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
-        print("First few lines of x: {}".format(self.x[:5]))
-        start_time = time.time()
-        # Since x and Q are already rotated and translated, need to supply 0 vector as center
-        point_field = calculate_electric_field_dev_c_shared(
-            np.array([0, 0, 0]), self.x, self.Q
-        )
-        end_time = time.time()
-        print(f"{end_time - start_time}")
-        return point_field
-
     def compute_topo_GPU_batch_filter(self):
+        """Compute the topology using GPU with batch-filtering
+        
+        Returns
+        -------
+        hist : np.ndarray
+            The computed topology data
+        """
+
         print("... > Computing Topo in Batches on a GPU!")
         print(f"Number of samples: {self.n_samples}")
         print(f"Number of charges: {len(self.Q)}")

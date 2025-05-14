@@ -18,12 +18,12 @@ import os
 from CPET.utils.calculator import (
     compute_field_on_grid,
     calculate_field_at_point,
-    calculate_electric_field_dev_c_shared,
     calculate_electric_field_base,
-    calculate_electric_field_dev_c_shared,
     calculate_electric_field_c_shared_full_alt,
-    calculate_electric_field_c_shared_full,
-    calculate_electric_field_gpu_for_test,
+)
+
+from CPET.utils.gpu import (
+    calculate_electric_field_torch_batch_gpu
 )
 
 
@@ -115,8 +115,6 @@ class TestEField:
 
     def test_calculators(self):
         calculator_function_list = [
-            calculate_electric_field_dev_c_shared,  # works
-            calculate_electric_field_c_shared_full,  # works
             calculate_electric_field_c_shared_full_alt,  # works
             calculate_electric_field_gpu_for_test,  # works
         ]
