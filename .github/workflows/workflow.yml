@@ -2,32 +2,36 @@ name: Publish to PyPI
 
 on:
   push:
-    tags: ["v*.*.*"]      # tag like  v0.0.1  to publish
+    tags: ["v*.*.*"]          # fires on v0.0.3, v1.2.0, etc.
 
 permissions:
   contents: read
-  id-token: write         # 🟢 enables OIDC for PyPI
+  id-token: write             # ← required for PyPI OIDC
 
 jobs:
   build-and-publish:
-    environment: pypi
     runs-on: ubuntu-latest
+    environment: pypi         # remove this line if you didn't create an env
 
     steps:
+      # 1. fetch your code
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      # 2. build wheels for all CPython versions / platforms
+      - name: Build wheels (cibuildwheel)
+        uses: pypa/cibuildwheel@v2
         with:
-          python-version: "3.11"
+          output-dir: wheelhouse     # cibuildwheel writes files here
+        env:
+          CIBW_SKIP: "pp* *musllinux*"   # optional: skip PyPy & musl wheels
+          CIBW_BUILD_VERBOSITY: 1        # more logging
+          # if your C extension needs OpenMP, cibuildwheel's manylinux
+          # images already include the GNU compiler with -fopenmp support.
 
-      - name: Build sdist & wheel
-        run: |
-          python -m pip install --upgrade build
-          python -m build
-
+      # 3. upload wheels + sdist to PyPI
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages_dir: dist     # default; just explicit
-          skip_existing: true    # don’t fail if tag was re-run
+          packages_dir: wheelhouse      # upload everything cibuildwheel produced
+          skip_existing: true
+
