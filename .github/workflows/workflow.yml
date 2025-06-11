@@ -17,19 +17,34 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: "3.11"}
 
+      # ---------- macOS: install libomp -----------------
+      - name: Install libomp (macOS only)
+        if: matrix.os == 'macos-latest'
+        run: brew install libomp
+      
+      # ---------- build wheels --------------------------
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.18.1
-        with: {output-dir: wheelhouse}
+        with:
+          output-dir: wheelhouse
+        env:
+          # clang needs these flags to use Homebrew’s libomp
+          CIBW_ENVIRONMENT_MACOS: |
+            CFLAGS="-O3 -march=native -funroll-loops -ffast-math -fPIC -Xpreprocessor -fopenmp"
+            LDFLAGS="-lomp"
+          CIBW_SKIP: "pp* *musllinux*"
 
-      - name: Build sdist (only once, on Linux)
+      # Linux job also builds an sdist once:
+      - name: Build sdist
         if: matrix.os == 'ubuntu-latest'
-        run: python -m pip install --upgrade build && python -m build --sdist -o wheelhouse
+        run: python -m pip install build && python -m build --sdist -o wheelhouse
 
+      # ---------- publish --------------------------------
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with: {packages_dir: wheelhouse, skip_existing: true}
+        with:
+          packages_dir: wheelhouse
+          skip_existing: true
 
 
