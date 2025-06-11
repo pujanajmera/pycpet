@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pycpet"
-version = "0.0.6"
+version = "0.0.7"
 authors = [
   { name="Pujan Ajmera", email="ajmerapujan@gmail.com" },
 ]
@@ -20,7 +20,7 @@ license-files = ["LICEN[CS]E*"]
 dependencies = [
     "torch",
     "numba",
-    "numpy",
+    "numpy<2",
     "pandas",
     "scikit-learn",
     "kneed",
