@@ -33,7 +33,7 @@ jobs:
           CIBW_ENVIRONMENT_MACOS: |
             CFLAGS="-O3 -march=native -funroll-loops -ffast-math -fPIC -I/opt/homebrew/opt/libomp/include -Xpreprocessor -fopenmp"
             LDFLAGS="-L/opt/homebrew/opt/libomp/lib -lomp"
-          CIBW_SKIP: "pp* *musllinux*"
+          CIBW_SKIP: "pp* *musllinux* *-win_amd64"
 
       # Linux job also builds an sdist once:
       - name: Build sdist
