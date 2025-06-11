@@ -31,8 +31,8 @@ jobs:
         env:
           # clang needs these flags to use Homebrew’s libomp
           CIBW_ENVIRONMENT_MACOS: |
-            CFLAGS="-O3 -march=native -funroll-loops -ffast-math -fPIC -Xpreprocessor -fopenmp"
-            LDFLAGS="-lomp"
+            CFLAGS="-O3 -march=native -funroll-loops -ffast-math -fPIC -I/opt/homebrew/opt/libomp/include -Xpreprocessor -fopenmp"
+            LDFLAGS="-L/opt/homebrew/opt/libomp/lib -lomp"
           CIBW_SKIP: "pp* *musllinux*"
 
       # Linux job also builds an sdist once:
