@@ -16,15 +16,20 @@ from kneed import KneeLocator
 import tensorly as tl
 from tensorly.decomposition import parafac
 
-package_name = "pycpet"
-package = pkg_resources.get_distribution(package_name)
-package_path = package.location
-# import cupy as cp
+import importlib.util, ctypes
+
+# Find name of c-shared library (system dependent!)
+spec = importlib.util.find_spec("CPET.utils.math_module")
+if spec is None or spec.origin is None:
+    raise ImportError(
+        "Could not find the c-shared library 'math_module'. Please ensure it is installed correctly."
+    )
+module_path = spec.origin
 
 from CPET.utils.fastmath import nb_subtract, nb_norm, nb_cross
 from CPET.utils.c_ops import Math_ops
 
-Math = Math_ops(shared_loc=package_path + "/CPET/utils/math_module.so")
+Math = Math_ops(shared_loc=module_path)
 
 
 def propagate_topo(x_0, x, Q, step_size, debug=False):
