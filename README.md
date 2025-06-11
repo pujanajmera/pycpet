@@ -15,7 +15,8 @@ Follow these recommended steps to install PyCPET
 
 1. Make a clean conda environment (recommended, not required)
 
-conda create -n pycpet-test python=3.11 -y
+conda create -n pycpet-env python=3.12 pip -c conda-forge -y
+conda activate pycpet-env
 
 2. Run pip install in the conda environment
 

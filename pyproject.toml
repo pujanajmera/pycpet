@@ -26,7 +26,10 @@ dependencies = [
     "kneed",
     "tensorly",
     "matplotlib",
-    "tqdm"
+    "tqdm",
+    "seaborn",
+    "scikit-learn-extra",
+    "psutil"
 ]
 
 [project.urls]
