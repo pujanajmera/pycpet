@@ -55,8 +55,4 @@ extra-compile-args = [
   "-funroll-loops",
   "-ffast-math",
   "-fPIC",
-  "-fopenmp"
 ]
-
-# linker flags  (… -shared … -fopenmp)
-extra-link-args = ["-fopenmp"]
