@@ -19,7 +19,7 @@ jobs:
 
       # 2. build wheels for all CPython versions / platforms
       - name: Build wheels (cibuildwheel)
-        uses: pypa/cibuildwheel@v2
+        uses: pypa/cibuildwheel@v2.18.1
         with:
           output-dir: wheelhouse     # cibuildwheel writes files here
         env:
