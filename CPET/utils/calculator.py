@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-import pkg_resources
 import matplotlib.pyplot as plt
 import warnings
 from sklearn.metrics import mean_squared_error

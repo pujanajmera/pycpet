@@ -414,6 +414,11 @@ class calculator:
         self.atom_number_copy = self.atom_number
         self.atom_type_copy = self.atom_type
         """
+
+        if self.box_shift != [0, 0, 0]:
+            print("Shifting box by: ", self.box_shift)
+            self.x = self.x - np.array(self.box_shift)
+
         if self.write_transformed_pdb == True:
             print("Writing transformed pdb file, ignoring chains")
             if self.strip_filter == True:
@@ -445,9 +450,6 @@ class calculator:
         # print(self.center)
         # print(self.x_vec_pt)
         # print(self.y_vec_pt)
-        if self.box_shift != [0, 0, 0]:
-            print("Shifting box by: ", self.box_shift)
-            self.x = self.x - np.array(self.box_shift)
 
         if self.dtype == "float32":
             self.x = self.x.astype(np.float32)
