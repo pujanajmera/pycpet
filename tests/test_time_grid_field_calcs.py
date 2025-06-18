@@ -19,10 +19,14 @@ from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
 
 from CPET.utils.c_ops import Math_ops
 
-package_name = "pycpet"
-package = pkg_resources.get_distribution(package_name)
-package_path = package.location
-Math = Math_ops(shared_loc=package_path + "/CPET/utils/math_module.so")
+spec = importlib.util.find_spec("CPET.utils.math_module")
+if spec if None or spec.origin is None:
+    raise ImportError(
+        "Could not find the c-shared library 'math_module'. Please ensure it is installed correctly."
+    )
+module_path = spec.origin
+
+Math = Math_ops(shared_loc=module_path)
 
 
 def loop_field_simult_c_shared_full(x_0, x, Q):

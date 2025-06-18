@@ -11,31 +11,18 @@ System requirements:
 - gcc (to compile C-shared libraries)
 - anaconda (preferred, not required)
 
-Follow these steps to install PyCPET
+Follow these recommended steps to install PyCPET
 
-1. Clone the repo:
+1. Make a clean conda environment (recommended, not required)
 
-git clone https://github.com/pujanajmera/CPET-python.git
+conda create -n pycpet-env python=3.12 pip -c conda-forge -y
+conda activate pycpet-env
 
-2. (Highly recommended but not required) Install the pre-made conda environment CPET_ENV in a path directory:
+2. Run pip install in the conda environment
 
-conda env create -f CPET_ENV.yml -p PATH_TO_ENVIRONMENT_LOCATION
+pip install pycpet
 
-If you do not create the environment/this environment file doesn't work for you, you will have to install the required python packages yourself (see CPET_ENV.yml)
-
-3. In the current directory, do the following (if you are using CPET_ENV, make sure to be in 
-the environment when running this step):
-
-pip install -e .
-
-From here, the executable cpet.py will be available in your path (or in your environment if using conda)
-
-4. To compile the C math modules, go to CPET/utils and run:
-
-cd CPET/utils
-gcc -fopenmp math_module.c -o math_module.so -shared -fPIC -O3 -march=native -funroll-loops -ffast-math
-
-5. When running, we advise you set the following:
+3. When running, we advise you set the following:
 
 CPU multithreading (available for topologies): 
     export OMP_NUM_THREADS=1
