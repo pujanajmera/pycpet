@@ -428,9 +428,10 @@ class calculator:
                 self.resids_copy = self.resids
                 self.atom_number_copy = self.atom_number
                 self.atom_type_copy = self.atom_type
-            self.x_copy = (self.x_copy - self.center) @ np.linalg.inv(
-                self.transformation_matrix
-            )
+            else:
+                self.x_copy = (self.x_copy - self.center) @ np.linalg.inv(
+                    self.transformation_matrix
+                )
             chain_id = "A"
             with open(f"transform_{path_to_pdb.split('/')[-1][:-4]}.pdb", "w") as f:
                 for i in range(len(self.x_copy)):
