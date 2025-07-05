@@ -208,11 +208,11 @@ class calculator:
         else:
             raise ValueError("Since you have provided x, y must be a list or dict")
 
-        self.x_copy = self.x
-        self.residue_number_copy = self.residue_number
-        self.resids_copy = self.resids
-        self.atom_number_copy = self.atom_number
-        self.atom_type_copy = self.atom_type
+        self.x_copy = self.x.copy()
+        self.residue_number_copy = self.residue_number.copy()
+        self.resids_copy = self.resids.copy()
+        self.atom_number_copy = self.atom_number.copy()
+        self.atom_type_copy = self.atom_type.copy()
 
         # Any sort of filtering related to atom identity information
         # NEED TO MAKE MORE ROBUST
@@ -423,15 +423,17 @@ class calculator:
             print("Writing transformed pdb file, ignoring chains")
             if self.strip_filter == True:
                 print("Stripping filtered residues for transformed pdb file")
-                self.x_copy = self.x
-                self.residue_number_copy = self.residue_number
-                self.resids_copy = self.resids
-                self.atom_number_copy = self.atom_number
-                self.atom_type_copy = self.atom_type
+                self.x_copy = self.x.copy()
+                self.residue_number_copy = self.residue_number.copy()
+                self.resids_copy = self.resids.copy()
+                self.atom_number_copy = self.atom_number.copy()
+                self.atom_type_copy = self.atom_type.copy()
             else:
                 self.x_copy = (self.x_copy - self.center) @ np.linalg.inv(
                     self.transformation_matrix
                 )
+                self.x_copy = self.x_copy + np.array(self.box_shift)
+                print("HEHE")
             chain_id = "A"
             with open(f"transform_{path_to_pdb.split('/')[-1][:-4]}.pdb", "w") as f:
                 for i in range(len(self.x_copy)):

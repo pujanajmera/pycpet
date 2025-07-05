@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pycpet"
+version = "0.0.7"
+authors = [
+  { name="Pujan Ajmera", email="ajmerapujan@gmail.com" },
+]
+description = "Computing Electric Field Topologies and Other Features in High-Throughput"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+dependencies = [
+    "torch",
+    "numba",
+    "numpy<2",
+    "pandas",
+    "scikit-learn",
+    "kneed",
+    "tensorly",
+    "matplotlib",
+    "tqdm",
+    "seaborn",
+    "scikit-learn-extra",
+    "psutil"
+]
+
+[project.urls]
+Homepage = "https://github.com/pujanajmera/pycpet"
+Issues = "https://github.com/pujanajmera/pycpet/issues"
+
+[project.scripts]
+"cpet.py" = "CPET.source.scripts.cpet:main"
+
+[tool.setuptools]
+packages = [
+    "CPET",
+    "CPET.utils",
+    "CPET.source",
+    "CPET.source.scripts"
+]
+
+[[tool.setuptools.ext-modules]]
+name = "CPET.utils.math_module"          # import path
+sources = ["CPET/utils/math_module.c"]
+
+# compiler flags  (gcc -O3 -march=native -funroll-loops -ffast-math -fPIC -fopenmp …)
+extra-compile-args = [
+  "-O3",
+  "-march=native",
+  "-funroll-loops",
+  "-ffast-math",
+  "-fPIC",
+]
