@@ -7,14 +7,16 @@ Interaction Energy Analysis
 -------------------------------------------------
 Authors: Anubhav Goswami, Pujan Ajmera. Credit to the Binju Wang group for the original method (w/o nuclear correction): https://doi.org/10.1021/acs.jpcb.3c01054
 
-The script is electrostatic_interaction_QM.py, and it computes interaction energies (for QM/MM calculations/QM calculations with point charge embedding) using these equation:
+The script is electrostatic_interaction_QM.py, and it computes interaction energies (for QM/MM calculations/QM calculations with point charge embedding) using these equations:
 
 .. math::
-    E_{int_elec} = \sum_{i=1}^{N} \int_{V} \frac{q_i \rho(\mathbf{r})}{|\mathbf{r} - \mathbf{r}_i|} d\mathbf{r}
-    E_{int_nuc} = \sum_{i=1}^{N} \sum_{j=1}^{M} \frac{q_i Q_j}{r_{ij}}
-    E_int = E_{int_elec} + E_{int_nuc}
+    E_{int,elec} = \sum_{i=1}^{N} \int_{V} \frac{q_i \rho(\mathbf{r})}{|\mathbf{r} - \mathbf{r}_i|} d\mathbf{r}
+.. math::
+    E_{int,nuc} = \sum_{i=1}^{N} \sum_{j=1}^{M} \frac{q_i Q_j}{r_{ij}}
+.. math::
+    E_int = E_{int,elec} + E_{int,nuc}
 
-where :math:`q_i` and :math:`Q_j` are the charges of MM region of interest and the nuclear charges of the QM density, respectively. These are the following options that can be passed to the script:
+where :math:`q_i` and :math:`Q_j` are the partial charges of MM region of interest and the nuclear charges of the QM region, respectively. These are the following options that can be passed to the script:
 
 - `-m/--molden`: The molden input file, which contains the QM density in a molden format.
 - `-p/--pdb`: The path to the a PDB file that contains charges of all MM atoms.
