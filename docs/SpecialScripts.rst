@@ -1,32 +1,33 @@
 Special Scripts
 =================
 
-PyCPET set-up
------------------
+The following are tutorials for special scripts that aren't built into the cpet.py executable, but use the pycpet libraries to do some neat analyses.
 
-PyCPET is a Python package that is coded in Python3, tested on Linux operating systems (Mac testing soon).
-
-PyCPET can be downloaded directory from the `GitHub repository <https://github.com/pujanajmera/pycpet>` (recommended) or installed via pip.
-
-Installing PyCPET from GitHub (recommended)
+Interaction Energy Analysis
 -------------------------------------------------
+Authors: Anubhav Goswami, Pujan Ajmera. Credit to the Binju Wang group for the original method (w/o nuclear correction): https://doi.org/10.1021/acs.jpcb.3c01054
 
-1. Clone the repository:
-.. code-block:: bash
+The script is electrostatic_interaction_QM.py, and it computes interaction energies (for QM/MM calculations/QM calculations with point charge embedding) using these equation:
 
-    git clone https://github.com/pujanajmera/pycpet.git
+.. math::
+    E_{int_elec} = \sum_{i=1}^{N} \int_{V} \frac{q_i \rho(\mathbf{r})}{|\mathbf{r} - \mathbf{r}_i|} d\mathbf{r}
+    E_{int_nuc} = \sum_{i=1}^{N} \sum_{j=1}^{M} \frac{q_i Q_j}{r_{ij}}
+    E_int = E_{int_elec} + E_{int_nuc}
 
-2. Change to the directory:
-.. code-block:: bash
+where :math:`q_i` and :math:`Q_j` are the charges of MM region of interest and the nuclear charges of the QM density, respectively. These are the following options that can be passed to the script:
 
-    cd pycpet
+- `-m/--molden`: The molden input file, which contains the QM density in a molden format.
+- `-p/--pdb`: The path to the a PDB file that contains charges of all MM atoms.
+- `-r/--res`: Flag for residue breakdown. If provided, analysis will be done by residue as well.
+- `-o/--options`: PyCPET options file. Please see the :doc:`Get Started <../GetStarted>` page for more information on how to write an options file. This is solely used in this script to filter out the QM region atoms, otherwise the interaction energy will be unrealistic.
+- `-v/--verbose`: Flag for verbose output. If provided, the script will tell you what interaction it is computing.
 
-3. Install dependencies via conda:
-.. code-block:: bash
+These interaction energies are output to the command line, so the following usage is recommended (The script should be in your path if you have correctly installed PyCPET):
 
-    conda env create -f environment.yml
+```bash
+electrostatic_interaction_QM.py -m name_of_molden_file -p protein.pdb -o options.json -r
+``` 
 
-4. Install the package:
-.. code-block:: bash
+To see an example usage of this, check out this work that applies it to chorismate mutases: (CITE)
 
-    pip install -e .
+
