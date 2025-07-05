@@ -3,7 +3,7 @@ Special Scripts
 
 The following are tutorials for special scripts that aren't built into the cpet.py executable, but use the pycpet libraries to do some neat analyses.
 
-Interaction Energy Analysis
+Electrostatic Interaction Energy Analysis
 -------------------------------------------------
 Authors: Anubhav Goswami, Pujan Ajmera. Credit to the Binju Wang group for the original method (w/o nuclear correction): https://doi.org/10.1021/acs.jpcb.3c01054
 
