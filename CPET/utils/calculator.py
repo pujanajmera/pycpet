@@ -402,8 +402,8 @@ def compute_field_on_grid(grid_coords, x, Q):
 
     # Compute the field using loop c-shared library
     E = Math.compute_looped_field(x_0, x, Q)
-
-    return E
+    field_concat = np.concatenate((x_0, E), axis=1)
+    return field_concat
 
 
 def compute_ESP_on_grid(grid_coords, x, Q):

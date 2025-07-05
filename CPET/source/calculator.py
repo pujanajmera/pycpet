@@ -432,8 +432,7 @@ class calculator:
                 self.x_copy = (self.x_copy - self.center) @ np.linalg.inv(
                     self.transformation_matrix
                 )
-                self.x_copy = self.x_copy + np.array(self.box_shift)
-                print("HEHE")
+                self.x_copy = self.x_copy - np.array(self.box_shift)
             chain_id = "A"
             with open(f"transform_{path_to_pdb.split('/')[-1][:-4]}.pdb", "w") as f:
                 for i in range(len(self.x_copy)):
