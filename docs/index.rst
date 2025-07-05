@@ -11,7 +11,9 @@ Welcome to pycpet's documentation!
    :caption: Contents:
 
    Installation
+   Get Started
    calculator
+   Special Scripts
 
 
 
