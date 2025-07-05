@@ -1,4 +1,4 @@
-Installation
+Special Scripts
 =================
 
 PyCPET set-up
