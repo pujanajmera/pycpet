@@ -1,3 +1,11 @@
+<div align="center">   
+<img title="logo" alt="" src="logo.png"  width="600" height="300" align="center">      
+
+<br/><br/>
+[![DOI:10.1021/acs.jctc.5c00138](https://img.shields.io/badge/DOI-10.1021%2Facs.jctc.5c00138%5D-blue
+)](https://doi.org/10.1021/acs.jctc.5c00138) 
+</div>
+
 # *PyCPET*
 
 Python-based Computation of Protein Electric Field Topology, built for high-throughput accelerated calculations of several electrostatic properties of enzyme active sites from simulations. This program is incredibly flexible and scriptable for virtually any analysis of classical electric fields and electrostatic potentials.
