@@ -325,6 +325,16 @@ def calculate_thread_c_shared(x_0, n_iter, x, Q, step_size, dimensions):
     return result
 
 
+def calculate_thread_c_shared_dipole(x_0, n_iter, x, mu, step_size, dimensions):
+    """
+    IN DEVELOPMENT, FOR TESTING ONLY
+    """
+    result = Math.thread_operation_dipole(
+        x_0=x_0, n_iter=n_iter, x=x, mu=mu, step_size=step_size, dimensions=dimensions
+    )
+    return result
+
+
 def calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q):
     """
     Computes electric field at a point given positions of charges
@@ -402,8 +412,8 @@ def compute_field_on_grid(grid_coords, x, Q):
 
     # Compute the field using loop c-shared library
     E = Math.compute_looped_field(x_0, x, Q)
-
-    return E
+    field_concat = np.concatenate((x_0, E), axis=1)
+    return field_concat
 
 
 def compute_ESP_on_grid(grid_coords, x, Q):

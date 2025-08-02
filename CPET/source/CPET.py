@@ -15,15 +15,35 @@ import logging
 
 
 class CPET:
+    """The main class for the CPET package. This class is responsible for running almost any calculation, either through cpet.py or other scripts.
+
+    Parameters
+    ----------
+    options : dict
+        A dictionary containing the options for the CPET package. An empty dictionary can be passed, in which the default options initializer will fully override the options with the default options. The options can also be passed as a JSON file, which will be loaded and used to initialize the CPET package.
+
+    Attributes
+    ----------
+    self.options : dict
+        A dictionary containing the options for the CPET package.
+    self.logger : logging.Logger
+        A logger for the CPET package, inheriting from the logger in cpet.py. Logging is not guaranteed when using an auxiliary script
+    self.m : str
+        The method to be used for the CPET package, set from the options.
+    self.inputpath : str
+        The input path for CPET, set from the options.
+    self.outputpath : str
+        The output path for CPET, set from the options.
+    """
+
     def __init__(self, options):
         # Logistics
         self.options = default_options_initializer(options)
         self.logger = logging.getLogger(__name__)  # Inherit logger from cpet.py
         self.m = self.options["CPET_method"]
-        self.logger.info("Instantiating CPET, running method: {}".format(self.m))
+        print("Instantiating CPET, method: {}".format(self.m))
         self.inputpath = self.options["inputpath"]
         self.outputpath = self.options["outputpath"]
-        self.step_size = self.options["step_size"]
         if not os.path.exists(self.outputpath):
             print(
                 "Output directory does not exist in current directory, creating: \n{}".format(
@@ -32,22 +52,18 @@ class CPET:
             )
             os.makedirs(self.outputpath)
 
-        # Calculation-specific settings
-        self.dimensions = self.options["dimensions"]
-
     def run(self):
+        """Run the CPET package based on the method specified in the options. This method will call the appropriate method based on the value of self.m."""
         if self.m == "topo":
             self.run_topo()
         elif self.m == "topo_GPU":
-            self.run_topo_GPU()
+            self.run_topo(gpu=True)
         elif self.m == "volume":
             self.run_volume()
         elif self.m == "volume_ESP":
             self.run_volume_ESP()
-        elif self.m == "point_field":
-            self.run_point_field()
-        elif self.m == "point_mag":
-            self.run_point_mag()
+        elif self.m == "point_field" or self.m == "point_mag":
+            self.run_point()
         elif (
             self.m == "cluster"
             or self.m == "cluster_volume"
@@ -62,18 +78,31 @@ class CPET:
         elif self.m == "pca" or self.m == "pca_compare":
             self.run_pca()
         else:
-            print(
-                "You have reached the limit of this package's capabilities at the moment, we do not support the function called as of yet"
+            ValueError(
+                "Method {} not recognized. Please check the options file or the command line arguments.".format(
+                    self.m
+                )
             )
-            exit()
 
-    def run_topo(self, num=100000, benchmarking=False):
+    def run_topo(self, gpu=False):
+        """Run the electric field topology calculation for a number of proteins in the input directory.
+        Picks a pdb file at random from the input directory and runs the topology calculation on it, allowing for dirty parallel runs of this function.
+
+        Parameters
+        ----------
+        gpu : bool, optional
+            If True, runs the topology calculation on the GPU. Default is False, which runs the calculation on the CPU.
+        """
+        if gpu:
+            runtype = "compute_topo_GPU_batch_filter"
+        else:
+            runtype = "compute_topo_complete_c_shared"
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
             raise ValueError("No pdb files found in the input directory")
         if len(files_input) == 1:
-            warnings.warn("Only one pdb file found in the input directory")
-        for i in range(num):
+            logging.warning("Only one pdb file found in the input directory")
+        for i in range(len(files_input) * 100):
             if len(files_input) != 0:
                 file = choice(files_input)
             else:
@@ -81,36 +110,30 @@ class CPET:
                 break
             files_input.remove(file)
             protein = file.split("/")[-1].split(".")[0]
-            print("protein file: {}".format(protein))
+            logging.info("Protein file: {}".format(protein))
             files_done = [
                 x for x in os.listdir(self.outputpath) if x.split(".")[-1] == "top"
             ]
             if protein + ".top" not in files_done:
                 self.calculator = calculator(self.options, path_to_pdb=file)
-                hist = self.calculator.compute_topo_complete_c_shared()
-                if not benchmarking:
-                    np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
-                if benchmarking:
-                    np.savetxt(
-                        self.outputpath
-                        + "/{}_{}_{}_{}.top".format(
-                            protein,
-                            self.calculator.n_samples,
-                            str(self.calculator.step_size)[2:],
-                            self.replica,
-                        ),
-                        hist,
-                    )
+                hist = getattr(self.calculator, runtype)()
+                np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
             else:
                 print("Already done for protein: {}, skipping...".format(protein))
 
-    def run_topo_GPU(self, num=100000, benchmarking=False):
+    '''
+    Getting rid of this function, as it is already covered by above run_topo
+    def run_topo_GPU(self):
+        """Run the electric field topology calculation (GPU-accelerated) for a number of proteins in the input directory.
+        Picks a pdb file at random from the input directory and runs the topology calculation on it, allowing for dirty parallel runs of this function.
+
+        """
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
             raise ValueError("No pdb files found in the input directory")
         if len(files_input) == 1:
             warnings.warn("Only one pdb file found in the input directory")
-        for i in range(num):
+        for i in range(len(files_input)*100):
             if len(files_input) != 0:
                 file = choice(files_input)
             else:
@@ -124,24 +147,11 @@ class CPET:
             ]
             if protein + ".top" not in files_done:
                 hist = self.calculator.compute_topo_GPU_batch_filter()
-                if not benchmarking:
-                    np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
-                if benchmarking:
-                    np.savetxt(
-                        self.outputpath
-                        + "/{}_{}_{}_{}.top".format(
-                            protein,
-                            self.calculator.n_samples,
-                            str(self.calculator.step_size)[2:],
-                            self.replica,
-                        ),
-                        hist,
-                    )
+                np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
+    '''
 
-    def run_volume(self, num=100000):
-        """
-        Get the electric fields along a grid of points in the box
-        """
+    def run_volume(self):
+        """Get the electric fields along a grid of points in the box"""
 
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
@@ -150,7 +160,7 @@ class CPET:
         if len(files_input) == 1:
             warnings.warn("Only one pdb file found in the input directory")
 
-        for i in range(num):
+        for i in range(len(files_input) * 100):
             if len(files_input) != 0:
                 file = choice(files_input)
             else:
@@ -168,8 +178,12 @@ class CPET:
                 field_box, mesh_shape = self.calculator.compute_box()
                 print(field_box.shape)
                 meta_data = {
-                    "dimensions": self.dimensions,
-                    "step_size": [self.step_size, self.step_size, self.step_size],
+                    "dimensions": self.calculator.dimensions,
+                    "step_size": [
+                        self.calculator.step_size,
+                        self.calculator.step_size,
+                        self.calculator.step_size,
+                    ],
                     "num_steps": [mesh_shape[0], mesh_shape[1], mesh_shape[2]],
                     "transformation_matrix": self.calculator.transformation_matrix,
                     "center": self.calculator.center,
@@ -181,43 +195,36 @@ class CPET:
                     meta_data=meta_data,
                 )
 
-    def run_point_field(self):
+    def run_point(self):
+        """Get the electric field/magnitude at the center of the box"""
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
             raise ValueError("No pdb files found in the input directory")
         if len(files_input) == 1:
             warnings.warn("Only one pdb file found in the input directory")
-        outfile = self.outputpath + "/point_field.dat"
+        if self.m == "point_field":
+            outfile = self.outputpath + "/point_field.dat"
+            runtype = "compute_point_field"
+        elif self.m == "point_mag":
+            outfile = self.outputpath + "/point_mag.dat"
+            runtype = "compute_point_mag"
         with open(outfile, "w") as f:
             for file in files_input:
                 self.calculator = calculator(self.options, path_to_pdb=file)
                 protein = file.split("/")[-1].split(".")[0]
                 print("protein file: {}".format(protein))
-                point_field = self.calculator.compute_point_field()
-                f.write("{}:{}\n".format(protein, point_field))
+                point_field_or_mag = getattr(self.calculator, runtype)()
+                # Save the point field or magnitude to the output file
+                f.write("{}:{}\n".format(protein, point_field_or_mag))
 
-    def run_point_mag(self):
+    def run_volume_ESP(self):
+        """Get the electrostatic potential along a grid of points in the box"""
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
             raise ValueError("No pdb files found in the input directory")
         if len(files_input) == 1:
             warnings.warn("Only one pdb file found in the input directory")
-        outfile = self.outputpath + "/point_mag.dat"
-        with open(outfile, "w") as f:
-            for file in files_input:
-                self.calculator = calculator(self.options, path_to_pdb=file)
-                protein = file.split("/")[-1].split(".")[0]
-                print("protein file: {}".format(protein))
-                point_field = self.calculator.compute_point_mag()
-                f.write("{}:{}\n".format(protein, point_field))
-
-    def run_volume_ESP(self, num=100000):
-        files_input = glob(self.inputpath + "/*.pdb")
-        if len(files_input) == 0:
-            raise ValueError("No pdb files found in the input directory")
-        if len(files_input) == 1:
-            warnings.warn("Only one pdb file found in the input directory")
-        for i in range(num):
+        for i in range(len(files_input) * 100):
             if len(files_input) != 0:
                 file = choice(files_input)
             else:
@@ -234,8 +241,12 @@ class CPET:
                 esp_box, mesh_shape = self.calculator.compute_box_ESP()
                 print(esp_box.shape)
                 meta_data = {
-                    "dimensions": self.dimensions,
-                    "step_size": [self.step_size, self.step_size, self.step_size],
+                    "dimensions": self.calculator.dimensions,
+                    "step_size": [
+                        self.calculator.step_size,
+                        self.calculator.step_size,
+                        self.calculator.step_size,
+                    ],
                     "num_steps": [mesh_shape[0], mesh_shape[1], mesh_shape[2]],
                     "transformation_matrix": self.calculator.transformation_matrix,
                     "center": self.calculator.center,
@@ -246,7 +257,8 @@ class CPET:
                     meta_data=meta_data,
                 )
 
-    def run_box_check(self, num=100000):
+    def run_box_check(self):
+        """Reports atoms that are inside the user-defined box, to check for potential e-field conflicts"""
         files_input = glob(self.inputpath + "/*.pdb")
         if len(files_input) == 0:
             raise ValueError("No pdb files found in the input directory")
@@ -267,93 +279,38 @@ class CPET:
         print("No more files to process!")
 
     def run_cluster(self):
+        """Run clustering (for a variety of types of field/esp data)"""
         print("Running the cluster analysis. Method type: {}".format(self.m))
         self.cluster = cluster(self.options)
         self.cluster.Cluster()
 
     def run_visualize_efield(self):
+        """Visualize the electric field/electrostatic potential file for ChimeraX"""
         print(
-            "Visualizing the electric field. This module will load a ChimeraX session with the first protein and the electric field, and requires the electric field to be computed first."
+            "Visualizing the electric field or electrostatic potential for use in ChimeraX"
         )
-        files_input_pdb = glob(self.inputpath + "/*.pdb")
         if self.m == "visualize_field":
-            files_input_efield = glob(self.inputpath + "/*_efield.dat")
+            files_input = glob(self.inputpath + "/*_efield.dat")
         elif self.m == "visualize_esp":
-            files_input_esp = glob(self.inputpath + "/*_esp.dat")
-        if len(files_input_pdb) == 0:
-            raise ValueError("No pdb files found in the input directory")
-        if len(files_input_pdb) > 1:
-            warnings.warn(
-                "More than one pdb file found in the input directory. Only the first will be visualized, .bild files will be generated for all of them though."
-            )
-
-        # Sort list of pdbs and efields
-        files_input_pdb.sort()
+            files_input = glob(self.inputpath + "/*_esp.dat")
 
         # Check to make sure each pdb file has a corresponding electric field file in the input path while visualizing fields
-        for i in range(len(files_input_pdb)):
+        for file in files_input:
             if self.m == "visualize_field":
-                # Modify efield file list to just have file name, not _efield.dat
-                files_input_efield = [
-                    efield.split("/")[-1].split("_efield")[0]
-                    for efield in files_input_efield
-                ]
-                # Efield list is unsorted, so just check if the protein file is anywhere in the efield list
-                if not any(
-                    files_input_pdb[i].split("/")[-1].split(".")[0] in efield
-                    for efield in files_input_efield
-                ):
-                    raise ValueError(
-                        "No electric field file found for protein: {}".format(
-                            files_input_pdb[i].split("/")[-1]
-                        )
-                    )
-                print(
-                    "Generating .bild file for the protein: {}".format(
-                        files_input_pdb[i].split("/")[-1]
-                    )
-                )
                 visualize.visualize_field(
-                    path_to_pdb=files_input_pdb[i],
-                    path_to_efield=self.inputpath
-                    + "/"
-                    + files_input_pdb[i].split("/")[-1].split(".")[0]
-                    + "_efield.dat",
+                    path_to_efield=file,
                     outputpath=self.outputpath,
                     options=self.options,
                 )
             elif self.m == "visualize_esp":
-                # Modify esp file list to just have file name, not _esp.dat
-                files_input_esp = [
-                    esp.split("/")[-1].split("_esp")[0] for esp in files_input_esp
-                ]
-                # Esp list is unsorted, so just check if the protein file is anywhere in the esp list
-                if not any(
-                    files_input_pdb[i].split("/")[-1].split(".")[0] in esp
-                    for esp in files_input_esp
-                ):
-                    raise ValueError(
-                        "No ESP file found for protein: {}".format(
-                            files_input_pdb[i].split("/")[-1]
-                        )
-                    )
-                print(
-                    "Generating .bild file for the protein: {}".format(
-                        files_input_pdb[i].split("/")[-1]
-                    )
-                )
                 visualize.visualize_esp(
-                    path_to_pdb=files_input_pdb[i],
-                    path_to_esp=self.inputpath
-                    + "/"
-                    + files_input_pdb[i].split("/")[-1].split(".")[0]
-                    + "_esp.dat",
+                    path_to_esp=file,
                     outputpath=self.outputpath,
                     options=self.options,
                 )
-            # To-do: automatically visualize the electric field for the first protein, in dev mode for now
 
     def run_pca(self):
+        """Run PCA on a set of electric fields or groups of electric fields (good for mutation comparison)"""
         if self.m == "pca":
             self.pca = pca_pycpet(self.options)
             self.pca.fit_and_transform()

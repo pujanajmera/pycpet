@@ -7,6 +7,7 @@ from CPET.utils.calculator import (
     Inside_Box,
     compute_curv_and_dist,
     calculate_thread_c_shared,
+    calculate_thread_c_shared_dipole,
 )
 
 
@@ -101,6 +102,25 @@ def task_complete_thread(x_0, n_iter, x, Q, step_size, dimensions):
 
     result = calculate_thread_c_shared(
         x_0=x_0, n_iter=n_iter, x=x, Q=Q, step_size=step_size, dimensions=dimensions
+    )
+    # print("result: ", result)
+    return result
+
+
+def task_complete_thread_dipole(x_0, n_iter, x, mu, step_size, dimensions):
+    """
+    IN DEVELOPMENT, FOR TESTING ONLY
+    Takes:
+        x_0(array) - (3, 1) array of box position
+        n_iter(int) - number of iterations of propagation for this slip
+        x(np array) - positions of dipoles
+        mu(np array) - dipole moments
+        step_size(float) - step size of each step
+        dimensions(array) - box limits
+    """
+
+    result = calculate_thread_c_shared_dipole(
+        x_0=x_0, n_iter=n_iter, x=x, Q=mu, step_size=step_size, dimensions=dimensions
     )
     # print("result: ", result)
     return result

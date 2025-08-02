@@ -94,6 +94,22 @@ class Math_ops:
             self.array_1d_float,
         ]
 
+        """
+        DIPOLES BELOW IN DEVELOPMENT, FOR TESTING ONLY
+        n_dipoles, n_iter, step_size, x_0, dimensions, x, mu, res
+        """
+        self.math.thread_operation_dipole.restype = None
+        self.math.thread_operation_dipole.argtypes = [
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_float,
+            self.array_1d_float,
+            self.array_1d_float,
+            self.array_2d_float,
+            self.array_2d_float, #Changed because moving from Q --> mu
+            self.array_1d_float,
+        ]       
+
         self.math.calc_field.restype = None
         self.math.calc_field.argtypes = [
             self.array_1d_float,
@@ -283,6 +299,28 @@ class Math_ops:
         )
         # print(res)
 
+        return res
+
+    def thread_operation_dipole(self, x_0, n_iter, x, mu, step_size, dimensions):
+        """
+        IN DEVELOPMENT, FOR TESTING ONLY
+        Takes:
+            x_0(array) - (3, 1) array of box position
+            n_iter(int) - number of iterations of propagation for this slip
+            x(np array) - positions of dipoles
+            mu(np array) - (3,N) dipole moments
+            step_size(float) - step size of each step
+            dimensions(array) - box limits
+        Returns:
+            res(array) - (2, ) array of curvature and distance
+        """
+        res = np.zeros(2, dtype="float32")
+        n_dipoles = len(mu)
+        self.math.thread_operation_dipole.restype = None
+        mu = mu.reshape(-1)
+        self.math.thread_operation_dipole(
+            n_dipoles, n_iter, step_size, x_0, dimensions, x, mu, res
+        )
         return res
 
     def calc_esp_base(self, x_0, x, Q):

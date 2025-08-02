@@ -80,13 +80,12 @@ def visualize_esp(path_to_pdb, path_to_esp, outputpath, options):
     return "Bild file saved for {}".format(name)
 
 
-def visualize_field(path_to_pdb, path_to_efield, outputpath, options, display=False):
+def visualize_field(path_to_efield, outputpath, options):
     """
     Visualize electric fields in proteins by creating a bild file
     for Chimera/ChimeraX input, with optional display in ChimeraX
     Takes:
-        path_to_pdb: Path to the PDB file of the protein
-        path_to_field: Path to the corresponding field file
+        path_to_field: Path to the corresponding field/esp file
         options: Options dictionary
         display: Boolean to display the fields in ChimeraX
     """
@@ -108,7 +107,7 @@ def visualize_field(path_to_pdb, path_to_efield, outputpath, options, display=Fa
         cutoff = 0
         sparsify_factor = 1
 
-    name = path_to_pdb.split("/")[-1].split(".")[0]
+    name = path_to_efield.split("/")[-1].split(".")[0]
 
     bild_path = outputpath + "/" + name
 
@@ -545,7 +544,7 @@ def generate_bild_file(
     print("Min field magnitude: ", field_mags_min)
 
     field_mags = (field_mags - field_mags_min) / (field_mags_max - field_mags_min)
-    #print(max(field_mags), min(field_mags)) #Debug, make sure min and max are 0 and 1
+    # print(max(field_mags), min(field_mags)) #Debug, make sure min and max are 0 and 1
     percentile_cutoff = np.percentile(field_mags, percentile)
     r = sparsify_vec_field(
         (1 - field_mags), sparsify_factor, nx, ny, nz, dim1, dim2, dim3

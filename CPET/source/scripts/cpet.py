@@ -1,7 +1,6 @@
-print("Importing...")
+print("Starting cpet.py!")
 from CPET.source.CPET import CPET
 
-print("Importing done!")
 import json
 import os
 import argparse
@@ -20,6 +19,16 @@ def main():
     )
 
     parser.add_argument(
+        "-d",
+        "--debug",
+        help="Print lots of debugging statements",
+        action="store_const",
+        dest="loglevel",
+        const=logging.DEBUG,
+        default=logging.WARNING,
+    )
+
+    parser.add_argument(
         "-v",
         "--verbose",
         help="Be verbose",
@@ -27,7 +36,6 @@ def main():
         dest="loglevel",
         const=logging.INFO,
     )
-
     # Overrides to the options file
 
     parser.add_argument(
@@ -38,7 +46,7 @@ def main():
     )
 
     parser.add_argument(
-        "-d",
+        "-p",
         type=str,
         help="Output path. Overrides the output path in the options file",
         default=None,
@@ -51,31 +59,35 @@ def main():
         default=None,
     )
 
+    """
+    TO-DO: Configure units argument across codebase
     parser.add_argument(
         "--units",
         type=str,
         help="Units for the output files. Default is V/Angstrom. Overrides the units in the options file",
         default=None,
     )
+    """
 
     args = parser.parse_args()
-    options = args.o
     logging.basicConfig(level=args.loglevel)
 
     # check if the options are valid
-    if not os.path.exists(options):
-        raise FileNotFoundError(f"Options File {options} not found!")
+    if not os.path.exists(args.o):
+        raise FileNotFoundError(f"Options File {args.o} not found!")
     else:
-        with open(options, "r") as f:
+        with open(args.o, "r") as f:
             options = json.load(f)
         if args.i:
             options["inputpath"] = args.i
-        if args.d:
-            options["outputpath"] = args.d
+        if args.p:
+            options["outputpath"] = args.p
         if args.m:
             options["CPET_method"] = args.m
+        """
         if args.units:
             options["units"] = args.units
+        """
 
     cpet = CPET(options)
     cpet.run()

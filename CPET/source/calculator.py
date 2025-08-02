@@ -5,7 +5,7 @@ import torch
 import logging
 
 
-from CPET.utils.parallel import task, task_batch, task_base, task_complete_thread
+from CPET.utils.parallel import task, task_batch, task_base, task_complete_thread, task_complete_thread_dipole
 from CPET.utils.calculator import (
     initialize_box_points_random,
     initialize_box_points_uniform,
@@ -33,16 +33,17 @@ from CPET.utils.gpu import (
     generate_path_filter_gpu,
 )
 
+
 class calculator:
     """Initialize the calculator object with the following parameters
-    
+
     Parameters
     ----------
-    options : dict                           
+    options : dict
         Dictionary from input options.json file
     path_to_pdb : str, optional
         Path to the PDB file, by default None
-    
+
     Attributes
     ----------
     self.profile : Bool
@@ -64,9 +65,12 @@ class calculator:
     self.dtype : str
         Data type for the calculations (float32 or float64)
     """
+
     def __init__(self, options, path_to_pdb=None):
         # self.efield_calc = calculator(math_loc=math_loc)
-        options = default_options_initializer(options) # Double in case calculator is called outside of CPET.py
+        options = default_options_initializer(
+            options
+        )  # Double in case calculator is called outside of CPET.py
         self.profile = options["profile"]
         self.path_to_pdb = path_to_pdb
 
@@ -76,7 +80,7 @@ class calculator:
             np.array(options["dimensions"]) if "dimensions" in options.keys() else None
         )
 
-        #Topology calculation parameters
+        # Topology calculation parameters
         self.n_samples = options["n_samples"] if "n_samples" in options.keys() else None
         self.concur_slip = options["concur_slip"]
         self.GPU_batch_freq = options["GPU_batch_freq"]
@@ -465,7 +469,7 @@ class calculator:
 
     def compute_point_mag(self):
         """Compute the electric field magnitude at a point defined by the center and the charges Q at positions x.
-        
+
         Returns
         -------
         point_mag : np.ndarray
@@ -480,7 +484,9 @@ class calculator:
         start_time = time.time()
         # Since x and Q are already rotated and translated, need to supply 0 vector as center
         point_mag = np.norm(
-            calculate_electric_field_c_shared_full_alt(np.array([0, 0, 0]), self.x, self.Q)
+            calculate_electric_field_c_shared_full_alt(
+                np.array([0, 0, 0]), self.x, self.Q
+            )
         )
         end_time = time.time()
         print(f"{end_time - start_time:.2f}")
@@ -511,7 +517,7 @@ class calculator:
 
     def compute_box(self):
         """Compute the electric field on a grid defined by the mesh and the charges Q at positions x.
-        
+
         Returns
         -------
         field_box : np.ndarray
@@ -531,7 +537,7 @@ class calculator:
 
     def compute_box_ESP(self):
         """Compute the electrostatic potential on a grid defined by the mesh and the charges Q at positions x.
-        
+
         Returns
         -------
         esp_box : np.ndarray
@@ -549,7 +555,6 @@ class calculator:
         print("Center: {}".format(self.center))
         esp_box = compute_ESP_on_grid(self.mesh, self.x, self.Q)
         return esp_box, self.mesh.shape
-
 
     def compute_topo_base(self):
         print("... > Computing Topo!")
@@ -692,6 +697,39 @@ class calculator:
         )
         return hist
 
+    def compute_topo_complete_c_shared_dipole(self):
+        """
+        IN DEVELOPMENT, FOR TESTING ONLY
+        """
+        print("... > Computing Topo from Dipoles!")
+        print(f"Number of samples: {self.n_samples}")
+        print(f"Number of dipoles: {len(self.mu)}")
+        print(f"Step size: {self.step_size}")
+        print(f"Start point shape: {self.random_start_points.shape}")
+        start_time = time.time()
+        with Pool(self.concur_slip) as pool:
+            args = [
+                (i, n_iter, self.x, self.mu, self.step_size, self.dimensions)
+                for i, n_iter in zip(self.random_start_points, self.random_max_samples)
+            ]
+            result = pool.starmap_async(task_complete_thread_dipole, args)
+            dist = []
+            curve = []
+            for result in result.get():
+                dist.append(result[0])
+                curve.append(result[1])
+
+            hist = np.column_stack((dist, curve))
+
+        end_time = time.time()
+        self.hist = hist
+
+        print(
+            f"Time taken for {self.n_samples} calculations with N_dipoles = {len(self.mu)}: {end_time - start_time:.2f} seconds"
+        )
+        return hist
+
+
     def compute_topo_batched(self):
         print("... > Computing Topo in Batches!")
         print(f"Number of samples: {self.n_samples}")
@@ -727,7 +765,7 @@ class calculator:
 
     def compute_topo_GPU_batch_filter(self):
         """Compute the topology using GPU with batch-filtering
-        
+
         Returns
         -------
         hist : np.ndarray

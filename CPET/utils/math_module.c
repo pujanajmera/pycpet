@@ -332,6 +332,44 @@ void calc_field_base(float E[3], float x_init[3], int n_charges, float x[n_charg
     }
 }
 
+void calc_field_base_dipole(float E[3], float x_init[3], int n_dipoles, float x[n_dipoles][3], float mu[n_dipoles][3]){
+    // calculate the field for dipoles
+
+    // subtract x_init from x
+    float R[3];
+    float r_mag[n_dipoles];
+    float r_mag_sq;
+    float r_mag_fifth;
+    float factor = 14.3996451;
+    float r_norm;
+    float E_temp[n_dipoles][3];
+
+    //# pragma omp parallel for shared(E, x_init, n_dipoles, x, mu) private(r_mag_cube, r_norm, R)
+    # pragma omp parallel for
+    for (int i = 0; i < n_dipoles; i++)
+    {
+        //get difference of x and x_init
+        R[0] = x_init[0] - x[i][0];
+        R[1] = x_init[1] - x[i][1];
+        R[2] = x_init[2] - x[i][2]; 
+
+        r_norm = sqrt(pow(R[0], 2) + pow(R[1], 2) + pow(R[2], 2));
+        r_mag_sq = pow(r_norm, 2);
+        r_mag_fifth = pow(r_norm, -5);
+
+        E_temp[i][0] = factor * r_mag_fifth * ((3 * mu[i][0] * R[0] + mu[i][1] * R[1] + mu[i][2] * R[2]) * R[0] - mu[i][0] * r_mag_sq);
+        E_temp[i][1] = factor * r_mag_fifth * ((3 * mu[i][0] * R[0] + mu[i][1] * R[1] + mu[i][2] * R[2]) * R[1] - mu[i][1] * r_mag_sq);
+        E_temp[i][2] = factor * r_mag_fifth * ((3 * mu[i][0] * R[0] + mu[i][1] * R[1] + mu[i][2] * R[2]) * R[2] - mu[i][2] * r_mag_sq);
+    }
+
+    for (int i = 0; i < n_dipoles; i++)
+    {
+        E[0] += E_temp[i][0];
+        E[1] += E_temp[i][1];
+        E[2] += E_temp[i][2];
+    }
+}
+
 // Compute electric field by giving batches of 100
 void compute_batched_field(int total_points, int batch_size, int n_charges, float x_0[total_points][3], float x[n_charges][3], float Q[n_charges], float E[total_points][3]) {
     for(int start = 0; start < total_points; start += batch_size) {
@@ -465,6 +503,23 @@ void propagate_topo(float result[3], float x_init[3], int n_charges, float x[n_c
 }
 
 
+void propagate_topo_dipole(float result[3], float x_init[3], int n_dipoles, float x[n_dipoles][3], float mu[n_dipoles][3], float step_size){
+    // propagate the topology for dipoles
+    float E[3] = {0.0, 0.0, 0.0};
+    float E_norm;
+    //printf("propagating!!");
+
+    //calc_field(E, x_init, n_charges, x, Q);
+    calc_field_base_dipole(E, x_init, n_dipoles, x, mu);
+    
+    norm(E, &E_norm);
+    for (int i = 0; i < 3; i++)
+    {
+        result[i] = x_init[i] + step_size * E[i] / (E_norm);
+    }
+}
+
+
 void thread_operation(int n_charges, int n_iter, float step_size, float x_0[3], float dimensions[3], float x[n_charges][3], float Q[n_charges], float ret[2]){
     bool bool_inside = true;
     float x_init[3] = {x_0[0], x_0[1], x_0[2]};
@@ -535,4 +590,71 @@ void thread_operation(int n_charges, int n_iter, float step_size, float x_0[3], 
 
 }
 
+void thread_operation_dipole(int n_dipoles, int n_iter, float step_size, float x_0[3], float dimensions[3], float x[n_dipoles][3], float mu[n_dipoles][3], float ret[2]){
+    bool bool_inside = true;
+    float x_init[3] = {x_0[0], x_0[1], x_0[2]};
+    float x_overwrite[3] = {x_0[0], x_0[1], x_0[2]};
+    // print x_init
+    // printf("x_init %f %f %f\n", x_init[0], x_init[1], x_init[2]);
+    int i; 
+    float half_length = dimensions[0];
+    float half_width = dimensions[1];
+    float half_height = dimensions[2];
+    
+    for (i = 0; i < n_iter; i++) {
 
+        propagate_topo_dipole(x_overwrite, x_overwrite, n_dipoles, x, mu, step_size);
+        // overwrite x_init with x_overwrite
+
+        if (
+            x_overwrite[0] < -half_length || 
+            x_overwrite[0] > half_length || 
+            x_overwrite[1] < -half_width || 
+            x_overwrite[1] > half_width || 
+            x_overwrite[2] < -half_height || 
+            x_overwrite[2] > half_height){
+            bool_inside = false;
+        }
+
+        // printf("%f %f %f\n", x_overwrite[0], x_overwrite[1], x_overwrite[2]);
+
+        if (!bool_inside){
+            // printf("Breaking out of loop at iteration: %i\n", i);
+            break;
+        }
+        // printf("x_final @ iter %i out of %i %f %f %f\n", i, n_iter, x_overwrite[0], x_overwrite[1], x_overwrite[2]);
+        
+    }
+        
+    
+    float x_init_plus[3];
+    float x_init_plus_plus[3];
+    float x_0_plus[3];
+    float x_0_plus_plus[3];    
+
+    propagate_topo_dipole(x_init_plus, x_init, n_dipoles, x, mu, step_size);
+    propagate_topo_dipole(x_init_plus_plus, x_init_plus, n_dipoles, x, mu, step_size);
+    propagate_topo_dipole(x_0_plus, x_overwrite, n_dipoles, x, mu, step_size);
+    propagate_topo_dipole(x_0_plus_plus, x_0_plus, n_dipoles, x, mu, step_size);
+
+    float curve_arg_1[3];
+    float curve_arg_2[3];
+    float curve_arg_3[3];
+    float curve_arg_4[3];
+
+    for (int i = 0; i < 3; i++) {
+        curve_arg_1[i] = x_init_plus[i] - x_init[i];
+        curve_arg_2[i] = x_init_plus_plus[i] - 2* x_init_plus[i] + x_init[i];
+        curve_arg_3[i] = x_0_plus[i] - x_overwrite[i];
+        curve_arg_4[i] = x_0_plus_plus[i] - 2* x_0_plus[i] + x_overwrite[i];
+    }
+
+    float curve_init = curve(curve_arg_1, curve_arg_2);
+    float curve_final = curve(curve_arg_3, curve_arg_4);
+    float curve_mean = (curve_init + curve_final) / 2;
+    float dist = euclidean_dist(x_0, x_overwrite);
+
+    ret[0] = dist;
+    ret[1] = curve_mean;
+
+}

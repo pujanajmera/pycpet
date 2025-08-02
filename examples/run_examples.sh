@@ -11,7 +11,7 @@ for example in $(ls -d */); do
         echo "Successfully ran example: $example"
         #Remove any output files or log files
         rm -f outdir/*.out
-        rm -f cpet.out
+        # rm -f cpet.out
     fi
     cd ..
 done

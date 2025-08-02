@@ -182,31 +182,31 @@ def default_options_initializer(options):
     Returns
         options(dict) - dictionary of options with default values
     """
-    #Directories:
+    # Directories:
     if "inputpath" not in options.keys():
         options["inputpath"] = "./inpdir"
     if "outputpath" not in options.keys():
         options["outputpath"] = "./outdir"
 
-    #Developer Options:
+    # Developer Options:
     if "profile" not in options.keys():
         options["profile"] = False
 
-    #Debugging Options:
+    # Debugging Options:
     if "write_transformed_pdb" not in options.keys():
         options["write_transformed_pdb"] = False
 
-    #Box options (all 3D calcs):
+    # Box options (all 3D calcs):
     if "dimensions" not in options.keys():
         options["dimensions"] = None
-    if "step_size" not in options.keys(): #Both for topology/box
+    if "step_size" not in options.keys():  # Both for topology/box
         options["step_size"] = None
     if "initializer" not in options.keys():
         options["initializer"] = "uniform"
     if "box_shift" not in options.keys():
         options["box_shift"] = [0, 0, 0]
 
-    #Topology options
+    # Topology options
     if "concur_slip" not in options.keys():
         options["concur_slip"] = 4
     if "dtype" not in options.keys():
