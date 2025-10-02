@@ -1,4 +1,3 @@
-print("Starting cpet.py!")
 from CPET.source.CPET import CPET
 
 import json
@@ -11,6 +10,21 @@ def main():
     parser = argparse.ArgumentParser(
         description="CPET: A tool for computing and analyzing electric fields in proteins"
     )
+
+    # log level flags (mutually exclusive)
+    grp = parser.add_mutually_exclusive_group()
+
+    grp.add_argument("-d", "--debug",
+                     help="Print lots of debugging statements",
+                     action="store_const", dest="loglevel", const=logging.DEBUG)
+    
+    grp.add_argument("-v", "--verbose",
+                     help="Be verbose",
+                     action="store_const", dest="loglevel", const=logging.INFO)
+    
+    # default if neither -v nor -d
+    parser.set_defaults(loglevel=logging.WARNING)
+
     parser.add_argument(
         "-o",
         type=str,
@@ -18,24 +32,6 @@ def main():
         default="./options/options.json",
     )
 
-    parser.add_argument(
-        "-d",
-        "--debug",
-        help="Print lots of debugging statements",
-        action="store_const",
-        dest="loglevel",
-        const=logging.DEBUG,
-        default=logging.WARNING,
-    )
-
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        help="Be verbose",
-        action="store_const",
-        dest="loglevel",
-        const=logging.INFO,
-    )
     # Overrides to the options file
 
     parser.add_argument(
@@ -70,7 +66,14 @@ def main():
     """
 
     args = parser.parse_args()
-    logging.basicConfig(level=args.loglevel)
+
+    logging.basicConfig(
+        level=args.loglevel,
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
+    log = logging.getLogger(__name__)
+    log.info("Starting cpet.py")
 
     # check if the options are valid
     if not os.path.exists(args.o):

@@ -10,7 +10,10 @@ Welcome to pycpet's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   Installation
+   GetStarted
    calculator
+   SpecialScripts
 
 
 

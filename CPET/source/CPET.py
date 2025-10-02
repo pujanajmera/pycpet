@@ -3,7 +3,7 @@ from CPET.source.cluster import cluster
 from CPET.source.pca import pca_pycpet
 
 import CPET.utils.visualize as visualize
-from CPET.utils.io import save_numpy_as_dat, default_options_initializer
+from CPET.utils.io import save_numpy_as_dat, default_options_initializer, get_input_files
 from CPET.utils.calculator import report_inside_box
 
 from glob import glob
@@ -13,7 +13,7 @@ import numpy as np
 import warnings
 import logging
 
-
+log = logging.getLogger(__name__)
 class CPET:
     """The main class for the CPET package. This class is responsible for running almost any calculation, either through cpet.py or other scripts.
 
@@ -39,13 +39,14 @@ class CPET:
     def __init__(self, options):
         # Logistics
         self.options = default_options_initializer(options)
-        self.logger = logging.getLogger(__name__)  # Inherit logger from cpet.py
+        self.log = log
         self.m = self.options["CPET_method"]
         print("Instantiating CPET, method: {}".format(self.m))
         self.inputpath = self.options["inputpath"]
         self.outputpath = self.options["outputpath"]
+        self.inputfiletype = self.options["inputfiletype"]
         if not os.path.exists(self.outputpath):
-            print(
+            self.log.warning(
                 "Output directory does not exist in current directory, creating: \n{}".format(
                     self.outputpath
                 )
@@ -97,11 +98,7 @@ class CPET:
             runtype = "compute_topo_GPU_batch_filter"
         else:
             runtype = "compute_topo_complete_c_shared"
-        files_input = glob(self.inputpath + "/*.pdb")
-        if len(files_input) == 0:
-            raise ValueError("No pdb files found in the input directory")
-        if len(files_input) == 1:
-            logging.warning("Only one pdb file found in the input directory")
+        files_input = get_input_files(self.inputpath, filetype=self.inputfiletype)
         for i in range(len(files_input) * 100):
             if len(files_input) != 0:
                 file = choice(files_input)
@@ -110,7 +107,7 @@ class CPET:
                 break
             files_input.remove(file)
             protein = file.split("/")[-1].split(".")[0]
-            logging.info("Protein file: {}".format(protein))
+            self.log.info("Protein file: {}".format(protein))
             files_done = [
                 x for x in os.listdir(self.outputpath) if x.split(".")[-1] == "top"
             ]
@@ -119,46 +116,13 @@ class CPET:
                 hist = getattr(self.calculator, runtype)()
                 np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
             else:
-                print("Already done for protein: {}, skipping...".format(protein))
+                self.log.info("Already done for protein: {}, skipping...".format(protein))
 
-    '''
-    Getting rid of this function, as it is already covered by above run_topo
-    def run_topo_GPU(self):
-        """Run the electric field topology calculation (GPU-accelerated) for a number of proteins in the input directory.
-        Picks a pdb file at random from the input directory and runs the topology calculation on it, allowing for dirty parallel runs of this function.
-
-        """
-        files_input = glob(self.inputpath + "/*.pdb")
-        if len(files_input) == 0:
-            raise ValueError("No pdb files found in the input directory")
-        if len(files_input) == 1:
-            warnings.warn("Only one pdb file found in the input directory")
-        for i in range(len(files_input)*100):
-            if len(files_input) != 0:
-                file = choice(files_input)
-            else:
-                break
-            self.calculator = calculator(self.options, path_to_pdb=file)
-            protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
-            files_input.remove(file)
-            print("protein file: {}".format(protein))
-            files_done = [
-                x for x in os.listdir(self.outputpath) if x.split(".")[-1] == "top"
-            ]
-            if protein + ".top" not in files_done:
-                hist = self.calculator.compute_topo_GPU_batch_filter()
-                np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
-    '''
 
     def run_volume(self):
         """Get the electric fields along a grid of points in the box"""
 
-        files_input = glob(self.inputpath + "/*.pdb")
-        if len(files_input) == 0:
-            raise ValueError("No pdb files found in the input directory")
-
-        if len(files_input) == 1:
-            warnings.warn("Only one pdb file found in the input directory")
+        files_input = get_input_files(self.inputpath, filetype=self.inputfiletype)
 
         for i in range(len(files_input) * 100):
             if len(files_input) != 0:
@@ -169,14 +133,14 @@ class CPET:
             self.calculator = calculator(self.options, path_to_pdb=file)
             protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
             files_input.remove(file)
-            print("protein file: {}".format(protein))
+            self.log.info("protein file: {}".format(protein))
             files_done = [
                 x for x in os.listdir(self.outputpath) if x[-11:] == "_efield.dat"
             ]
 
             if protein + "_efield.dat" not in files_done:
                 field_box, mesh_shape = self.calculator.compute_box()
-                print(field_box.shape)
+                self.log.info(field_box.shape)
                 meta_data = {
                     "dimensions": self.calculator.dimensions,
                     "step_size": [
@@ -197,11 +161,7 @@ class CPET:
 
     def run_point(self):
         """Get the electric field/magnitude at the center of the box"""
-        files_input = glob(self.inputpath + "/*.pdb")
-        if len(files_input) == 0:
-            raise ValueError("No pdb files found in the input directory")
-        if len(files_input) == 1:
-            warnings.warn("Only one pdb file found in the input directory")
+        files_input = get_input_files(self.inputpath, filetype=self.inputfiletype)
         if self.m == "point_field":
             outfile = self.outputpath + "/point_field.dat"
             runtype = "compute_point_field"
@@ -212,18 +172,14 @@ class CPET:
             for file in files_input:
                 self.calculator = calculator(self.options, path_to_pdb=file)
                 protein = file.split("/")[-1].split(".")[0]
-                print("protein file: {}".format(protein))
+                self.log.info("protein file: {}".format(protein))
                 point_field_or_mag = getattr(self.calculator, runtype)()
                 # Save the point field or magnitude to the output file
                 f.write("{}:{}\n".format(protein, point_field_or_mag))
 
     def run_volume_ESP(self):
         """Get the electrostatic potential along a grid of points in the box"""
-        files_input = glob(self.inputpath + "/*.pdb")
-        if len(files_input) == 0:
-            raise ValueError("No pdb files found in the input directory")
-        if len(files_input) == 1:
-            warnings.warn("Only one pdb file found in the input directory")
+        files_input = get_input_files(self.inputpath, filetype=self.inputfiletype)
         for i in range(len(files_input) * 100):
             if len(files_input) != 0:
                 file = choice(files_input)
@@ -233,13 +189,13 @@ class CPET:
             self.calculator = calculator(self.options, path_to_pdb=file)
             protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
             files_input.remove(file)
-            print("protein file: {}".format(protein))
+            self.log.info("protein file: {}".format(protein))
             files_done = [
                 x for x in os.listdir(self.outputpath) if x[-11:] == "_esp.dat"
             ]
             if protein + "_esp.dat" not in files_done:
                 esp_box, mesh_shape = self.calculator.compute_box_ESP()
-                print(esp_box.shape)
+                self.log.info(esp_box.shape)
                 meta_data = {
                     "dimensions": self.calculator.dimensions,
                     "step_size": [
@@ -259,11 +215,7 @@ class CPET:
 
     def run_box_check(self):
         """Reports atoms that are inside the user-defined box, to check for potential e-field conflicts"""
-        files_input = glob(self.inputpath + "/*.pdb")
-        if len(files_input) == 0:
-            raise ValueError("No pdb files found in the input directory")
-        if len(files_input) == 1:
-            warnings.warn("Only one pdb file found in the input directory")
+        files_input = get_input_files(self.inputpath, filetype=self.inputfiletype)
         for file in files_input:
             if "filter_radius" in self.options or "filter_resnum" in self.options:
                 # Error out, radius not compatible
@@ -274,20 +226,20 @@ class CPET:
             self.options["filter_in_box"] = False
             self.calculator = calculator(self.options, path_to_pdb=file)
             protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
-            print("protein file: {}".format(protein))
+            self.log.info("protein file: {}".format(protein))
             report_inside_box(self.calculator)
         print("No more files to process!")
 
     def run_cluster(self):
         """Run clustering (for a variety of types of field/esp data)"""
-        print("Running the cluster analysis. Method type: {}".format(self.m))
+        self.log.info("Running the cluster analysis. Method type: {}".format(self.m))
         self.cluster = cluster(self.options)
         self.cluster.Cluster()
 
     def run_visualize_efield(self):
-        """Visualize the electric field/electrostatic potential file for ChimeraX"""
+        """Visualize the electric field/electrostatic potential file for Chimera/ChimeraX"""
         print(
-            "Visualizing the electric field or electrostatic potential for use in ChimeraX"
+            "Visualizing the electric field or electrostatic potential for use in Chimera/ChimeraX"
         )
         if self.m == "visualize_field":
             files_input = glob(self.inputpath + "/*_efield.dat")

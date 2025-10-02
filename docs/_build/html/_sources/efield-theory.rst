@@ -26,10 +26,10 @@ where :math:`q_i` and :math:`Q_j` are the partial charges of MM region of intere
 
 These interaction energies are output to the command line, so the following usage is recommended (The script should be in your path if you have correctly installed PyCPET):
 
-```bash
-electrostatic_interaction_QM.py -m name_of_molden_file -p protein.pdb -o options.json -r
-``` 
+.. code-block:: console
+    
+    electrostatic_interaction_QM.py -m name_of_molden_file -p protein.pdb -o options.json -r > interaction_energies.txt
 
-To see an example usage of this, check out this work that applies it to chorismate mutases: (CITE)
+To see an example usage of this, check out this work that applies it to chorismate mutases: (https://doi.org/10.1021/jacs.5c11931)
 
 

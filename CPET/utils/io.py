@@ -1,7 +1,28 @@
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from glob import glob
+import logging
 
+log = logging.getLogger(__name__)
+
+def get_input_files(inputpath, input_type):
+    """
+    Check if the pdb/pqr folder contains any pdb/pqr files
+    Parameters:
+        pdb_folder (str): Path to the folder containing pdb/pqr
+        input_type (str): Type of input files ('pdb' or 'pqr')
+    Returns:
+        files_input (list): List of pdb/pqr files in the folder
+    """
+    if input_type not in ["pdb", "pqr"]:
+        raise ValueError("input_type must be 'pdb' or 'pqr'")
+    files_input = glob(inputpath + f"/*.{input_type}")
+    if len(files_input) == 0:
+        raise ValueError("No pdb files found in the input directory")
+    if len(files_input) == 1:
+        log.warning("Only one pdb file found in the input directory")
+    return files_input
 
 def write_field_to_file(grid_points, field_points, filename):
     """
@@ -187,6 +208,8 @@ def default_options_initializer(options):
         options["inputpath"] = "./inpdir"
     if "outputpath" not in options.keys():
         options["outputpath"] = "./outdir"
+    if "input_type" not in options.keys():
+        options["input_type"] = "pdb" #Default to pdb with charges
 
     # Developer Options:
     if "profile" not in options.keys():
