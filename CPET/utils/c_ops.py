@@ -308,7 +308,7 @@ class Math_ops:
             x_0(array) - (3, 1) array of box position
             n_iter(int) - number of iterations of propagation for this slip
             x(np array) - positions of dipoles
-            mu(np array) - (3,N) dipole moments
+            mu(np array) - (N,3) dipole moments
             step_size(float) - step size of each step
             dimensions(array) - box limits
         Returns:
@@ -316,8 +316,8 @@ class Math_ops:
         """
         res = np.zeros(2, dtype="float32")
         n_dipoles = len(mu)
+        # print(n_dipoles, n_iter, step_size, x_0, dimensions, x, mu, res)
         self.math.thread_operation_dipole.restype = None
-        mu = mu.reshape(-1)
         self.math.thread_operation_dipole(
             n_dipoles, n_iter, step_size, x_0, dimensions, x, mu, res
         )

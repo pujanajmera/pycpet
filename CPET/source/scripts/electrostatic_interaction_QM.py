@@ -8,7 +8,7 @@ from pyscf import gto, tools
 from pathlib import Path
 
 
-def E_elec_qmmm(mol, x, q, dm, track=False):
+def E_elec_qmmm(mol, x, q, dm, verbose, track=False):
     E_elec = 0.0
     if not track:
         for i in range(len(x)):
@@ -20,11 +20,12 @@ def E_elec_qmmm(mol, x, q, dm, track=False):
             mol.set_rinv_origin(x[i])
             V = (-1) * mol.intor("int1e_rinv")
             E_elec += q[i] * np.einsum("ij,ij", dm, V)
-    print(E_elec)
+    if verbose:
+        print(E_elec)
     return E_elec
 
 
-def E_nuc_qmmm(x, x_qm, q, q_qm, track=False):
+def E_nuc_qmmm(x, x_qm, q, q_qm, verbose, track=False):
     E_nuc = 0.0
     if not track:
         for i in range(len(x)):
@@ -50,7 +51,8 @@ def E_nuc_qmmm(x, x_qm, q, q_qm, track=False):
                     )
                     continue
                 E_nuc += q[i] * q_qm[j] / r
-    print(E_nuc)
+    if verbose:
+        print(E_nuc)
     return E_nuc
 
 
@@ -91,7 +93,12 @@ def main():
     parser.add_argument(
         "-v", "--verbose", help="Verbose output", action="store_true", default=False
     )
-
+    parser.add_argument(
+        "-s", "--spin", help="Provide the total S", default=0.5
+    )
+    parser.add_argument(
+        "-c", "--charge", help="Provide the total charge of the QM region as an integer", default=0
+    )
     ANGSTROM_TO_BOHR = 1.8897259886
 
     args = parser.parse_args()
@@ -118,13 +125,13 @@ def main():
     residue_number = calculator_object.residue_number  # Residue numbers
 
     print("Parsing Molden file...")
-    parsed_molden = tools.molden.parse(molden, verbose=0)
+    parsed_molden = tools.molden.parse(molden, verbose=1)
     mol, mo_energy, mo_coeff, mo_occ = parsed_molden[0:4]
     x_qm = mol.atom_coords()  # Get coordinates of atoms in Bohr
     q_qm = mol.atom_charges()  # Get atomic numbers to get nuclear charges
     dm = density_matrix(mo_coeff, mo_occ)  # Density matrix in AO basis
     print(
-        f"Molden file parsed successfully. MO coefficients shape (AOxMO): {mo_coeff.shape}"
+        f"Molden file parsed successfully. MO coefficients shape (AOxMO):"
     )
 
     print(x[0:5], q[0:5])  # Print first 5 coordinates and charges for debugging
@@ -132,7 +139,9 @@ def main():
         x_qm[0:5], q_qm[0:5]
     )  # Print first 5 QM coordinates and charges for debugging
     print(len(x), len(q))
-
+    print(f"Number of unpaired electrons: {int(float(args.spin)*2)}")
+    mol.spin = int(float(args.spin)*2)
+    mol.charge = int(args.charge)
     # Create a PySCF molecule object
     mol.build()
     print("Molecule built successfully.")
@@ -191,8 +200,8 @@ def main():
                 print(
                     f"Calculating interaction energy for residue {resn} with {count} atoms..."
                 )
-            res_breakdown_dict[resn]["E_elec"] = E_elec_qmmm(mol, x_temp, q_temp, dm)
-            res_breakdown_dict[resn]["E_nuc"] = E_nuc_qmmm(x_temp, x_qm, q_temp, q_qm)
+            res_breakdown_dict[resn]["E_elec"] = E_elec_qmmm(mol, x_temp, q_temp, dm, verbose)
+            res_breakdown_dict[resn]["E_nuc"] = E_nuc_qmmm(x_temp, x_qm, q_temp, q_qm, verbose)
             res_breakdown_dict[resn]["V_qmmm"] = (
                 res_breakdown_dict[resn]["E_elec"] + res_breakdown_dict[resn]["E_nuc"]
             )
@@ -219,10 +228,10 @@ def main():
         # Print floating point precision of the variables
         print(f"x: {x.dtype}, q: {q.dtype}")
 
-        E_elec = E_elec_qmmm(mol, x, q, dm, track=True)
+        E_elec = E_elec_qmmm(mol, x, q, dm, verbose, track=True)
         # Interaction energy of PC with nuclear charges
         print("E_nuc")
-        E_nuc = E_nuc_qmmm(x, x_qm, q, q_qm, track=True)
+        E_nuc = E_nuc_qmmm(x, x_qm, q, q_qm, verbose, track=True)
         V_qmmm = E_elec + E_nuc
         print(f"Total interaction energy V_qmmm: {V_qmmm} Hartree")
 

@@ -118,9 +118,8 @@ def task_complete_thread_dipole(x_0, n_iter, x, mu, step_size, dimensions):
         step_size(float) - step size of each step
         dimensions(array) - box limits
     """
-
     result = calculate_thread_c_shared_dipole(
-        x_0=x_0, n_iter=n_iter, x=x, Q=mu, step_size=step_size, dimensions=dimensions
+        x_0=x_0, n_iter=n_iter, x=x, mu=mu, step_size=step_size, dimensions=dimensions
     )
     # print("result: ", result)
     return result
