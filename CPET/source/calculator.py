@@ -499,6 +499,11 @@ class calculator:
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
+        self.log.debug("x shape: {}".format(self.x.shape))
+        self.log.debug("Q shape: {}".format(self.Q.shape))
+        self.log.debug("First few lines of x: {}".format(self.x[:5]))
+        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
+        self.log.debug("Center: {}".format(self.center))
         start_time = time.time()
         self.log.debug("Starting pooling")
         with Pool(self.concur_slip) as pool:
@@ -524,6 +529,11 @@ class calculator:
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
+        self.log.debug("x shape: {}".format(self.x.shape))
+        self.log.debug("Q shape: {}".format(self.Q.shape))
+        self.log.debug("First few lines of x: {}".format(self.x[:5]))
+        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
+        self.log.debug("Center: {}".format(self.center))
         start_time = time.time()
         self.log.debug("Starting pooling")
         with Pool(self.concur_slip) as pool:
@@ -554,6 +564,11 @@ class calculator:
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
+        self.log.debug("x shape: {}".format(self.x.shape))
+        self.log.debug("Q shape: {}".format(self.Q.shape))
+        self.log.debug("First few lines of x: {}".format(self.x[:5]))
+        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
+        self.log.debug("Center: {}".format(self.center))
         start_time = time.time()
         dist_list, curve_list, init_points_list, final_points_list = [], [], [], []
         endtype_list = []
@@ -607,6 +622,11 @@ class calculator:
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
         self.log.info(f"Start point shape: {self.random_start_points.shape}")
+        self.log.debug("x shape: {}".format(self.x.shape))
+        self.log.debug("Q shape: {}".format(self.Q.shape))
+        self.log.debug("First few lines of x: {}".format(self.x[:5]))
+        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
+        self.log.debug("Center: {}".format(self.center))
         start_time = time.time()
         self.log.debug("Starting pooling")
         self.log.debug(f"Random start points: {self.random_start_points}")
@@ -644,6 +664,11 @@ class calculator:
         self.log.info(f"Number of dipoles: {len(self.mu)}")
         self.log.info(f"Step size: {self.step_size}")
         self.log.info(f"Start point shape: {self.random_start_points.shape}")
+        self.log.debug("x shape: {}".format(self.x.shape))
+        self.log.debug("mu shape: {}".format(self.mu.shape))
+        self.log.debug("First few lines of x: {}".format(self.x[:5]))
+        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
+        self.log.debug("Center: {}".format(self.center))
         start_time = time.time()
         with Pool(self.concur_slip) as pool:
             args = [
@@ -672,6 +697,11 @@ class calculator:
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
+        self.log.debug("x shape: {}".format(self.x.shape))
+        self.log.debug("Q shape: {}".format(self.Q.shape))
+        self.log.debug("First few lines of x: {}".format(self.x[:5]))
+        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
+        self.log.debug("Center: {}".format(self.center))
         start_time = time.time()
         self.log.info(f"num batches: {len(self.random_start_points_batched)}")
         self.log.debug(f"Random start points (batched): {self.random_start_points_batched}")
@@ -713,6 +743,11 @@ class calculator:
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
+        self.log.debug("x shape: {}".format(self.x.shape))
+        self.log.debug("Q shape: {}".format(self.Q.shape))
+        self.log.debug("First few lines of x: {}".format(self.x[:5]))
+        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
+        self.log.debug("Center: {}".format(self.center))
 
         Q_gpu = torch.tensor(self.Q, dtype=torch.float32).cuda()
         Q_gpu = Q_gpu.unsqueeze(0)
@@ -794,15 +829,15 @@ class calculator:
             if dumped_values.shape[1] >= self.n_samples:
                 print("Finished streamlines early, breaking!")
                 break
-        print(
+        self.log.info(
             f"Checking dumped values ({dumped_values.shape[1]}) vs number of samples ({self.n_samples})"
         )
         if (
             dumped_values.shape[1] < self.n_samples
         ):  # Still some samples remaining in the remainder
-            print("Streamlines remaining")
-            print(remainder)
-            print(path_matrix_torch.shape)
+            self.log.info("Streamlines remaining")
+            self.log.debug(f" Remainder: {remainder}")
+            self.log.debug(f"Path matrix shape: {path_matrix_torch.shape}")
             path_matrix_torch_new = torch.zeros(
                 (remainder + 2, path_matrix_torch.shape[1], 3),
                 dtype=torch.float32,
@@ -837,25 +872,28 @@ class calculator:
         else:
             del path_matrix_torch
 
-        print(dumped_values.shape)
-        np.savetxt(
-            "dumped_values_init.txt",
-            dumped_values[0:3]
-            .cpu()
-            .numpy()
-            .transpose(1, 0, 2)
-            .reshape(dumped_values.shape[1], -1),
-            fmt="%.6f",
-        )
-        np.savetxt(
-            "dumped_values_final.txt",
-            dumped_values[3:6]
-            .cpu()
-            .numpy()
-            .transpose(1, 0, 2)
-            .reshape(dumped_values.shape[1], -1),
-            fmt="%.6f",
-        )
+        self.log.debug(f"Dumped values shape: {dumped_values.shape}")
+
+        if self.log.logger.isEnabledFor(logging.DEBUG):
+            self.log.debug("Dumping topology information in debug mode")
+            np.savetxt(
+                "dumped_values_init.txt",
+                dumped_values[0:3]
+                .cpu()
+                .numpy()
+                .transpose(1, 0, 2)
+                .reshape(dumped_values.shape[1], -1),
+                fmt="%.6f",
+            )
+            np.savetxt(
+                "dumped_values_final.txt",
+                dumped_values[3:6]
+                .cpu()
+                .numpy()
+                .transpose(1, 0, 2)
+                .reshape(dumped_values.shape[1], -1),
+                fmt="%.6f",
+            )
         distances, curvatures = compute_curv_and_dist_mat_gpu(
             dumped_values[0, :, :],
             dumped_values[1, :, :],
@@ -865,15 +903,9 @@ class calculator:
             dumped_values[5, :, :],
         )
         end_time = time.time()
-        print(
+        self.log.debug(
             f"Time taken for {self.n_samples} calculations with N~{self.Q.shape}: {end_time - start_time:.2f} seconds"
         )
         topology = np.column_stack((distances.cpu().numpy(), curvatures.cpu().numpy()))
-        print(topology.shape)
-        # For dev testing
-        np.savetxt(
-            "topology_GPU.txt",
-            topology,
-            fmt="%.6f",
-        )
+        self.log.info(f"Topology shape: {topology.shape}")
         return topology

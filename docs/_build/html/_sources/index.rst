@@ -12,6 +12,9 @@ Welcome to pycpet's documentation!
 
    Installation
    GetStarted
+   FieldTopESP
+   Dynamics
+   Visualization
    SpecialScripts
    Parallel
    citation

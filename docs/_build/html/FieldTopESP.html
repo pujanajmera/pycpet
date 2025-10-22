@@ -3,14 +3,14 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Search &mdash; pycpet  documentation</title>
+  <title>Computing Electric Fields, Electric Field Topologies, and Electrostatic Potentials &mdash; pycpet  documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
 
   
-    
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=9eb32ce0"></script>
@@ -18,10 +18,10 @@
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="_static/js/theme.js"></script>
-    <script src="_static/searchtools.js"></script>
-    <script src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="#" /> 
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Dynamics of 3-D E-Fields and Potentials" href="Dynamics.html" />
+    <link rel="prev" title="Visualization" href="Visualization.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -36,7 +36,7 @@
             pycpet
           </a>
 <div role="search">
-  <form id="rtd-search-form" class="wy-form" action="#" method="get">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
@@ -44,12 +44,17 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="GetStarted.html">Getting Started - Input Options File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="FieldTopESP.html">Computing Electric Fields, Electric Field Topologies, and Electrostatic Potentials</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Dynamics.html">Dynamics of 3-D E-Fields and Potentials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GetStarted.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Visualization.html">Visualization</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Computing Electric Fields, Electric Field Topologies, and Electrostatic Potentials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#point-e-field-esp">Point E-field/ESP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#volume-e-field-esp">Volume E-field/ESP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric-field-topologies-distribution-of-streamlines">Electric Field Topologies (Distribution of Streamlines)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Dynamics.html">Dynamics of 3-D E-Fields and Potentials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="SpecialScripts.html">Special Scripts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Parallel.html">Parallel Execution</a></li>
 <li class="toctree-l1"><a class="reference internal" href="citation.html">Citing PyCPET &amp; References</a></li>
@@ -70,8 +75,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Search</li>
+      <li class="breadcrumb-item active">Computing Electric Fields, Electric Field Topologies, and Electrostatic Potentials</li>
       <li class="wy-breadcrumbs-aside">
+            <a href="_sources/FieldTopESP.rst" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -79,22 +85,29 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <noscript>
-  <div id="fallback" class="admonition warning">
-    <p class="last">
-      Please activate JavaScript to enable the search functionality.
-    </p>
-  </div>
-  </noscript>
+  <section id="computing-electric-fields-electric-field-topologies-and-electrostatic-potentials">
+<h1>Computing Electric Fields, Electric Field Topologies, and Electrostatic Potentials<a class="headerlink" href="#computing-electric-fields-electric-field-topologies-and-electrostatic-potentials" title="Link to this heading"></a></h1>
+<section id="point-e-field-esp">
+<h2>Point E-field/ESP<a class="headerlink" href="#point-e-field-esp" title="Link to this heading"></a></h2>
+<p>To be added.</p>
+</section>
+<section id="volume-e-field-esp">
+<h2>Volume E-field/ESP<a class="headerlink" href="#volume-e-field-esp" title="Link to this heading"></a></h2>
+<p>To be added.</p>
+</section>
+<section id="electric-field-topologies-distribution-of-streamlines">
+<h2>Electric Field Topologies (Distribution of Streamlines)<a class="headerlink" href="#electric-field-topologies-distribution-of-streamlines" title="Link to this heading"></a></h2>
+<p>To be added. Advised to use parallel/GPU accelerated calculations.</p>
+</section>
+</section>
 
-  
-  <div id="search-results">
-  
-  </div>
 
            </div>
           </div>
-          <footer>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Visualization.html" class="btn btn-neutral float-left" title="Visualization" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Dynamics.html" class="btn btn-neutral float-right" title="Dynamics of 3-D E-Fields and Potentials" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
 
   <hr/>
 
@@ -116,14 +129,7 @@
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-  <script>
-    jQuery(function() { Search.loadIndex("searchindex.js"); });
-  </script>
-  
-  <script id="searchindexloader"></script>
-   
-
+  </script> 
 
 </body>
 </html>

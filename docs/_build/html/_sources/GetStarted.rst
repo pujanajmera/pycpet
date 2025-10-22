@@ -1,5 +1,5 @@
-Getting Started
-=================
+Getting Started - Input Options File
+=========================================
 
 Examples for pycpet are located in the `examples` directory of the repository. The examples are designed to demonstrate how to use the package for various applications.
 Here, we will provide a fairly in-depth overview of *PyCPET*'s features, and how to use them.
