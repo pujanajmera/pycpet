@@ -6,12 +6,8 @@ import pandas as pd
 from CPET.utils.io import (
     filter_radius,
     filter_radius_whole_residue,
-    filter_IDs,
-    filter_residue,
-    filter_resnum,
-    filter_resnum_andname,
+    filter_atomspec,
     filter_in_box,
-    filter_atom_num,
 )
 
 
@@ -23,7 +19,6 @@ class TestFilter:
         your filter functions expect. We'll return a dictionary
         of arrays for convenience.
         """
-        # Coordinates
         x = np.array(
             [
                 [0.0, 0.0, 0.0],  # A
@@ -33,28 +28,48 @@ class TestFilter:
             ],
             dtype=float,
         )
-
-        # Charge array
         Q = np.array([+1.0, -0.5, +0.3, +1.2], dtype=float)
-
-        # Residue names and numbers
         resids = np.array(["WAT", "WAT", "FE", "NI"])  # Example residue IDs
         resnums = np.array([10, 10, 651, 652])  # Example residue numbers
-
-        # Atom info
         atom_numbers = np.array([1001, 1002, 2001, 3001])  # Unique identifiers
         atom_types = np.array(["O", "H", "FE", "NI"])
+        chains = np.array(["A", "A", "A", "A"])  # All in chain A
 
         # Combine them into a single dictionary to pass around
         data = {
             "x": x,
             "Q": Q,
+            "chains": chains,
             "resids": resids,
             "resnums": resnums,
             "atom_number": atom_numbers,
             "atom_type": atom_types,
         }
         return data
+
+    def test_filter_atomspec(self, synthetic_data):
+        """Test filter_atomspec with any atom specification."""
+        x = synthetic_data["x"]
+        Q = synthetic_data["Q"]
+        resids = synthetic_data["resids"]
+        resnums = synthetic_data["resnums"]
+        chains = synthetic_data["chains"]
+        atom_numbers = synthetic_data["atom_number"]
+        atom_types = synthetic_data["atom_type"]
+
+        ID = [
+                (
+                    atom_numbers[i],
+                    atom_types[i],
+                    resids[i],
+                    resnums[i],
+                    chains[i],
+                )
+                for i in range(len(x))
+            ]
+        
+        # Test A1: Intersect = False, remove all FE atoms
+        # Test A2: Intersect = False, 
 
     def test_filter_radius(self, synthetic_data):
         """Test filter_radius with a simple radius around origin."""
@@ -167,72 +182,6 @@ class TestFilter:
             # row = (atom_number, atom_type, resid, resnum, chain)
             assert row[1] != "FE"
 
-    def test_filter_residue(self, synthetic_data):
-        """
-        Test filter_residue by removing e.g. 'WAT' from the dataset.
-        """
-        # We'll call the function: filter_residue(x, Q, resnums, resids, atom_number, atom_type, filter_list)
-        x, Q, resnums, resids, anums, atypes = [
-            synthetic_data[k]
-            for k in ["x", "Q", "resnums", "resids", "atom_number", "atom_type"]
-        ]
-
-        filter_list = ["WAT"]  # remove all "WAT" residues
-        (x_filt, Q_filt, resnums_filt, resids_filt, anums_filt, atypes_filt) = (
-            filter_residue(x, Q, resnums, resids, anums, atypes, filter_list)
-        )
-
-        # Original data had WAT #10 for the first two items => removed.
-        # FE #651, NI #652 remain => we expect 2 items left
-        assert len(x_filt) == 2
-        # They should match the last two from the original
-        np.testing.assert_allclose(x_filt[0], [2.1, 1.0, 0.0])
-        np.testing.assert_allclose(x_filt[1], [5.0, 5.0, 5.0])
-
-    def test_filter_resnum(self, synthetic_data):
-        """
-        Test filter_resnum by removing e.g. residue #651.
-        """
-        x, Q, resnums, resids = [
-            synthetic_data[k] for k in ["x", "Q", "resnums", "resids"]
-        ]
-        filter_list = [651]  # remove residue number 651
-        x_filt, Q_filt, resnums_filt, resids_filt = filter_resnum(
-            x, Q, resnums, resids, filter_list
-        )
-
-        # Residue #651 was the 3rd entry (FE).
-        # So we remove that => expect 3 left
-        assert len(x_filt) == 3
-        # Let's check the coordinates are the 1st, 2nd, and 4th from the original
-        # which are [0,0,0], [1.5,0,0], and [5,5,5].
-        np.testing.assert_allclose(x_filt[0], [0.0, 0.0, 0.0])
-        np.testing.assert_allclose(x_filt[1], [1.5, 0.0, 0.0])
-        np.testing.assert_allclose(x_filt[2], [5.0, 5.0, 5.0])
-
-    def test_filter_resnum_andname(self, synthetic_data):
-        """
-        Test filter_resnum_andname, which removes atoms with a specific (resnum -> resname) mapping.
-        """
-        x = synthetic_data["x"]
-        Q = synthetic_data["Q"]
-        resnums = synthetic_data["resnums"]
-        resnames = synthetic_data["resids"]  # 'resids' are effectively residue names
-        anums = synthetic_data["atom_number"]
-        atypes = synthetic_data["atom_type"]
-
-        # Suppose we want to remove the pair { "651":"FE" } from the data
-        filter_list = [{"651": "FE"}]
-        (x_filt, Q_filt, resnums_filt, resnames_filt, anums_filt, atypes_filt) = (
-            filter_resnum_andname(x, Q, resnums, resnames, anums, atypes, filter_list)
-        )
-
-        # This should remove whichever row has resnum=651 with resname="FE", i.e. the 3rd row
-        assert len(x_filt) == 3
-        # Check the 3rd coordinate is gone
-        for coord in x_filt:
-            assert not np.allclose(coord, [2.1, 1.0, 0.0])
-
     def test_filter_in_box(self, synthetic_data):
         """
         Test filter_in_box, which *removes* points *inside* the given box.
@@ -259,22 +208,3 @@ class TestFilter:
         assert len(x_filt) == 1
         np.testing.assert_allclose(x_filt[0], [5.0, 5.0, 5.0])
         np.testing.assert_allclose(Q_filt[0], 1.2)
-
-    def test_filter_atom_num(self, synthetic_data):
-        """
-        Test filter_atom_num, which removes coordinates if their atom_number is in a filter_list.
-        """
-        x = synthetic_data["x"]
-        Q = synthetic_data["Q"]
-        anums = synthetic_data["atom_number"]
-
-        # Suppose we want to remove the 2nd and 3rd entries => that corresponds to
-        # atom_number=1002, 2001 in our synthetic data.
-        filter_list = [1002, 2001]
-        x_filt, Q_filt = filter_atom_num(x, Q, anums, filter_list)
-
-        # The original had 4. We remove 2 => expect 2 remain.
-        assert len(x_filt) == 2
-        # We should keep only entries with atom_number=1001 and 3001 => indices 0,3 from original
-        np.testing.assert_allclose(x_filt[0], [0.0, 0.0, 0.0])
-        np.testing.assert_allclose(x_filt[1], [5.0, 5.0, 5.0])

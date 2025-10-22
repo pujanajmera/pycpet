@@ -32,4 +32,21 @@ These interaction energies are output to the command line, so the following usag
 
 The Alexandrova group's work on Chorismate Mutase inspired this script [Chaturvedi2025]_
 
+Two-Site 3D Electrostatic Potential Clustering
+-------------------------------------------------
+Author: Pujan Ajmera
 
+To be added soon. This script provides representative clusters from a set of two 3d electrostatic potentials. The clusters are "co-clusters",
+i.e. depend on both potentials changing simultaneously.
+
+Field Topology from Dipole Moments
+-------------------------------------------------
+Authors: Pujan Ajmera, Anubhav Goswami
+
+To be added.
+
+Residue Breakdown Analysis of Field Topology
+-------------------------------------------------
+Authors: Pujan Ajmera
+
+To be added.

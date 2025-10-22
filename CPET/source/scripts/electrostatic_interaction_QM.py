@@ -93,11 +93,12 @@ def main():
     parser.add_argument(
         "-v", "--verbose", help="Verbose output", action="store_true", default=False
     )
+    parser.add_argument("-s", "--spin", help="Provide the total S", default=0.5)
     parser.add_argument(
-        "-s", "--spin", help="Provide the total S", default=0.5
-    )
-    parser.add_argument(
-        "-c", "--charge", help="Provide the total charge of the QM region as an integer", default=0
+        "-c",
+        "--charge",
+        help="Provide the total charge of the QM region as an integer",
+        default=0,
     )
     ANGSTROM_TO_BOHR = 1.8897259886
 
@@ -106,12 +107,12 @@ def main():
     res = args.res
     verbose = args.verbose
     options = json.load(open(args.options, "r"))
-    options["dtype"] = (
-        "float64"  # Ensure that the dtype is set to float64 for consistency
-    )
-    options["CPET_method"] = (
-        "point_field"  # Preventative to ensure that time isn't wasted on creating other attributes
-    )
+    options[
+        "dtype"
+    ] = "float64"  # Ensure that the dtype is set to float64 for consistency
+    options[
+        "CPET_method"
+    ] = "point_field"  # Preventative to ensure that time isn't wasted on creating other attributes
     options["center"] = [0, 0, 0]
     calculator_object = calculator(
         options, args.pdb
@@ -130,9 +131,7 @@ def main():
     x_qm = mol.atom_coords()  # Get coordinates of atoms in Bohr
     q_qm = mol.atom_charges()  # Get atomic numbers to get nuclear charges
     dm = density_matrix(mo_coeff, mo_occ)  # Density matrix in AO basis
-    print(
-        f"Molden file parsed successfully. MO coefficients shape (AOxMO):"
-    )
+    print(f"Molden file parsed successfully. MO coefficients shape (AOxMO):")
 
     print(x[0:5], q[0:5])  # Print first 5 coordinates and charges for debugging
     print(
@@ -140,7 +139,7 @@ def main():
     )  # Print first 5 QM coordinates and charges for debugging
     print(len(x), len(q))
     print(f"Number of unpaired electrons: {int(float(args.spin)*2)}")
-    mol.spin = int(float(args.spin)*2)
+    mol.spin = int(float(args.spin) * 2)
     mol.charge = int(args.charge)
     # Create a PySCF molecule object
     mol.build()
@@ -200,8 +199,12 @@ def main():
                 print(
                     f"Calculating interaction energy for residue {resn} with {count} atoms..."
                 )
-            res_breakdown_dict[resn]["E_elec"] = E_elec_qmmm(mol, x_temp, q_temp, dm, verbose)
-            res_breakdown_dict[resn]["E_nuc"] = E_nuc_qmmm(x_temp, x_qm, q_temp, q_qm, verbose)
+            res_breakdown_dict[resn]["E_elec"] = E_elec_qmmm(
+                mol, x_temp, q_temp, dm, verbose
+            )
+            res_breakdown_dict[resn]["E_nuc"] = E_nuc_qmmm(
+                x_temp, x_qm, q_temp, q_qm, verbose
+            )
             res_breakdown_dict[resn]["V_qmmm"] = (
                 res_breakdown_dict[resn]["E_elec"] + res_breakdown_dict[resn]["E_nuc"]
             )

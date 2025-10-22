@@ -1,0 +1,16 @@
+{
+        "CPET_method": "point_field",
+        "inputpath": "../1A_point-field/pdb",
+        "center": {
+                "method": "mean",
+                "atoms": [
+                        {"C7": 378},
+                        {"O9": 378}
+                ]
+        },
+	"filter_IDs": [
+		["","","CF1",378,""]
+	],
+        "filter_radius": 40,
+        "_comment": "WARNING: keeping filter_res_radius will overwrite filter_radius and filter_resname"
+}

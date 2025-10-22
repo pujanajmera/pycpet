@@ -106,9 +106,9 @@ class Math_ops:
             self.array_1d_float,
             self.array_1d_float,
             self.array_2d_float,
-            self.array_2d_float, #Changed because moving from Q --> mu
+            self.array_2d_float,  # Changed because moving from Q --> mu
             self.array_1d_float,
-        ]       
+        ]
 
         self.math.calc_field.restype = None
         self.math.calc_field.argtypes = [

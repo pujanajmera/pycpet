@@ -1,4 +1,5 @@
 from CPET.source.CPET import CPET
+from CPET.utils import intro_citation
 
 import json
 import os
@@ -11,19 +12,16 @@ def main():
         description="CPET: A tool for computing and analyzing electric fields in proteins"
     )
 
-    # log level flags (mutually exclusive)
-    grp = parser.add_mutually_exclusive_group()
-
-    grp.add_argument("-d", "--debug",
-                     help="Print lots of debugging statements",
-                     action="store_const", dest="loglevel", const=logging.DEBUG)
-    
-    grp.add_argument("-v", "--verbose",
-                     help="Be verbose",
-                     action="store_const", dest="loglevel", const=logging.INFO)
-    
-    # default if neither -v nor -d
-    parser.set_defaults(loglevel=logging.WARNING)
+    # log level flags
+    parser.add_argument(
+        "-d",
+        "--debug",
+        help="Print lots of debugging statements",
+        action="store_const",
+        dest="loglevel",
+        const=logging.DEBUG,
+        default=logging.INFO #By default, show info and warnings
+    )
 
     parser.add_argument(
         "-o",
@@ -73,7 +71,7 @@ def main():
         datefmt="%H:%M:%S",
     )
     log = logging.getLogger(__name__)
-    log.info("Starting cpet.py")
+    log.info("... > Starting cpet.py")
 
     # check if the options are valid
     if not os.path.exists(args.o):

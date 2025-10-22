@@ -2,8 +2,6 @@ import numpy as np
 import warnings
 import math
 
-# from chimerax.core.commands import run
-
 """
 Overall script for all visualization functions and visualization-affiliates.
 
@@ -18,7 +16,7 @@ To-add:
 """
 
 
-def visualize_esp(path_to_pdb, path_to_esp, outputpath, options):
+def visualize_esp(path_to_esp, outputpath, options):
     """
     Visualize electrostatic potential in proteins by creating a bild file
     for Chimera/ChimeraX input
@@ -49,7 +47,7 @@ def visualize_esp(path_to_pdb, path_to_esp, outputpath, options):
     max_n_esp = options["max_n_esp"] if "max_n_esp" in options else None
     min_n_esp = options["min_n_esp"] if "min_n_esp" in options else None
 
-    name = path_to_pdb.split("/")[-1].split(".")[0]
+    name = path_to_esp.split("/")[-1].split(".")[0]
 
     bild_path = outputpath + "/" + name
 

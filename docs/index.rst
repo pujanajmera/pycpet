@@ -12,8 +12,10 @@ Welcome to pycpet's documentation!
 
    Installation
    GetStarted
-   calculator
    SpecialScripts
+   Parallel
+   citation
+   apiref
 
 
 

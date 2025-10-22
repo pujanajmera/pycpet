@@ -6,23 +6,25 @@ import logging
 
 log = logging.getLogger(__name__)
 
-def get_input_files(inputpath, input_type):
+
+def get_input_files(inputpath, filetype):
     """
     Check if the pdb/pqr folder contains any pdb/pqr files
     Parameters:
         pdb_folder (str): Path to the folder containing pdb/pqr
-        input_type (str): Type of input files ('pdb' or 'pqr')
+        filetype (str): Type of input files ('pdb' or 'pqr')
     Returns:
         files_input (list): List of pdb/pqr files in the folder
     """
-    if input_type not in ["pdb", "pqr"]:
-        raise ValueError("input_type must be 'pdb' or 'pqr'")
-    files_input = glob(inputpath + f"/*.{input_type}")
+    if filetype not in ["pdb", "pqr"]:
+        raise ValueError("filetype must be 'pdb' or 'pqr'")
+    files_input = glob(inputpath + f"/*.{filetype}")
     if len(files_input) == 0:
         raise ValueError("No pdb files found in the input directory")
     if len(files_input) == 1:
         log.warning("Only one pdb file found in the input directory")
     return files_input
+
 
 def write_field_to_file(grid_points, field_points, filename):
     """
@@ -142,8 +144,8 @@ def read_mat(file, meta_data=False, verbose=False):
         "bounds_y": [-y_size, y_size + step_size_y],
         "bounds_z": [-z_size, z_size + step_size_z],
     }
-    # print(lines[0].split())
-    # print(meta_dict)
+    print(lines[0].split())
+    print(meta_dict)
     if verbose:
         print(meta_dict)
 
@@ -208,8 +210,8 @@ def default_options_initializer(options):
         options["inputpath"] = "./inpdir"
     if "outputpath" not in options.keys():
         options["outputpath"] = "./outdir"
-    if "input_type" not in options.keys():
-        options["input_type"] = "pdb" #Default to pdb with charges
+    if "inputfiletype" not in options.keys():
+        options["inputfiletype"] = "pdb"  # Default to pdb with charges
 
     # Developer Options:
     if "profile" not in options.keys():
@@ -229,7 +231,11 @@ def default_options_initializer(options):
     if "box_shift" not in options.keys():
         options["box_shift"] = [0, 0, 0]
 
-    # Topology options
+    # Filtering Options:
+    if "filter_intersect" not in options.keys():
+        options["filter_intersect"] = False
+
+    # Topology Options:
     if "concur_slip" not in options.keys():
         options["concur_slip"] = 4
     if "dtype" not in options.keys():
@@ -308,175 +314,85 @@ def filter_radius_whole_residue(x, Q, resids, resnums, center, radius=2.0):
     return x_filtered, Q_filtered
 
 
-def filter_IDs(x, Q, ID, filter_dict):
+def filter_atomspec(x, Q, ID, filter_dict, intersect):
     """
-    General filter to remove anything in the filter list based on
-    identity information solely. Includes currently:
-    - Atom Number (self.atom_number in calculator object)
-    - Atom Name (self.atom_type in calculator object)
-    - Residue Name (self.resid in calculator object)
-    - Residue Number (self.resnum in calculator object)
-    - Chain (self.chain in calculator object, if available)
+    General filter to remove any specification based on input
+    filter list, either by the overlap of the lists or the union
+    of the lists
 
-    Takes:
-        x(array) - coordinates of charges of shape (N,3)
-        Q(array) - magnitude and sign of charges of shape (N,1)
-        ID(list) - identity information of shape (N,), where each value is a tuple of
-        the form (atom_number, atom_type, atom_resid, atom_resnum, atom_chain)
-        filter_dict(dict) - dictionary of identity information to filter out
-    Returns:
-        x_filtered(array) - filtered coordinates of charges of shape (N,3)
-        Q_filtered(array) - filtered magnitude and sign of charges of shape (N,1)
-        ID_filtered(array) - filtered identity information of shape (N,)
+    Parameters
+    ----------
+    x : array
+        Coordinates of charges of shape (N,3)
+    Q : array
+        Magnitude and sign of charges of shape (N,1)
+    ID : list
+        Identity information of shape (N,), where each value is a tuple of
+        the form (atom_number, atom_type, resid, resnum, chain). Chain is optional.
+    filter_dict : dict
+        Dictionary of identity information to filter out
+    intersect : bool
+        If True, filter out only if all conditions in filter_dict are met (intersection)
+
+    Returns
+    -------
+    x_filtered : array
+        Filtered coordinates of charges of shape (N,3)
+    Q_filtered : array
+        Filtered magnitude and sign of charges of shape (N,1)
+    ID_filtered : list
+        Filtered identity information of shape (N,)
     """
-
-    # ------------------------------------
-    # 1) Convert ID into a pandas DataFrame
-    # ------------------------------------
-    # We'll assume ID is a list of tuples, each (atom_number, atom_type, resid, resnum, chain).
-    # Let's create a DataFrame with 5 named columns:
-    df_id = pd.DataFrame(
-        ID, columns=["atom_number", "atom_type", "resid", "resnum", "chain"]
-    )
-    # print(df_id)
-    N = len(df_id)
-    if len(x) != N or len(Q) != N:
-        raise ValueError("x, Q, and ID must have the same length.")
-
-    # ------------------------------------
-    # 2) Check filter_dict list lengths
-    # ------------------------------------
-    filter_lengths = [len(lst) for lst in filter_dict.values()]
-    print("Shape of filter array: {}".format(filter_lengths))
-    if filter_lengths:  # if filter_dict is not empty
-        if len(set(filter_lengths)) != 1:
-            # mismatch in lengths
-            msg = "ERROR: Not all filter lists in filter_dict have the same length.\n"
-            for key, val in filter_dict.items():
-                msg += f" - {key}: length {len(val)}\n"
-            raise ValueError(msg)
-        num_filters = filter_lengths[0]
+    filter_idx = []
+    atom_attributes_list = ["atom_number", "atom_type", "resid", "resnum", "chain"]
+    atom_attributes_considered = []
+    for key in filter_dict.keys():
+        if key not in atom_attributes_list:
+            raise ValueError(
+                f"Key {key} not recognized. Must be one of {atom_attributes_list}"
+            )
+        atom_attributes_considered.append(key)
+    log.info(f"Filtering by attributes: {atom_attributes_considered}")
+    if not intersect:  # Default behavior, union of filters
+        log.info("Filtering by union of filters (default)")
+        for i in atom_attributes_considered:
+            filter_vals = filter_dict[i]
+            for j in range(len(ID)):
+                if ID[j][atom_attributes_list.index(i)] in filter_vals:
+                    filter_idx.append(j)
+        filter_idx = list(set(filter_idx))  # Remove duplicates
     else:
-        # If filter_dict is empty, then there are no filters => we keep everything
-        print("No filters in filter_dict. Keeping all data.")
-        return x, Q, ID
-
-    # ------------------------------------
-    # 3) Build a mask of which rows match ANY filter
-    #    We'll call it "any_filter_mask"
-    # ------------------------------------
-    any_filter_mask = np.zeros(N, dtype=bool)  # start with all False
-
-    # We'll iterate over each filter index f_idx in [0, num_filters-1],
-    # and build a "local_mask" for each filter. Then we'll combine them.
-    for f_idx in range(num_filters):
-        local_mask = np.ones(N, dtype=bool)  # start True, narrow it down
-
-        # For each key in filter_dict, see if there's a constraint
-        for key, val_list in filter_dict.items():
-            filter_val = val_list[f_idx]
-            # If filter_val != "", we need to check it
-            if filter_val != "":
-                # Convert both sides to string if needed (since some data might be numeric)
-                # We compare row-by-row in a vectorized way:
-                local_mask &= df_id[key].astype(str) == str(filter_val)
-
-        # local_mask is now True for rows that match this filter, and False otherwise
-        # Combine it with our global any_filter_mask via logical OR
-        any_filter_mask |= local_mask
-
-    # ------------------------------------
-    # 4) any_filter_mask == True means the row matched at least one filter
-    #    => we want to remove it. So let's invert it for "keep_mask".
-    # ------------------------------------
-    keep_mask = ~any_filter_mask  # True where row did NOT match any filter
-
-    # ------------------------------------
-    # 5) Filter x, Q, and ID using keep_mask
-    # ------------------------------------
-    # If x, Q, ID are lists, we can do list comprehensions;
-    # If they're NumPy arrays, we can just slice them with keep_mask.
-    # Example if x, Q are lists:
-    x_filtered = [val for val, keep in zip(x, keep_mask) if keep]
-    Q_filtered = [val for val, keep in zip(Q, keep_mask) if keep]
-    # For ID, we can slice df_id or the original ID
-    ID_filtered = [ID[i] for i, keep in enumerate(keep_mask) if keep]
-    print("Length before filtering: {}".format(len(x), len(Q), len(ID)))
-    print(
-        "Length after filtering: {}".format(
-            len(x_filtered), len(Q_filtered), len(ID_filtered)
-        )
-    )
-    return np.array(x_filtered), np.array(Q_filtered), np.array(ID_filtered)
-
-
-def filter_residue(x, Q, resnums, resids, atom_number, atom_type, filter_list):
-    # Filter out points that are inside the box
-    x = x
-    filter_inds = []
-    for resid in resids:
-        if resid in filter_list:
-            filter_inds.append(False)
-        else:
-            filter_inds.append(True)
-    x_filtered = x[filter_inds]
-    Q_filtered = Q[filter_inds]
-    resnums_filtered = resnums[filter_inds]
-    resids_filtered = resids[filter_inds]
-    atom_number_filtered = atom_number[filter_inds]
-    atom_type_filtered = atom_type[filter_inds]
-
-    return (
-        x_filtered,
-        Q_filtered,
-        resnums_filtered,
-        resids_filtered,
-        atom_number_filtered,
-        atom_type_filtered,
-    )
-
-
-def filter_resnum(x, Q, resnums, resids, filter_list):
-    # Filter out points that are inside the box
-    x = x
-    filter_inds = []
-    for resnum in resnums:
-        if resnum in filter_list:
-            filter_inds.append(False)
-        else:
-            filter_inds.append(True)
-    x_filtered = x[filter_inds]
-    Q_filtered = Q[filter_inds]
-    resnums_filtered = resnums[filter_inds]
-    resids_filtered = resids[filter_inds]
-
-    return x_filtered, Q_filtered, resnums_filtered, resids_filtered
-
-
-def filter_resnum_andname(x, Q, resnums, resnames, atom_number, atom_type, filter_list):
-    # Filter out points that are part of select resnum and resname
-    x = x
-    filter_inds = []
-    for i in range(len(resnums)):
-        if {str(resnums[i]): resnames[i]} in filter_list:
-            filter_inds.append(False)
-        else:
-            filter_inds.append(True)
-    x_filtered = x[filter_inds]
-    Q_filtered = Q[filter_inds]
-    resnums_filtered = resnums[filter_inds]
-    resnames_filtered = resnames[filter_inds]
-    atom_number_filtered = atom_number[filter_inds]
-    atom_type_filtered = atom_type[filter_inds]
-
-    return (
-        x_filtered,
-        Q_filtered,
-        resnums_filtered,
-        resnames_filtered,
-        atom_number_filtered,
-        atom_type_filtered,
-    )
+        log.info("Filtering by an ordered intersection of filters")
+        attr_len = []
+        for i in atom_attributes_considered:
+            attr_len.append(len(filter_dict[i]))
+        if len(set(attr_len)) != 1:
+            raise ValueError(
+                "All filter lists must be the same length when using intersection filtering"
+            )
+        for i in range(attr_len[0]):
+            filter_vals = {
+                key: filter_dict[key][i] for key in atom_attributes_considered
+            }
+            for j in range(len(ID)):
+                match = True
+                for key in filter_vals:
+                    val = filter_vals[key]
+                    id_val = ID[j][atom_attributes_list.index(key)]
+                    if val != "*" and val != "" and id_val != val:
+                        match = False
+                        break
+                if match:
+                    filter_idx.append(j)
+        filter_idx = list(set(filter_idx))  # Remove duplicates
+    log.debug(f"Length before filtering: {len(x)}, {len(Q)}, {len(ID)}")
+    x_filtered = np.delete(x, filter_idx, axis=0)
+    Q_filtered = np.delete(Q, filter_idx, axis=0)
+    ID_filtered = np.delete(ID, filter_idx, axis=0)
+    if len(x_filtered) != len(Q_filtered) or len(x_filtered) != len(ID_filtered):
+        raise ValueError("Unexpected: filtered arrays have different lengths")
+    log.info(f"Number of atoms filtered out: {len(filter_idx)}")
+    return x_filtered, Q_filtered, ID_filtered
 
 
 def filter_in_box(x, Q, center, dimensions):
@@ -506,18 +422,6 @@ def filter_in_box(x, Q, center, dimensions):
     x_filtered = x[~mask]
     Q_filtered = Q[~mask]
     # print("masked points: {}".format(len(mask)))
-    return x_filtered, Q_filtered
-
-
-def filter_atom_num(x, Q, atom_num_list, filter_list):
-    # Filter out points that are inside the box
-    x_filtered = []
-    Q_filtered = []
-    for i in range(len(x)):
-        if atom_num_list[i] not in filter_list:
-            x_filtered.append(x[i])
-            Q_filtered.append(Q[i])
-
     return x_filtered, Q_filtered
 
 
@@ -695,10 +599,10 @@ def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="c
             )
             for k, v in atom_dict.items()
         ]
-        print(len(chains))
-        print(len(atom_type))
-        print(len(residue_number))
-        print(len(x))
+        log.debug(f"len(chains): {len(chains)}")
+        log.debug(f"len(atom_type): {len(atom_type)}")
+        log.debug(f"len(residue_number): {len(residue_number)}")
+        log.debug(f"len(x): {len(x)}")
         pos_considered = [
             pos
             for atom_res in centering_atoms
@@ -711,20 +615,20 @@ def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="c
             == atom_res
         ]
     else:
-        print(options[seltype]["atoms"])
+        log.debug(options[seltype]["atoms"])
         centering_atoms = [
             (k, v)
             for atom_dict in options[seltype]["atoms"]
             for k, v in atom_dict.items()
         ]
-        print(f"centering atoms for {seltype}: ", centering_atoms)
+        log.info(f"centering atoms for {seltype}: {centering_atoms}")
         atom_set = set(centering_atoms)
         pos_considered = [
             pos
             for (atype, rnum), pos in zip(zip(atom_type, residue_number), x)
             if (atype, rnum) in atom_set
         ]
-    print("pos considered for center: ", pos_considered)
+    log.debug(f"pos considered for {seltype}: {pos_considered}")
     return pos_considered
 
 

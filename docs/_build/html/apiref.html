@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Calculator Class &mdash; pycpet  documentation</title>
+  <title>API Reference &mdash; pycpet  documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
 
@@ -20,8 +20,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Special Scripts" href="SpecialScripts.html" />
-    <link rel="prev" title="Getting Started" href="GetStarted.html" /> 
+    <link rel="prev" title="Citing PyCPET &amp; References" href="citation.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -47,7 +46,10 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="GetStarted.html">Getting Started</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Calculator Class</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="SpecialScripts.html">Special Scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Parallel.html">Parallel Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citation.html">Citing PyCPET &amp; References</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#CPET.source.calculator.calculator"><code class="docutils literal notranslate"><span class="pre">calculator</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#CPET.source.calculator.calculator.compute_box"><code class="docutils literal notranslate"><span class="pre">calculator.compute_box()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#CPET.source.calculator.calculator.compute_box_ESP"><code class="docutils literal notranslate"><span class="pre">calculator.compute_box_ESP()</span></code></a></li>
@@ -62,10 +64,20 @@
 <li class="toctree-l3"><a class="reference internal" href="#CPET.source.calculator.calculator.compute_topo_single"><code class="docutils literal notranslate"><span class="pre">calculator.compute_topo_single()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#CPET.source.CPET.CPET"><code class="docutils literal notranslate"><span class="pre">CPET</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#CPET.source.CPET.CPET.run"><code class="docutils literal notranslate"><span class="pre">CPET.run()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#CPET.source.CPET.CPET.run_box_check"><code class="docutils literal notranslate"><span class="pre">CPET.run_box_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#CPET.source.CPET.CPET.run_cluster"><code class="docutils literal notranslate"><span class="pre">CPET.run_cluster()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#CPET.source.CPET.CPET.run_pca"><code class="docutils literal notranslate"><span class="pre">CPET.run_pca()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#CPET.source.CPET.CPET.run_point"><code class="docutils literal notranslate"><span class="pre">CPET.run_point()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#CPET.source.CPET.CPET.run_topo"><code class="docutils literal notranslate"><span class="pre">CPET.run_topo()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#CPET.source.CPET.CPET.run_visualize_efield"><code class="docutils literal notranslate"><span class="pre">CPET.run_visualize_efield()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#CPET.source.CPET.CPET.run_volume"><code class="docutils literal notranslate"><span class="pre">CPET.run_volume()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#CPET.source.CPET.CPET.run_volume_ESP"><code class="docutils literal notranslate"><span class="pre">CPET.run_volume_ESP()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="SpecialScripts.html">Special Scripts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="citation.html">Citing PyCPET &amp; References</a></li>
+</ul>
+</li>
 </ul>
 
         </div>
@@ -82,9 +94,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Calculator Class</li>
+      <li class="breadcrumb-item active">API Reference</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="_sources/calculator.rst" rel="nofollow"> View page source</a>
+            <a href="_sources/apiref.rst" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -92,8 +104,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="calculator-class">
-<h1>Calculator Class<a class="headerlink" href="#calculator-class" title="Link to this heading"></a></h1>
+  <section id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="CPET.source.calculator.calculator">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">CPET.source.calculator.</span></span><span class="sig-name descname"><span class="pre">calculator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">options</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path_to_pdb</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#CPET.source.calculator.calculator" title="Link to this definition"></a></dt>
@@ -225,14 +237,94 @@
 
 </dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="CPET.source.CPET.CPET">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">CPET.source.CPET.</span></span><span class="sig-name descname"><span class="pre">CPET</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#CPET.source.CPET.CPET" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>The main class for the CPET package. This class is responsible for running almost any calculation, either through cpet.py or other scripts.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>options</strong> (<em>dict</em>) – A dictionary containing the options for the CPET package. An empty dictionary can be passed, in which the default options initializer will fully override the options with the default options. The options can also be passed as a JSON file, which will be loaded and used to initialize the CPET package.</p>
+</dd>
+<dt class="field-even">Variables<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>self.options</strong> (<em>dict</em>) – A dictionary containing the options for the CPET package.</p></li>
+<li><p><strong>self.logger</strong> (<em>logging.Logger</em>) – A logger for the CPET package, inheriting from the logger in cpet.py. Logging is not guaranteed when using an auxiliary script</p></li>
+<li><p><strong>self.m</strong> (<em>str</em>) – The method to be used for the CPET package, set from the options.</p></li>
+<li><p><strong>self.inputpath</strong> (<em>str</em>) – The input path for CPET, set from the options.</p></li>
+<li><p><strong>self.outputpath</strong> (<em>str</em>) – The output path for CPET, set from the options.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="CPET.source.CPET.CPET.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#CPET.source.CPET.CPET.run" title="Link to this definition"></a></dt>
+<dd><p>Run the CPET package based on the method specified in the options. This method will call the appropriate method based on the value of self.m.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="CPET.source.CPET.CPET.run_box_check">
+<span class="sig-name descname"><span class="pre">run_box_check</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#CPET.source.CPET.CPET.run_box_check" title="Link to this definition"></a></dt>
+<dd><p>Reports atoms that are inside the user-defined box, to check for potential e-field conflicts</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="CPET.source.CPET.CPET.run_cluster">
+<span class="sig-name descname"><span class="pre">run_cluster</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#CPET.source.CPET.CPET.run_cluster" title="Link to this definition"></a></dt>
+<dd><p>Run clustering (for a variety of types of field/esp data)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="CPET.source.CPET.CPET.run_pca">
+<span class="sig-name descname"><span class="pre">run_pca</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#CPET.source.CPET.CPET.run_pca" title="Link to this definition"></a></dt>
+<dd><p>Run PCA on a set of electric fields or groups of electric fields (good for mutation comparison)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="CPET.source.CPET.CPET.run_point">
+<span class="sig-name descname"><span class="pre">run_point</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#CPET.source.CPET.CPET.run_point" title="Link to this definition"></a></dt>
+<dd><p>Get the electric field/magnitude at the center of the box</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="CPET.source.CPET.CPET.run_topo">
+<span class="sig-name descname"><span class="pre">run_topo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#CPET.source.CPET.CPET.run_topo" title="Link to this definition"></a></dt>
+<dd><p>Run the electric field topology calculation for a number of proteins in the input directory.
+Picks a pdb file at random from the input directory and runs the topology calculation on it, allowing for dirty parallel runs of this function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>gpu</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, runs the topology calculation on the GPU. Default is False, which runs the calculation on the CPU.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="CPET.source.CPET.CPET.run_visualize_efield">
+<span class="sig-name descname"><span class="pre">run_visualize_efield</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#CPET.source.CPET.CPET.run_visualize_efield" title="Link to this definition"></a></dt>
+<dd><p>Visualize the electric field/electrostatic potential file for Chimera/ChimeraX</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="CPET.source.CPET.CPET.run_volume">
+<span class="sig-name descname"><span class="pre">run_volume</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#CPET.source.CPET.CPET.run_volume" title="Link to this definition"></a></dt>
+<dd><p>Get the electric fields along a grid of points in the box</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="CPET.source.CPET.CPET.run_volume_ESP">
+<span class="sig-name descname"><span class="pre">run_volume_ESP</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#CPET.source.CPET.CPET.run_volume_ESP" title="Link to this definition"></a></dt>
+<dd><p>Get the electrostatic potential along a grid of points in the box</p>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="GetStarted.html" class="btn btn-neutral float-left" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="SpecialScripts.html" class="btn btn-neutral float-right" title="Special Scripts" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="citation.html" class="btn btn-neutral float-left" title="Citing PyCPET &amp; References" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

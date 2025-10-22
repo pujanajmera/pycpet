@@ -3,6 +3,7 @@ import argparse
 from CPET.source.calculator import calculator
 from CPET.utils.calculator import initialize_box_points_uniform
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Compute electric field topology from a set of input dipoles"
@@ -115,8 +116,10 @@ def main():
     n_samples = len(random_start_points)
 
     dipole_positions = dipoles[:, 1:4]
-    dipole_positions = (dipole_positions - center) @ np.linalg.inv(transformation_matrix)
-    dipole_moments = dipoles[:, 4:7] # Already in atomic units
+    dipole_positions = (dipole_positions - center) @ np.linalg.inv(
+        transformation_matrix
+    )
+    dipole_moments = dipoles[:, 4:7]  # Already in atomic units
     dipole_moments = dipole_moments @ np.linalg.inv(transformation_matrix)
 
     # Create an instance without __init__
@@ -131,7 +134,7 @@ def main():
     topo_calc_dip.random_max_samples = random_max_samples
     topo_calc_dip.concur_slip = args.threads
 
-    #Convert to float32
+    # Convert to float32
     topo_calc_dip.x = topo_calc_dip.x.astype(np.float32)
     topo_calc_dip.mu = topo_calc_dip.mu.astype(np.float32)
 
@@ -140,6 +143,7 @@ def main():
     # Save hist based on the dipole file name in working directory
     filename = args.dipole_file.split("/")[-1].split(".")[0]
     np.savetxt("{}.top".format(filename), hist)
+
 
 if __name__ == "__main__":
     main()

@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 import warnings
+import logging
 from sklearn.metrics import mean_squared_error
 from scipy.spatial.distance import pdist, squareform
 from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
@@ -30,6 +31,8 @@ from CPET.utils.c_ops import Math_ops
 
 Math = Math_ops(shared_loc=module_path)
 
+log = logging.getLogger(__name__)
+
 
 def propagate_topo(x_0, x, Q, step_size, debug=False):
     """
@@ -43,9 +46,12 @@ def propagate_topo(x_0, x, Q, step_size, debug=False):
         x_0 - new position on streamline after propagation via electric field
     """
     # Compute field
+    epsilon=1e-8
     E = calculate_electric_field_base(x_0, x, Q)
-    # if np.linalg.norm(E) > epsilon:
-    E = E / (np.linalg.norm(E))
+    if np.linalg.norm(E) > epsilon:
+        E = E / (np.linalg.norm(E))
+    else:
+        E = E / (np.linalg.norm(E) + epsilon)
     x_0 = x_0 + step_size * E
     return x_0
 
@@ -62,9 +68,12 @@ def propagate_topo_dev(x_0, x, Q, step_size, debug=False):
         x_0 - new position on streamline after propagation via electric field
     """
     # Compute field
+    epsilon=1e-8
     E = calculate_electric_field_dev_c_shared(x_0, x, Q)
-    # if np.linalg.norm(E) > epsilon:
-    E = E / (np.linalg.norm(E))
+    if np.linalg.norm(E) > epsilon:
+        E = E / (np.linalg.norm(E))
+    else:
+        E = E / (np.linalg.norm(E) + epsilon) # avoid division by zero
     x_0 = x_0 + step_size * E
     return x_0
 
@@ -189,7 +198,7 @@ def initialize_box_points_uniform(
         transformation_matrix(array) - matrix that contains the basis vectors for the box of shape (3,3)
     """
     # Convert lists to numpy arrays
-    print("... initializing box points uniformly")
+    print("Initializing box points uniformly...")
 
     x = x - center  # Translate to origin
     y = y - center  # Translate to origin
@@ -207,7 +216,7 @@ def initialize_box_points_uniform(
     transformation_matrix = np.column_stack(
         [x_unit, y_unit, z_unit]
     ).T  # Each column is a unit vector
-    print(N_cr)
+    log.debug(f"Original grid shape: {N_cr}")
     # construct a grid of points in the box - lengths are floats
     if inclusive:
         x_coords = np.linspace(-half_length, half_length, N_cr[0] + 1)
@@ -225,7 +234,7 @@ def initialize_box_points_uniform(
     x_mesh, y_mesh, z_mesh = np.meshgrid(x_coords, y_coords, z_coords, indexing="ij")
 
     local_coords = np.stack([x_mesh, y_mesh, z_mesh], axis=-1, dtype=dtype)
-    print(local_coords.shape)
+    log.debug(f"Final grid shape: {local_coords.shape}")
     if not seed == None:
         np.random.seed(seed)
 
@@ -376,7 +385,7 @@ def calculate_electric_field_gpu_for_test(x_0, x, Q, device="cuda"):
     # Create matrix R
     if device == "cuda":
         if not torch.cuda.is_available():
-            print("CUDA is not available, using CPU instead")
+            raise RuntimeError("CUDA is not available, using CPU instead")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
         device = torch.device("cpu")
@@ -431,13 +440,13 @@ def compute_ESP_on_grid(grid_coords, x, Q):
     reshaped_meshgrid = grid_coords.reshape(-1, 3)
     # Initialize an array to hold the electric field values
     ESP = np.zeros((reshaped_meshgrid.shape[0], 1), dtype=float)
-    print(ESP.shape)
+    log.debug(f"ESP shape: {ESP.shape}")
 
     # Calculate the electric field at each point in the meshgrid
     for i, x_0 in enumerate(reshaped_meshgrid):
         ESP[i] = calculate_esp_c_shared_full(x_0, x, Q)
         if x_0[0] == 0 and x_0[1] == 0 and x_0[2] == 0:
-            print(f"Center esp: {ESP[i]}")
+            log.debug(f"Center esp: {ESP[i]}")
 
     point_ESP_concat = np.concatenate((reshaped_meshgrid, ESP), axis=1)
 
@@ -833,10 +842,7 @@ def make_single_4d_tensor(
         lines = file.readlines()
 
     # Skip the first 7 lines (header)
-    if type == "field":
-        data_lines = lines[7:]
-    elif type == "esp":
-        data_lines = lines[:]
+    data_lines = lines[7:]
 
     # Initialize lists to store the parsed data
     x_coords, y_coords, z_coords = [], [], []
@@ -1060,7 +1066,7 @@ def reduce_tensor(tensor, rank):
     return cp_tensor, relative_error
 
 
-def determine_rank(tensor_5d, threshold, max_rank, min_rank):
+def determine_rank(tensor_5d, threshold, max_rank, min_rank=1):
     errors = []
     ranks = list(range(min_rank, max_rank + 1))
 

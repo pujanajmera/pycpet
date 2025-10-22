@@ -5,7 +5,13 @@ import torch
 import logging
 
 
-from CPET.utils.parallel import task, task_batch, task_base, task_complete_thread, task_complete_thread_dipole
+from CPET.utils.parallel import (
+    task,
+    task_batch,
+    task_base,
+    task_complete_thread,
+    task_complete_thread_dipole,
+)
 from CPET.utils.calculator import (
     initialize_box_points_random,
     initialize_box_points_uniform,
@@ -18,12 +24,9 @@ from CPET.utils.io import (
     parse_pqr,
     get_atoms_for_axes,
     filter_radius_whole_residue,
-    filter_residue,
+    filter_atomspec,
     filter_in_box,
     calculate_center,
-    filter_resnum,
-    filter_resnum_andname,
-    filter_IDs,
     default_options_initializer,
 )
 from CPET.utils.gpu import (
@@ -32,6 +35,8 @@ from CPET.utils.gpu import (
     batched_filter_gpu,
     generate_path_filter_gpu,
 )
+
+log = logging.getLogger(__name__)
 
 
 class calculator:
@@ -72,6 +77,7 @@ class calculator:
             options
         )  # Double in case calculator is called outside of CPET.py
         self.profile = options["profile"]
+        self.log = log
         self.path_to_pdb = path_to_pdb
 
         # Electric field grid parameters
@@ -101,6 +107,7 @@ class calculator:
             options["box_shift"] if "box_shift" in options.keys() else [0, 0, 0]
         )
 
+        # Parse pdb/pqr file
         if ".pqr" in self.path_to_pdb:
             (
                 self.x,
@@ -143,13 +150,11 @@ class calculator:
                 )
                 for i in range(len(self.x))
             ]
+        self.log.debug(self.chains)
 
-        print(self.chains)
-        ##################### define center
-
+        #Define center, x, and y axes
         if type(options["center"]) == list:
             self.center = np.array(options["center"])
-
         elif type(options["center"]) == dict:
             method = options["center"]["method"]
             pos_considered = get_atoms_for_axes(
@@ -163,12 +168,8 @@ class calculator:
             self.center = calculate_center(pos_considered, method=method)
         else:
             raise ValueError("center must be a list or dict")
-
-        ##################### define x axis
-
-        # First, failsafe if x doesn't exist in options dict:
         if "x" not in options.keys():
-            print(
+            self.log.info(
                 "No x specified, calculating in input file reference frame. Ignoring y..."
             )
             compute_y = False
@@ -188,16 +189,11 @@ class calculator:
             self.x_vec_pt = calculate_center(pos_considered, method=method)
             compute_y = True
         else:
-            # Return an error:
             raise ValueError("x must be a list or dict")
-
-        ##################### define y axis
-
         if compute_y == False:
-            print("Not computing y since x is not specified")
+            self.log.info("Not computing y since x is not specified")
         elif type(options["y"]) == list:
             self.y_vec_pt = np.array(options["y"])
-
         elif type(options["y"]) == dict:
             method = options["y"]["method"]
             pos_considered = get_atoms_for_axes(
@@ -219,10 +215,9 @@ class calculator:
         self.atom_type_copy = self.atom_type.copy()
 
         # Any sort of filtering related to atom identity information
-        # NEED TO MAKE MORE ROBUST
-        if "filter_IDs" in options.keys():
-            self.x, self.Q, self.ID = filter_IDs(
-                self.x, self.Q, self.ID, options["filter_IDs"]
+        if "filter" in options.keys():
+            self.x, self.Q, self.ID = filter_atomspec(
+                self.x, self.Q, self.ID, options["filter"], options["filter_intersect"]
             )
 
             if hasattr(self, "chains"):
@@ -236,63 +231,14 @@ class calculator:
                 self.atom_type = [self.ID[i][1] for i in range(len(self.x))]
                 self.resids = [self.ID[i][2] for i in range(len(self.x))]
                 self.residue_number = [self.ID[i][3] for i in range(len(self.x))]
-
         else:
-            if "filter_resids" in options.keys():
-                # print("filtering residues: {}".format(options["filter_resids"]))
-                (
-                    self.x,
-                    self.Q,
-                    self.residue_number,
-                    self.resids,
-                    self.atom_number,
-                    self.atom_type,
-                ) = filter_residue(
-                    self.x,
-                    self.Q,
-                    self.residue_number,
-                    self.resids,
-                    self.atom_number,
-                    self.atom_type,
-                    filter_list=options["filter_resids"],
-                )
+            self.log.info("No atom spec filtering specified, using all atoms")
 
-            if "filter_resnum" in options.keys():
-                # print("filtering residues: {}".format(options["filter_resids"]))
-                self.x, self.Q, self.residue_number, self.resids = filter_resnum(
-                    self.x,
-                    self.Q,
-                    self.residue_number,
-                    self.resids,
-                    filter_list=options["filter_resnum"],
-                )
-
-            if "filter_resnum_andname" in options.keys():
-                # print("filtering residues: {}".format(options["filter_resids"]))
-                (
-                    self.x,
-                    self.Q,
-                    self.residue_number,
-                    self.resids,
-                    self.atom_number,
-                    self.atom_type,
-                ) = filter_resnum_andname(
-                    self.x,
-                    self.Q,
-                    self.residue_number,
-                    self.resids,
-                    self.atom_number,
-                    self.atom_type,
-                    filter_list=options["filter_resnum_andname"],
-                )
-
+        # Radius-based filtering, added from previous, residue-inclusive filtering
         if "filter_radius" in options.keys():
-            print("filtering by radius: {} Ang".format(options["filter_radius"]))
-
-            r = np.linalg.norm(self.x, axis=1)
-            # print("r {}".format(r))
-
-            # Default is whole residue-inclusive filtering to ensure proper topology convergence
+            self.log.info(f"filtering by radius: {options['filter_radius']} Ang")
+            r = np.linalg.norm(self.x, axis=1) # Distance from origin
+            self.log.debug(f"r {r}")
             self.x, self.Q = filter_radius_whole_residue(
                 x=self.x,
                 Q=self.Q,
@@ -301,14 +247,13 @@ class calculator:
                 center=self.center,
                 radius=float(options["filter_radius"]),
             )
-
-            # print("center {}".format(self.center))
             r = np.linalg.norm(self.x, axis=1)
-            # print("r {}".format(r))
+            self.log.debug(f"New r {r}")
 
+        # Box filtering
         if "filter_in_box" in options.keys():
             if bool(options["filter_in_box"]):
-                # print("filtering charges in sampling box")
+                self.log.info("Filtering charges in sampling box")
                 self.x, self.Q = filter_in_box(
                     x=self.x, Q=self.Q, center=self.center, dimensions=self.dimensions
                 )
@@ -355,11 +300,11 @@ class calculator:
                 self.n_samples = num_per_dim**3
                 # print("num_per_dim: ", num_per_dim)
                 grid_density = 2 * self.dimensions / (num_per_dim + 1)
-                print("grid_density: ", grid_density)
+                self.log.info(f"Grid_density: {grid_density}")
                 seed = None
                 if self.max_streamline_init == "fixed_rand":
-                    print("Fixing max steps with Random seed 42")
                     seed = 42
+                    self.log.debug(f"Fixing max steps with random seed {seed}")
                 (
                     self.random_start_points,
                     self.random_max_samples,
@@ -377,22 +322,15 @@ class calculator:
                     seed=seed,
                 )
                 # convert mesh to list of x, y, z points
-                # print(self.random_start_points)
                 self.random_start_points = self.random_start_points.reshape(-1, 3)
+                self.log.debug(f"Reshaped start points: {self.random_start_points}")
                 self.n_samples = len(self.random_start_points)
-                # print("random start points")
-                # print(self.random_start_points)
-                print("start point shape: ", str(self.random_start_points.shape))
         elif (
             options["CPET_method"] == "point_field"
             or options["CPET_method"] == "point_mag"
             or options["CPET_method"] == "box_check"
         ) and hasattr(self, "y_vec_pt"):
-            (
-                _,
-                _,
-                self.transformation_matrix,
-            ) = initialize_box_points_uniform(
+            (_, _, self.transformation_matrix,) = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,
@@ -405,10 +343,10 @@ class calculator:
             )
 
         if hasattr(self, "y_vec_pt"):
-            print("Rotating coordinates")
+            self.log.info("Rotating coordinates")
             self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
         else:
-            print("Not rotating coordinates since no y-vector is provided")
+            self.log.info("Not rotating coordinates since no y-vector is provided")
             self.x = self.x - self.center
         """
         #Debug version
@@ -420,13 +358,13 @@ class calculator:
         """
 
         if self.box_shift != [0, 0, 0]:
-            print("Shifting box by: ", self.box_shift)
+            self.log.info(f"Shifting box by: {self.box_shift}")
             self.x = self.x - np.array(self.box_shift)
 
         if self.write_transformed_pdb == True:
-            print("Writing transformed pdb file, ignoring chains")
+            self.log.info("Writing transformed pdb file, ignoring chains")
             if self.strip_filter == True:
-                print("Stripping filtered residues for transformed pdb file")
+                self.log.info("Stripping filtered residues for transformed pdb file")
                 self.x_copy = self.x.copy()
                 self.residue_number_copy = self.residue_number.copy()
                 self.resids_copy = self.resids.copy()
@@ -454,9 +392,9 @@ class calculator:
                         f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00           \n"
                     )
 
-        # print(self.center)
-        # print(self.x_vec_pt)
-        # print(self.y_vec_pt)
+        self.log.info(f"Center: {self.center}")
+        self.log.info(f"x vector point: {self.x_vec_pt}")
+        self.log.info(f"y vector point: {self.y_vec_pt}")
 
         if self.dtype == "float32":
             self.x = self.x.astype(np.float32)
@@ -546,23 +484,23 @@ class calculator:
             The shape of the mesh grid
         """
         print("... > Computing Box ESP!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("mesh shape: {}".format(self.mesh.shape))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
-        print("First few lines of x: {}".format(self.x[:5]))
-        print("Transformation matrix: {}".format(self.transformation_matrix))
-        print("Center: {}".format(self.center))
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.info("mesh shape: {}".format(self.mesh.shape))
+        self.log.debug("x shape: {}".format(self.x.shape))
+        self.log.debug("Q shape: {}".format(self.Q.shape))
+        self.log.debug("First few lines of x: {}".format(self.x[:5]))
+        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
+        self.log.debug("Center: {}".format(self.center))
         esp_box = compute_ESP_on_grid(self.mesh, self.x, self.Q)
         return esp_box, self.mesh.shape
 
     def compute_topo_base(self):
         print("... > Computing Topo!")
-        print(f"Number of samples: {self.n_samples}")
-        print(f"Number of charges: {len(self.Q)}")
-        print(f"Step size: {self.step_size}")
+        self.log.info(f"Number of samples: {self.n_samples}")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.info(f"Step size: {self.step_size}")
         start_time = time.time()
-        # print("starting pooling")
+        self.log.debug("Starting pooling")
         with Pool(self.concur_slip) as pool:
             args = [
                 (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
@@ -576,18 +514,18 @@ class calculator:
         end_time = time.time()
         self.hist = hist
 
-        print(
+        self.log.debug(
             f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
         )
         return hist
 
     def compute_topo(self):
         print("... > Computing Topo!")
-        print(f"Number of samples: {self.n_samples}")
-        print(f"Number of charges: {len(self.Q)}")
-        print(f"Step size: {self.step_size}")
+        self.log.info(f"Number of samples: {self.n_samples}")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.info(f"Step size: {self.step_size}")
         start_time = time.time()
-        # print("starting pooling")
+        self.log.debug("Starting pooling")
         with Pool(self.concur_slip) as pool:
             args = [
                 (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
@@ -606,16 +544,16 @@ class calculator:
         end_time = time.time()
         self.hist = hist
 
-        print(
+        self.log.debug(
             f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
         )
         return hist
 
     def compute_topo_single(self):
         print("... > Computing Topo(baseline)!")
-        print(f"Number of samples: {self.n_samples}")
-        print(f"Number of charges: {len(self.Q)}")
-        print(f"Step size: {self.step_size}")
+        self.log.info(f"Number of samples: {self.n_samples}")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.info(f"Step size: {self.step_size}")
         start_time = time.time()
         dist_list, curve_list, init_points_list, final_points_list = [], [], [], []
         endtype_list = []
@@ -635,44 +573,44 @@ class calculator:
         self.hist = hist
         init_points_list = np.array(init_points_list)  # Shape (N, 3, 3)
         final_points_list = np.array(final_points_list)  # Shape (N, 3, 3)
-        print(
+        self.log.debug(
             f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
         )
-        # For testing purposes
-        np.savetxt(
-            "topology_base.txt",
-            hist,
-            fmt="%.6f",
-        )
-
-        np.savetxt(
-            "dumped_values_init_base.txt",
-            init_points_list.reshape(init_points_list.shape[0], -1),
-            fmt="%.6f",
-        )
-        np.savetxt(
-            "dumped_values_final_base.txt",
-            final_points_list.reshape(final_points_list.shape[0], -1),
-            fmt="%.6f",
-        )
-
-        np.savetxt(
-            "endtype_base.txt",
-            endtype_list,
-            fmt="%s",
-        )
+        # If debug mode, save more information:
+        if self.log.logger.isEnabledFor(logging.DEBUG):
+            self.log.debug("Dumping topology information in debug mode")
+            np.savetxt(
+                "topology_base.txt",
+                hist,
+                fmt="%.6f",
+            )
+            np.savetxt(
+                "dumped_values_init_base.txt",
+                init_points_list.reshape(init_points_list.shape[0], -1),
+                fmt="%.6f",
+            )
+            np.savetxt(
+                "dumped_values_final_base.txt",
+                final_points_list.reshape(final_points_list.shape[0], -1),
+                fmt="%.6f",
+            )
+            np.savetxt(
+                "endtype_base.txt",
+                endtype_list,
+                fmt="%s",
+            )
         return hist
 
     def compute_topo_complete_c_shared(self):
         print("... > Computing Topo!")
-        print(f"Number of samples: {self.n_samples}")
-        print(f"Number of charges: {len(self.Q)}")
-        print(f"Step size: {self.step_size}")
-        print(f"Start point shape: {self.random_start_points.shape}")
+        self.log.info(f"Number of samples: {self.n_samples}")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.info(f"Step size: {self.step_size}")
+        self.log.info(f"Start point shape: {self.random_start_points.shape}")
         start_time = time.time()
-        # print("starting pooling")
-        # print("random start points")
-        # print(self.random_max_samples)
+        self.log.debug("Starting pooling")
+        self.log.debug(f"Random start points: {self.random_start_points}")
+        self.log.debug(f"Random max samples: {self.random_max_samples}")
         with Pool(self.concur_slip) as pool:
             args = [
                 (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
@@ -692,7 +630,7 @@ class calculator:
         end_time = time.time()
         self.hist = hist
 
-        print(
+        self.log.debug(
             f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
         )
         return hist
@@ -702,10 +640,10 @@ class calculator:
         IN DEVELOPMENT, FOR TESTING ONLY
         """
         print("... > Computing Topo from Dipoles!")
-        print(f"Number of samples: {self.n_samples}")
-        print(f"Number of dipoles: {len(self.mu)}")
-        print(f"Step size: {self.step_size}")
-        print(f"Start point shape: {self.random_start_points.shape}")
+        self.log.info(f"Number of samples: {self.n_samples}")
+        self.log.info(f"Number of dipoles: {len(self.mu)}")
+        self.log.info(f"Step size: {self.step_size}")
+        self.log.info(f"Start point shape: {self.random_start_points.shape}")
         start_time = time.time()
         with Pool(self.concur_slip) as pool:
             args = [
@@ -724,21 +662,20 @@ class calculator:
         end_time = time.time()
         self.hist = hist
 
-        print(
+        self.log.debug(
             f"Time taken for {self.n_samples} calculations with N_dipoles = {len(self.mu)}: {end_time - start_time:.2f} seconds"
         )
         return hist
 
-
     def compute_topo_batched(self):
         print("... > Computing Topo in Batches!")
-        print(f"Number of samples: {self.n_samples}")
-        print(f"Number of charges: {len(self.Q)}")
-        print(f"Step size: {self.step_size}")
+        self.log.info(f"Number of samples: {self.n_samples}")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.info(f"Step size: {self.step_size}")
         start_time = time.time()
-        print("num batches: {}".format(len(self.random_start_points_batched)))
-        # print(self.random_start_points_batched)
-        # print(self.random_max_samples_batched)
+        self.log.info(f"num batches: {len(self.random_start_points_batched)}")
+        self.log.debug(f"Random start points (batched): {self.random_start_points_batched}")
+        self.log.debug(f"Random max samples (batched): {self.random_max_samples_batched}")
         with Pool(self.concur_slip) as pool:
             args = [
                 (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
@@ -758,7 +695,7 @@ class calculator:
         end_time = time.time()
         # self.hist = hist
 
-        print(
+        self.log.debug(
             f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
         )
         return hist
@@ -773,9 +710,9 @@ class calculator:
         """
 
         print("... > Computing Topo in Batches on a GPU!")
-        print(f"Number of samples: {self.n_samples}")
-        print(f"Number of charges: {len(self.Q)}")
-        print(f"Step size: {self.step_size}")
+        self.log.info(f"Number of samples: {self.n_samples}")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.info(f"Step size: {self.step_size}")
 
         Q_gpu = torch.tensor(self.Q, dtype=torch.float32).cuda()
         Q_gpu = Q_gpu.unsqueeze(0)
@@ -816,9 +753,9 @@ class calculator:
             path_filter = path_filter_temp
 
         path_filter = torch.tensor(path_filter, dtype=torch.bool).cuda()
-        print(path_matrix_torch.shape)
-        print(path_filter.shape)
-        print(M + 2)
+        self.log.debug(f"path_matrix_torch.shape: {path_matrix_torch.shape}")
+        self.log.debug(f"path_filter.shape: {path_filter.shape}")
+        self.log.debug(f"Number of steps (M + 2): {M + 2}")
 
         dumped_values = torch.tensor(np.empty((6, 0, 3)), dtype=torch.float32).cuda()
 
@@ -837,7 +774,7 @@ class calculator:
                 if i == 0 and j == 0:
                     init_points = path_matrix_torch[0:3, ...]
 
-            # print("filtering!")
+            self.log.debug("Filtering!")
             (
                 path_matrix_torch,
                 dumped_values,

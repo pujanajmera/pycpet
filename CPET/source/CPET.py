@@ -3,7 +3,11 @@ from CPET.source.cluster import cluster
 from CPET.source.pca import pca_pycpet
 
 import CPET.utils.visualize as visualize
-from CPET.utils.io import save_numpy_as_dat, default_options_initializer, get_input_files
+from CPET.utils.io import (
+    save_numpy_as_dat,
+    default_options_initializer,
+    get_input_files,
+)
 from CPET.utils.calculator import report_inside_box
 
 from glob import glob
@@ -14,6 +18,8 @@ import warnings
 import logging
 
 log = logging.getLogger(__name__)
+
+
 class CPET:
     """The main class for the CPET package. This class is responsible for running almost any calculation, either through cpet.py or other scripts.
 
@@ -109,15 +115,16 @@ class CPET:
             protein = file.split("/")[-1].split(".")[0]
             self.log.info("Protein file: {}".format(protein))
             files_done = [
-                x for x in os.listdir(self.outputpath) if x.split(".")[-1] == "top"
+                x for x in os.listdir(self.outputpath) if x.endswith("top")
             ]
             if protein + ".top" not in files_done:
                 self.calculator = calculator(self.options, path_to_pdb=file)
                 hist = getattr(self.calculator, runtype)()
                 np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
             else:
-                self.log.info("Already done for protein: {}, skipping...".format(protein))
-
+                self.log.info(
+                    "Already done for protein: {}, skipping...".format(protein)
+                )
 
     def run_volume(self):
         """Get the electric fields along a grid of points in the box"""
@@ -135,12 +142,11 @@ class CPET:
             files_input.remove(file)
             self.log.info("protein file: {}".format(protein))
             files_done = [
-                x for x in os.listdir(self.outputpath) if x[-11:] == "_efield.dat"
+                x for x in os.listdir(self.outputpath) if x.endswith("_efield.dat")
             ]
-
+            self.log.debug("Files done: {}".format(files_done))
             if protein + "_efield.dat" not in files_done:
                 field_box, mesh_shape = self.calculator.compute_box()
-                self.log.info(field_box.shape)
                 meta_data = {
                     "dimensions": self.calculator.dimensions,
                     "step_size": [
@@ -191,8 +197,9 @@ class CPET:
             files_input.remove(file)
             self.log.info("protein file: {}".format(protein))
             files_done = [
-                x for x in os.listdir(self.outputpath) if x[-11:] == "_esp.dat"
+                x for x in os.listdir(self.outputpath) if x.endswith("_esp.dat")
             ]
+            self.log.debug("Files done: {}".format(files_done))
             if protein + "_esp.dat" not in files_done:
                 esp_box, mesh_shape = self.calculator.compute_box_ESP()
                 self.log.info(esp_box.shape)
@@ -239,7 +246,7 @@ class CPET:
     def run_visualize_efield(self):
         """Visualize the electric field/electrostatic potential file for Chimera/ChimeraX"""
         print(
-            "Visualizing the electric field or electrostatic potential for use in Chimera/ChimeraX"
+            "... > Visualizing the electric field or electrostatic potential for use in Chimera/ChimeraX"
         )
         if self.m == "visualize_field":
             files_input = glob(self.inputpath + "/*_efield.dat")
@@ -273,7 +280,7 @@ class CPET:
                     "No inputpath_list provided for PCA comparison mode. Please provide a list of directories that contain field files in the output file, or use the 'pca' method instead."
                 )
             if "outputpath_list" not in self.options:
-                warnings.warn(
+                self.log.warning(
                     "No outputpath_list provided. Using default outputpath_list based on inputpath_list"
                 )
                 # Add 'pca_out' to the end of each input path
@@ -287,7 +294,7 @@ class CPET:
                 ):
                     self.options["inputpath"] = inputpath
                     self.options["outputpath"] = outputpath
-                    print(
+                    self.log.info(
                         "Running PCA for variant: {}".format(inputpath.split("/")[-1])
                     )
                     self.pca = pca_pycpet(self.options)
