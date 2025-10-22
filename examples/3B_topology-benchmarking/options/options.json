@@ -29,14 +29,6 @@
         "step_size": 0.001,
         "concur_slip": 64,
 	"initializer": "uniform",
-	"_filter_resnum_andname": [
-		{"105":"FE1"},
-		{"106":"HC1"},
-		{"18":"HD1"},
-		{"80":"MT1"},
-		{"14":"CM1"},
-		{"17":"CM2"}
-	],
 	"filter_resids": [
                 "CS1",
                 "CS2",
@@ -51,10 +43,6 @@
                 "S3",
                 "S4"
         ],
-        "_filter_resname": [
-                "HEM"
-        ],
-	"_filter_radius": 30,
         "cluster_method": "kmeds",
         "benchmark": {
                 "threshold": 0.1,

@@ -8,9 +8,11 @@
                         {"O9": 378}
                 ]
         },
-        "filter_resnum_andname": [
-                {"378":"CF1"}
-        ],
+        "filter_intersect": true,
+        "filter": {
+                "resid": ["CF1"],
+                "resnum": [378]
+        },
         "filter_radius": 40,
         "_comment": "WARNING: keeping filter_res_radius will overwrite filter_radius and filter_resname"
 }
