@@ -17,6 +17,7 @@ Welcome to pycpet's documentation!
    Dynamics
    SpecialScripts
    Parallel
+   Example Suite
    citation
    apiref
 

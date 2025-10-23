@@ -239,11 +239,10 @@ class calculator:
             self.log.info(f"filtering by radius: {options['filter_radius']} Ang")
             r = np.linalg.norm(self.x, axis=1) # Distance from origin
             self.log.debug(f"r {r}")
-            self.x, self.Q = filter_radius_whole_residue(
+            self.x, self.Q, self.ID = filter_radius_whole_residue(
                 x=self.x,
                 Q=self.Q,
-                resids=self.resids,
-                resnums=self.residue_number,
+                ID=self.ID,
                 center=self.center,
                 radius=float(options["filter_radius"]),
             )
@@ -393,8 +392,9 @@ class calculator:
                     )
 
         self.log.info(f"Center: {self.center}")
-        self.log.info(f"x vector point: {self.x_vec_pt}")
-        self.log.info(f"y vector point: {self.y_vec_pt}")
+        if hasattr(self, "y_vec_pt"):
+            self.log.info(f"x vector point: {self.x_vec_pt}")
+            self.log.info(f"y vector point: {self.y_vec_pt}")
 
         if self.dtype == "float32":
             self.x = self.x.astype(np.float32)

@@ -262,14 +262,14 @@ def filter_radius(x, Q, center, radius=2.0):
     return x_filtered, Q_filtered
 
 
-def filter_radius_whole_residue(x, Q, resids, resnums, center, radius=2.0):
+def filter_radius_whole_residue(x, Q, ID, center, radius=2.0):
     """
     Filters out entire residues that have any points that fall outside of the radius
     Takes
         x(array) - coordinates of charges of shape (N,3)
         Q(array) - magnitude and sign of charges of shape (N,1)
-        resids(array) - residue ids/names of shape (N,)
-        resnums(array) - residue numbers of shape (N,)
+        ID(list) - identity information of shape (N,), where each value is a tuple of
+            the form (atom_number, atom_type, resid, resnum, chain). Chain is optional.
         center(array) - center of box of shape (1,3)
         radius(float) - radius to filter
     """
@@ -278,6 +278,11 @@ def filter_radius_whole_residue(x, Q, resids, resnums, center, radius=2.0):
     resid_current = None
     resnum_current = None
     true_res_dict = {}
+
+    #Need to extract resids and resnums from ID
+    resids = np.array([id[2] for id in ID])
+    resnums = np.array([id[3] for id in ID])
+    
     print(x_recentered.shape)
     print(Q.shape)
     print(resids.shape)
@@ -309,9 +314,10 @@ def filter_radius_whole_residue(x, Q, resids, resnums, center, radius=2.0):
     ]
     x_filtered = np.delete(x, indices_to_filter_out, axis=0)
     Q_filtered = np.delete(Q, indices_to_filter_out, axis=0)
+    ID_filtered = np.delete(ID, indices_to_filter_out, axis=0)
     print("radius filter leaves: {}".format(len(Q_filtered)))
-    # print(np.linalg.norm(x_filtered, axis=1))
-    return x_filtered, Q_filtered
+    print(np.linalg.norm(x_filtered, axis=1))
+    return x_filtered, Q_filtered, ID_filtered
 
 
 def filter_atomspec(x, Q, ID, filter_dict, intersect):
