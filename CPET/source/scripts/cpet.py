@@ -20,7 +20,7 @@ def main():
         action="store_const",
         dest="loglevel",
         const=logging.DEBUG,
-        default=logging.INFO #By default, show info and warnings
+        default=logging.INFO,  # By default, show info and warnings
     )
 
     parser.add_argument(

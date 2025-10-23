@@ -152,7 +152,7 @@ class calculator:
             ]
         self.log.debug(self.chains)
 
-        #Define center, x, and y axes
+        # Define center, x, and y axes
         if type(options["center"]) == list:
             self.center = np.array(options["center"])
         elif type(options["center"]) == dict:
@@ -237,7 +237,7 @@ class calculator:
         # Radius-based filtering, added from previous, residue-inclusive filtering
         if "filter_radius" in options.keys():
             self.log.info(f"filtering by radius: {options['filter_radius']} Ang")
-            r = np.linalg.norm(self.x, axis=1) # Distance from origin
+            r = np.linalg.norm(self.x, axis=1)  # Distance from origin
             self.log.debug(f"r {r}")
             self.x, self.Q, self.ID = filter_radius_whole_residue(
                 x=self.x,
@@ -329,7 +329,11 @@ class calculator:
             or options["CPET_method"] == "point_mag"
             or options["CPET_method"] == "box_check"
         ) and hasattr(self, "y_vec_pt"):
-            (_, _, self.transformation_matrix,) = initialize_box_points_uniform(
+            (
+                _,
+                _,
+                self.transformation_matrix,
+            ) = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,
@@ -374,7 +378,6 @@ class calculator:
                     self.transformation_matrix
                 )
                 self.x_copy = self.x_copy + np.array(self.box_shift)
-                print("HEHE")
             chain_id = "A"
             with open(f"transform_{path_to_pdb.split('/')[-1][:-4]}.pdb", "w") as f:
                 for i in range(len(self.x_copy)):
@@ -704,8 +707,12 @@ class calculator:
         self.log.debug("Center: {}".format(self.center))
         start_time = time.time()
         self.log.info(f"num batches: {len(self.random_start_points_batched)}")
-        self.log.debug(f"Random start points (batched): {self.random_start_points_batched}")
-        self.log.debug(f"Random max samples (batched): {self.random_max_samples_batched}")
+        self.log.debug(
+            f"Random start points (batched): {self.random_start_points_batched}"
+        )
+        self.log.debug(
+            f"Random max samples (batched): {self.random_max_samples_batched}"
+        )
         with Pool(self.concur_slip) as pool:
             args = [
                 (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)

@@ -46,7 +46,7 @@ def propagate_topo(x_0, x, Q, step_size, debug=False):
         x_0 - new position on streamline after propagation via electric field
     """
     # Compute field
-    epsilon=1e-8
+    epsilon = 1e-8
     E = calculate_electric_field_base(x_0, x, Q)
     if np.linalg.norm(E) > epsilon:
         E = E / (np.linalg.norm(E))
@@ -68,12 +68,12 @@ def propagate_topo_dev(x_0, x, Q, step_size, debug=False):
         x_0 - new position on streamline after propagation via electric field
     """
     # Compute field
-    epsilon=1e-8
+    epsilon = 1e-8
     E = calculate_electric_field_dev_c_shared(x_0, x, Q)
     if np.linalg.norm(E) > epsilon:
         E = E / (np.linalg.norm(E))
     else:
-        E = E / (np.linalg.norm(E) + epsilon) # avoid division by zero
+        E = E / (np.linalg.norm(E) + epsilon)  # avoid division by zero
     x_0 = x_0 + step_size * E
     return x_0
 

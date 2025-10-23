@@ -114,9 +114,7 @@ class CPET:
             files_input.remove(file)
             protein = file.split("/")[-1].split(".")[0]
             self.log.info("Protein file: {}".format(protein))
-            files_done = [
-                x for x in os.listdir(self.outputpath) if x.endswith("top")
-            ]
+            files_done = [x for x in os.listdir(self.outputpath) if x.endswith("top")]
             if protein + ".top" not in files_done:
                 self.calculator = calculator(self.options, path_to_pdb=file)
                 hist = getattr(self.calculator, runtype)()

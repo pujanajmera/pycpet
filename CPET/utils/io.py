@@ -279,10 +279,10 @@ def filter_radius_whole_residue(x, Q, ID, center, radius=2.0):
     resnum_current = None
     true_res_dict = {}
 
-    #Need to extract resids and resnums from ID
+    # Need to extract resids and resnums from ID
     resids = np.array([id[2] for id in ID])
     resnums = np.array([id[3] for id in ID])
-    
+
     print(x_recentered.shape)
     print(Q.shape)
     print(resids.shape)

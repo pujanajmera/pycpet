@@ -22,9 +22,7 @@ from CPET.utils.calculator import (
     calculate_electric_field_c_shared_full_alt,
 )
 
-from CPET.utils.gpu import (
-    calculate_electric_field_torch_batch_gpu
-)
+from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
 
 
 def gather_reference_from_utility(topo):

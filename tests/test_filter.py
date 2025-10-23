@@ -58,18 +58,18 @@ class TestFilter:
         atom_types = synthetic_data["atom_type"]
 
         ID = [
-                (
-                    atom_numbers[i],
-                    atom_types[i],
-                    resids[i],
-                    resnums[i],
-                    chains[i],
-                )
-                for i in range(len(x))
-            ]
-        
+            (
+                atom_numbers[i],
+                atom_types[i],
+                resids[i],
+                resnums[i],
+                chains[i],
+            )
+            for i in range(len(x))
+        ]
+
         # Test A1: Intersect = False, remove all FE atoms
-        # Test A2: Intersect = False, 
+        # Test A2: Intersect = False,
 
     def test_filter_radius(self, synthetic_data):
         """Test filter_radius with a simple radius around origin."""
