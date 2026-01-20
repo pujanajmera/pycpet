@@ -3,6 +3,7 @@ import time
 from multiprocessing import Pool
 import torch
 import logging
+from copy import deepcopy
 
 
 from CPET.utils.parallel import (
@@ -150,7 +151,10 @@ class calculator:
                 )
                 for i in range(len(self.x))
             ]
-        self.log.debug(self.chains)
+        if not hasattr(self, "chains"):
+            self.chains = [None] * len(self.x)
+        if hasattr(self, "chains"):
+            self.log.debug(self.chains)
 
         # Define center, x, and y axes
         if type(options["center"]) == list:
@@ -208,18 +212,22 @@ class calculator:
         else:
             raise ValueError("Since you have provided x, y must be a list or dict")
 
-        self.x_copy = self.x.copy()
-        self.residue_number_copy = self.residue_number.copy()
-        self.resids_copy = self.resids.copy()
-        self.atom_number_copy = self.atom_number.copy()
-        self.atom_type_copy = self.atom_type.copy()
+        self.x_copy = deepcopy(self.x)
+        self.residue_number_copy = deepcopy(self.residue_number)
+        self.resids_copy = deepcopy(self.resids)
+        self.atom_number_copy = deepcopy(self.atom_number)
+        self.atom_type_copy = deepcopy(self.atom_type)
+        if hasattr(self, "chains"):
+            self.chains_copy = deepcopy(self.chains)
 
         # Any sort of filtering related to atom identity information
         if "filter" in options.keys():
             self.x, self.Q, self.ID = filter_atomspec(
                 self.x, self.Q, self.ID, options["filter"], options["filter_intersect"]
             )
-
+            # If chains is a list of nones, delete it as an attribute
+            if all(c is None for c in self.chains):
+                del self.chains
             if hasattr(self, "chains"):
                 self.atom_number = [self.ID[i][0] for i in range(len(self.x))]
                 self.atom_type = [self.ID[i][1] for i in range(len(self.x))]
@@ -248,14 +256,6 @@ class calculator:
             )
             r = np.linalg.norm(self.x, axis=1)
             self.log.debug(f"New r {r}")
-
-        # Box filtering
-        if "filter_in_box" in options.keys():
-            if bool(options["filter_in_box"]):
-                self.log.info("Filtering charges in sampling box")
-                self.x, self.Q = filter_in_box(
-                    x=self.x, Q=self.Q, center=self.center, dimensions=self.dimensions
-                )
 
         assert "CPET_method" in options.keys(), "CPET_method must be specified"
 
@@ -329,11 +329,7 @@ class calculator:
             or options["CPET_method"] == "point_mag"
             or options["CPET_method"] == "box_check"
         ) and hasattr(self, "y_vec_pt"):
-            (
-                _,
-                _,
-                self.transformation_matrix,
-            ) = initialize_box_points_uniform(
+            (_, _, self.transformation_matrix,) = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,
@@ -351,6 +347,19 @@ class calculator:
         else:
             self.log.info("Not rotating coordinates since no y-vector is provided")
             self.x = self.x - self.center
+
+        # Box filtering, must be done after coordinates are rotated
+        if "filter_in_box" in options.keys():
+            if bool(options["filter_in_box"]):
+                self.log.info("Filtering charges in sampling box")
+                self.x, self.Q, self.ID = filter_in_box(
+                    x=self.x,
+                    Q=self.Q,
+                    ID=self.ID,
+                    center=self.center,
+                    dimensions=self.dimensions,
+                )
+
         """
         #Debug version
         self.x_copy = self.x
@@ -368,11 +377,11 @@ class calculator:
             self.log.info("Writing transformed pdb file, ignoring chains")
             if self.strip_filter == True:
                 self.log.info("Stripping filtered residues for transformed pdb file")
-                self.x_copy = self.x.copy()
-                self.residue_number_copy = self.residue_number.copy()
-                self.resids_copy = self.resids.copy()
-                self.atom_number_copy = self.atom_number.copy()
-                self.atom_type_copy = self.atom_type.copy()
+                self.x_copy = deepcopy(self.x)
+                self.residue_number_copy = deepcopy(self.residue_number)
+                self.resids_copy = deepcopy(self.resids)
+                self.atom_number_copy = deepcopy(self.atom_number)
+                self.atom_type_copy = deepcopy(self.atom_type)
             else:
                 self.x_copy = (self.x_copy - self.center) @ np.linalg.inv(
                     self.transformation_matrix
@@ -496,6 +505,29 @@ class calculator:
         self.log.debug("Center: {}".format(self.center))
         esp_box = compute_ESP_on_grid(self.mesh, self.x, self.Q)
         return esp_box, self.mesh.shape
+
+    # WIP
+    def compute_box_QM(self):
+        """Compute the electric field on a grid, generated from QM calculations with optional MM embedding. Defined by mesh, density, and charges Q at position x.
+
+        Returns
+        -------
+        field_box : np.ndarray
+            The computed electric field on the grid
+        mesh.shape : tuple
+            The shape of the mesh grid
+        """
+        print("... > Computing Box Field!")
+        print(f"Number of charges: {len(self.Q)}")
+        print("mesh shape: {}".format(self.mesh.shape))
+        print("x shape: {}".format(self.x.shape))
+        print("Q shape: {}".format(self.Q.shape))
+        print("First few lines of x: {}".format(self.x[:5]))
+        print("Transformation matrix: {}".format(self.transformation_matrix))
+        field_box = compute_field_on_grid_qm(self.mesh, self.x, self.Q, self.moldenpath)
+        if self.qmmm == True:  # Add qmmm charges
+            field_box += compute_field_on_grid(self.mesh, self.x, self.Q)
+        return field_box, self.mesh.shape
 
     def compute_topo_base(self):
         print("... > Computing Topo!")

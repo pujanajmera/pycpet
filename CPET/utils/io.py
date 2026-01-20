@@ -401,9 +401,34 @@ def filter_atomspec(x, Q, ID, filter_dict, intersect):
     return x_filtered, Q_filtered, ID_filtered
 
 
-def filter_in_box(x, Q, center, dimensions):
+def filter_in_box(x, Q, ID, center, dimensions):
+    """
+    Filter to remove charges inside of a box defined by center and dimensions
+
+    Parameters
+    ----------
+    x : array
+        Coordinates of charges of shape (N,3)
+    Q : array
+        Magnitude and sign of charges of shape (N,1)
+    ID : list
+        Identity information of shape (N,), where each value is a tuple of
+        the form (atom_number, atom_type, resid, resnum, chain). Chain is optional.
+    filter_dict : dict
+        Dictionary of identity information to filter out
+    intersect : bool
+        If True, filter out only if all conditions in filter_dict are met (intersection)
+
+    Returns
+    -------
+    x_filtered : array
+        Filtered coordinates of charges of shape (N,3)
+    Q_filtered : array
+        Filtered magnitude and sign of charges of shape (N,1)
+    ID_filtered : list
+        Filtered identity information of shape (N,)
+    """
     x_recentered = x - center
-    print("Filtering Charges in Sampling Box")
     # Filter out points that are inside the box
     limits = {
         "x": [-dimensions[0], dimensions[0]],
@@ -427,8 +452,9 @@ def filter_in_box(x, Q, center, dimensions):
     # only keep points that are outside the box
     x_filtered = x[~mask]
     Q_filtered = Q[~mask]
+    ID_filtered = ID[~mask]
     # print("masked points: {}".format(len(mask)))
-    return x_filtered, Q_filtered
+    return x_filtered, Q_filtered, ID_filtered
 
 
 def parse_pqr(path_to_pqr):

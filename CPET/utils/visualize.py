@@ -1,6 +1,7 @@
 import numpy as np
 import warnings
 import math
+import logging
 
 """
 Overall script for all visualization functions and visualization-affiliates.
@@ -14,6 +15,8 @@ To-add:
 - Clustering visualizations
 - High quality distance matrix plotting (?)
 """
+
+log = logging.getLogger(__name__)
 
 
 def visualize_esp(path_to_esp, outputpath, options):
@@ -48,6 +51,8 @@ def visualize_esp(path_to_esp, outputpath, options):
     min_n_esp = options["min_n_esp"] if "min_n_esp" in options else None
 
     name = path_to_esp.split("/")[-1].split(".")[0]
+
+    log.info(f"Generating bild file for field: {name}")
 
     bild_path = outputpath + "/" + name
 
@@ -106,6 +111,8 @@ def visualize_field(path_to_efield, outputpath, options):
         sparsify_factor = 1
 
     name = path_to_efield.split("/")[-1].split(".")[0]
+
+    log.info(f"Generating bild file for field: {name}")
 
     bild_path = outputpath + "/" + name
 

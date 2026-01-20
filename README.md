@@ -19,7 +19,7 @@ System requirements:
 - gcc (to compile C-shared libraries)
 - anaconda (preferred, not required)
 
-Follow these recommended steps to install PyCPET
+Follow these steps to install PyCPET. I recommend installing the latest version from GitHub by cloning and "pip install -e .", but these are simpler steps:
 
 1. Make a clean conda environment (recommended, not required)
 
@@ -50,7 +50,7 @@ These are the following available features, and their corresponding options file
 - Computing 3-D electrostatic potentials: 'volume_ESP'
 - Computing 3-D distribution of streamlines: 'topo' (CPU, default) and 'topo_GPU' (GPU)
 - Clustering by distribution of streamlines: 'cluster'
-- Clustering by 3-D electric field (tensor decomp): 'cluster_volume_tensor' **IN BETA**
+- Clustering by 3-D electric field (tensor decomp): 'cluster_volume_tensor'
 - Clustering by 3-D electrostatic potential: 'cluster_volume_ESP_tensor' **IN BETA**
 - Visualizing 3-D fields: 'visualize_fields'
 - PCA on 3-D fields, for a single set of data: 'pca' **IN BETA**
@@ -65,8 +65,10 @@ Several examples are in the ```examples``` directory. Most of these are designed
 
 For features unavailable from the cpet.py script mentioned above, we offer scripts in ```source/scripts``` for the following. Please note that these are not rigorously tested for all cases, but showcase the scripting ability of the pycpet library:
 
+- electrostatic_interaction_QM.py: Electrostatic interaction energy and residue-breakdown for QM/MM calculations
 - residue_breakdown_analysis.py: Residue contribution to topology over dynamics, ranked. Requires completed topology calculations for an MD **IN BETA**
 - tensor_based_cluster_double.py: Electrostatic potential/electric field-based clustering for two sets of electric fields/electrostatic potentials. Assumes that all field calculations have been completed for both sets of directories. **IN BETA**
+- field_topology_dipoel.py: Electric field streamline distributions from a given set of dipoles **IN BETA**
 
 ## Note: Formatting of PDB/PQR files
 

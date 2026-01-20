@@ -135,8 +135,7 @@ class CPET:
             else:
                 print("No more files to process!")
                 break
-            self.calculator = calculator(self.options, path_to_pdb=file)
-            protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
+            protein = file.split("/")[-1].split(".")[0]
             files_input.remove(file)
             self.log.info("protein file: {}".format(protein))
             files_done = [
@@ -144,6 +143,7 @@ class CPET:
             ]
             self.log.debug("Files done: {}".format(files_done))
             if protein + "_efield.dat" not in files_done:
+                self.calculator = calculator(self.options, path_to_pdb=file)
                 field_box, mesh_shape = self.calculator.compute_box()
                 meta_data = {
                     "dimensions": self.calculator.dimensions,
@@ -161,6 +161,10 @@ class CPET:
                     name=self.outputpath + "/{}_efield.dat".format(protein),
                     volume=field_box,
                     meta_data=meta_data,
+                )
+            else:
+                self.log.info(
+                    "Already done for protein: {}, skipping...".format(protein)
                 )
 
     def run_point(self):
@@ -190,8 +194,7 @@ class CPET:
             else:
                 print("No more files to process!")
                 break
-            self.calculator = calculator(self.options, path_to_pdb=file)
-            protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
+            protein = file.split("/")[-1].split(".")[0]
             files_input.remove(file)
             self.log.info("protein file: {}".format(protein))
             files_done = [
@@ -199,6 +202,7 @@ class CPET:
             ]
             self.log.debug("Files done: {}".format(files_done))
             if protein + "_esp.dat" not in files_done:
+                self.calculator = calculator(self.options, path_to_pdb=file)
                 esp_box, mesh_shape = self.calculator.compute_box_ESP()
                 self.log.info(esp_box.shape)
                 meta_data = {
@@ -216,6 +220,10 @@ class CPET:
                     name=self.outputpath + "/{}_esp.dat".format(protein),
                     volume=esp_box,
                     meta_data=meta_data,
+                )
+            else:
+                self.log.info(
+                    "Already done for protein: {}, skipping...".format(protein)
                 )
 
     def run_box_check(self):

@@ -66,7 +66,7 @@ autodoc_mock_imports = [
 # a list of builtin themes.
 # Use readthedocs theme
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
