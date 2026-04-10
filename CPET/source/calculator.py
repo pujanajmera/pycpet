@@ -18,6 +18,7 @@ from CPET.utils.calculator import (
     initialize_box_points_uniform,
     compute_field_on_grid,
     calculate_electric_field_c_shared_full_alt,
+    calculate_electric_field_c_shared_full_alt_polarizable,
     compute_ESP_on_grid,
 )
 from CPET.utils.io import (
@@ -460,6 +461,30 @@ class calculator:
         # Since x and Q are already rotated and translated, need to supply 0 vector as center
         point_field = calculate_electric_field_c_shared_full_alt(
             np.array([0, 0, 0]), self.x, self.Q
+        )
+        end_time = time.time()
+        print(f"{end_time - start_time}")
+        return point_field
+
+#WIP
+    def compute_point_field_polarizable(self):
+        """Compute the electric field at a point defined by the center and multipole moments T at positions x.
+
+        Returns
+        -------
+        point_field : np.ndarray
+            The computed electric field at the point
+        """
+        print("... > Computing Point Field (Vector)!")
+        print(f"Number of charges: {len(self.Q)}")
+        print("point: {}".format(self.center))
+        print("x shape: {}".format(self.x.shape))
+        print("T shape: {}".format(self.T.shape))
+        print("First few lines of x: {}".format(self.x[:5]))
+        start_time = time.time()
+        # Since x and T are already rotated and translated, need to supply 0 vector as center
+        point_field = calculate_electric_field_c_shared_full_alt_polarizable(
+            np.array([0, 0, 0]), self.x, self.T
         )
         end_time = time.time()
         print(f"{end_time - start_time}")

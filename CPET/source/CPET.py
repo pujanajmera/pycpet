@@ -7,6 +7,7 @@ from CPET.utils.io import (
     save_numpy_as_dat,
     default_options_initializer,
     get_input_files,
+    check_valid_options,
 )
 from CPET.utils.calculator import report_inside_box
 
@@ -45,6 +46,7 @@ class CPET:
     def __init__(self, options):
         # Logistics
         self.options = default_options_initializer(options)
+        check_valid_options(self.options)
         self.log = log
         self.m = self.options["CPET_method"]
         print("Instantiating CPET, method: {}".format(self.m))

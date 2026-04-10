@@ -465,7 +465,7 @@ def scale_tip_to_tail_vectors(
     for i in range(len(tip_to_tail_vectors)):
 
         # use field mag as scaling factor
-        m = 0.5 * sparsify_factor * field_mags[i] * min_dim
+        m = sparsify_factor * field_mags[i] * min_dim
 
         xA = tip_to_tail_vectors[i][0]
         yA = tip_to_tail_vectors[i][1]

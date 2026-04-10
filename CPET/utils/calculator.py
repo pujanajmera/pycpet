@@ -312,6 +312,21 @@ def calculate_electric_field_c_shared_full_alt(x_0, x, Q):
     E = Math.calc_field(x_0=x_0, x=x, Q=Q)
     return E
 
+def calculate_electric_field_c_shared_full_alt_polarizable(x_0, x, T):
+    """
+    Computes electric field at a point given positions of charges and polarizability
+    Takes
+        x_0(array) - position to compute field at of shape (1,3)
+        x(array) - positions of charges of shape (N,3)
+        T(array) - multipole terms of shape (N,3,3)
+    Returns
+        E(array) - electric field at the point of shape (1,3)
+    """
+    x_0 = x_0.astype(np.float32)
+    x = x.astype(np.float32)
+    T = T.astype(np.float32)
+    E = Math.calc_field_polarizable(x_0=x_0, x=x, T=T)
+    return E
 
 def calculate_esp_c_shared_full(x_0, x, Q):
     """
