@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pycpet"
-version = "0.0.7"
+version = "0.0.7a"
 authors = [
   { name="Pujan Ajmera", email="ajmerapujan@gmail.com" },
 ]
