@@ -4,7 +4,7 @@ from CPET.utils import intro_citation
 import numpy as np
 
 """
-Section required for fortran binding imports
+Section required for fortran binding imports, or consider just compiling fortran code with pip and then calling it directly
 """
 
 """
