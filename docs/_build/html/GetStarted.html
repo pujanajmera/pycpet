@@ -3,9 +3,9 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Computing Electric Fields, Electric Field Topologies, and Electrostatic Potentials" href="FieldTopESP.html"><link rel="prev" title="Installation" href="Installation.html">
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Atom Specification" href="AtomSpec.html"><link rel="prev" title="Installation" href="Installation.html">
 
-    <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
         <title>Getting Started - Input Options File - pycpet documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
@@ -194,6 +194,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Getting Started - Input Options File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AtomSpec.html">Atom Specification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="FieldTopESP.html">Computing Electric Fields, Electric Field Topologies, and Electrostatic Potentials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Dynamics.html">Dynamics of 3-D E-Fields and Potentials</a></li>
@@ -243,17 +244,23 @@
 <h1>Getting Started - Input Options File<a class="headerlink" href="#getting-started-input-options-file" title="Link to this heading">¶</a></h1>
 <p>Examples for pycpet are located in the <cite>examples</cite> directory of the repository. The examples are designed to demonstrate how to use the package for various applications.
 Here, we will provide a fairly in-depth overview of <em>PyCPET</em>’s features, and how to use them.</p>
-<section id="pycpet-functionalities">
-<h2>PyCPET functionalities<a class="headerlink" href="#pycpet-functionalities" title="Link to this heading">¶</a></h2>
-<p><em>PyCPET</em> is designed for the high throughput computation of electrostatic properties at enzyme active sites, including their dynamic behavior. This includes things like:</p>
+<section id="pycpet-features">
+<h2>PyCPET features<a class="headerlink" href="#pycpet-features" title="Link to this heading">¶</a></h2>
+<p><em>PyCPET</em> is designed for the high throughput computation of electrostatic properties at enzyme active sites, including their dynamic behavior. This includes:</p>
+<p><strong>Point Electrostatic Analysis + Dynamics</strong></p>
 <ul class="simple">
-<li><p>Computing point electric fields/electrostatic potentials at arbitrary points, and over dynamic trajectories</p></li>
-<li><p>Computing fields/potentials in volumes, and their topological features defined by user input</p></li>
-<li><p>Clustering fields/potentials to get representative structures and understand the fluctuation of these quantities</p></li>
-<li><p>PCA on electric fields, useful for comparing fields across different enzyme classes</p></li>
-<li><p>Residue breakdown analysis of classical electric field topologies</p></li>
+<li><p>Computing point electric fields/electrostatic potentials at user-specified points, over dynamic trajectories</p></li>
+</ul>
+<p><strong>Volume Electrostatic Analysis + Dynamics</strong></p>
+<ul class="simple">
+<li><p>Computing fields/potentials in volumes, and their topological features defined by user input (parallelized!)</p></li>
+<li><p>Clustering fields/potentials to get representative structures and dynamic fluctuations (parallelized!)</p></li>
+<li><p>Principal Component Analysis (PCA) on 3D electric fields, useful for comparing fields across enzymes</p></li>
+<li><p>Residue breakdown analysis of classical electric field topologies over dynamics</p></li>
+</ul>
+<p><strong>Quantum Mechanical Electrostatic Analysis</strong></p>
+<ul class="simple">
 <li><p>Electrostatic interaction energies between protein scaffold and active site charge densities</p></li>
-<li><p>And more!</p></li>
 </ul>
 <p>We outline the tested functionalities below, primarily focusing on making your own “options” file for the cpet.py executable.</p>
 </section>
@@ -266,7 +273,7 @@ Here, we will provide a fairly in-depth overview of <em>PyCPET</em>’s features
 <p>These are some general options that are required for most/all calculations.</p>
 <ol class="arabic simple">
 <li><dl class="simple">
-<dt><cite>method</cite>: The method to use for the calculation. These are the tested available methods:</dt><dd><ul class="simple">
+<dt><cite>CPET_method</cite>: The method to use for the calculation. These are the tested available methods:</dt><dd><ul class="simple">
 <li><p>Standalone methods that can be run for single pdbs, or over any set of pdbs in a directory as long as they have a common orientable atom set:</p></li>
 <li><p><cite>point_field</cite>: Computing the electric field at a point, either arbitrary or defined by some atom selection.</p></li>
 <li><p><cite>point_mag</cite>: Computing the electric field magnitude at a point.</p></li>
@@ -285,7 +292,37 @@ Here, we will provide a fairly in-depth overview of <em>PyCPET</em>’s features
 </dd>
 </dl>
 </li>
+<li><p><cite>input_path</cite>: The path to input structures, typically a folder of pdb/pqr files or a folder of 3D electric field/topology files</p></li>
+<li><p><cite>output_path</cite> (optional): The path to output the results. If not specified, results will be output to a default directory typically <cite>./cpet/</cite></p></li>
+<li><p><cite>write_transformed_pdb</cite> (optional): If True, write out the transformed pdb files after orienting to the active site frame. Default is False. This function is useful for making schemes in ChimeraX, see <a class="reference internal" href="Visualization.html"><span class="doc">Visualization</span></a>.</p></li>
+<li><p><cite>strip_filter</cite> (optional): If True while <cite>write_transformed_pdb</cite> is True, the transformed pdb files will be stripped of filtered residue.</p></li>
 </ol>
+</section>
+<section id="field-options-file-parameters">
+<h2>Field Options File Parameters<a class="headerlink" href="#field-options-file-parameters" title="Link to this heading">¶</a></h2>
+<p>These are some general options that are required for electric field, or electrostatic potential calculations.</p>
+<ol class="arabic simple">
+<li><p><cite>center</cite>: The center of the calculation. For point fields/electrostatic potential, this is where the quantity is computed. See <a class="reference internal" href="AtomSpec.html"><span class="doc">AtomSpec</span></a> for more information.</p></li>
+<li><p><cite>x</cite>: The point used for defining the x-axis of the volume. See <a class="reference internal" href="AtomSpec.html"><span class="doc">AtomSpec</span></a> for more information.</p></li>
+<li><p><cite>y</cite> (optional): The point used for defining the y-axis of the volume. See <a class="reference internal" href="AtomSpec.html"><span class="doc">AtomSpec</span></a> for more information. If this isn’t provided, there will be no rotation into the active site frame.</p></li>
+<li><p><cite>dimensions</cite> (optional): The <strong>half width</strong> dimensions of the volumes to compute 3D fields/topology/ESP, provided as a list of 3 numbers, e.g. <cite>[0.5,0.5,0.75]</cite> is a 1x1x1.5 volume. Units are in Angstroms.</p></li>
+<li><p><cite>step_size</cite> (optional): The grid size used for computing 3D fields/ESP, provided as a single number. For topologies, this number dictates how the streamlines are seeded and the steps size of the streamline itself and is a convergence parameter. Units are in Angstroms.</p></li>
+<li><p><cite>n_samples</cite> (optional): Only required for 3D field topologies, this is the integer number of streamlines to compute, and acts as a convergence parameter. See <a class="reference internal" href="Parallel.html"><span class="doc">Parallel</span></a> for more information on how to parallelize over streamlines.</p></li>
+</ol>
+<p>Filtering parameters:</p>
+<ol class="arabic simple" start="7">
+<li><p><cite>filter_intersect</cite> (optional): If True, find the intersection of the provided filters. If False, find the union of the provided filters. Default is False.</p></li>
+<li><p><cite>filter</cite> (optional): A list of residue/atom/etc filters to apply to the field/topology/ESP calculations. See <a class="reference internal" href="AtomSpec.html"><span class="doc">AtomSpec</span></a> for more information.</p></li>
+<li><p><cite>filter_radius</cite> (optional): If specified, the radius from the <cite>center</cite> selection to exclude atoms/residues from the field/topology/ESP calculations. Units are in Angstroms.</p></li>
+</ol>
+</section>
+<section id="clustering-options-file-parameters">
+<h2>Clustering Options File Parameters<a class="headerlink" href="#clustering-options-file-parameters" title="Link to this heading">¶</a></h2>
+<p>TBD</p>
+</section>
+<section id="visualization-options-file-parameters">
+<h2>Visualization Options File Parameters<a class="headerlink" href="#visualization-options-file-parameters" title="Link to this heading">¶</a></h2>
+<p>TBD</p>
 </section>
 </section>
 
@@ -294,12 +331,12 @@ Here, we will provide a fairly in-depth overview of <em>PyCPET</em>’s features
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="FieldTopESP.html">
+          <a class="next-page" href="AtomSpec.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Computing Electric Fields, Electric Field Topologies, and Electrostatic Potentials</div>
+                <div class="title">Atom Specification</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -345,9 +382,12 @@ Here, we will provide a fairly in-depth overview of <em>PyCPET</em>’s features
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Getting Started - Input Options File</a><ul>
-<li><a class="reference internal" href="#pycpet-functionalities">PyCPET functionalities</a></li>
+<li><a class="reference internal" href="#pycpet-features">PyCPET features</a></li>
 <li><a class="reference internal" href="#the-options-file">The Options File</a></li>
 <li><a class="reference internal" href="#general-options-file-parameters">General Options File Parameters</a></li>
+<li><a class="reference internal" href="#field-options-file-parameters">Field Options File Parameters</a></li>
+<li><a class="reference internal" href="#clustering-options-file-parameters">Clustering Options File Parameters</a></li>
+<li><a class="reference internal" href="#visualization-options-file-parameters">Visualization Options File Parameters</a></li>
 </ul>
 </li>
 </ul>
@@ -360,7 +400,7 @@ Here, we will provide a fairly in-depth overview of <em>PyCPET</em>’s features
     </aside>
   </div>
 </div><script src="_static/documentation_options.js?v=9eb32ce0"></script>
-    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
     <script src="_static/scripts/sphinx-book-theme.js"></script>

@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Installation" href="Installation.html">
 
-    <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
         <title>pycpet documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
@@ -194,6 +194,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="GetStarted.html">Getting Started - Input Options File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AtomSpec.html">Atom Specification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="FieldTopESP.html">Computing Electric Fields, Electric Field Topologies, and Electrostatic Potentials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Dynamics.html">Dynamics of 3-D E-Fields and Potentials</a></li>
@@ -260,9 +261,17 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="GetStarted.html">Getting Started - Input Options File</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="GetStarted.html#pycpet-functionalities">PyCPET functionalities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GetStarted.html#pycpet-features">PyCPET features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GetStarted.html#the-options-file">The Options File</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GetStarted.html#general-options-file-parameters">General Options File Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GetStarted.html#field-options-file-parameters">Field Options File Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GetStarted.html#clustering-options-file-parameters">Clustering Options File Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GetStarted.html#visualization-options-file-parameters">Visualization Options File Parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="AtomSpec.html">Atom Specification</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="AtomSpec.html#atom-specification-for-volume-orientation">Atom Specification for Volume Orientation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="AtomSpec.html#atom-specification-for-filtering-in-field-esp-calculations">Atom Specification for Filtering in Field/ESP Calculations</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="FieldTopESP.html">Computing Electric Fields, Electric Field Topologies, and Electrostatic Potentials</a><ul>
@@ -274,6 +283,7 @@
 <li class="toctree-l1"><a class="reference internal" href="Visualization.html">Visualization</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="Visualization.html#electric-fields">Electric Fields</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Visualization.html#electrostatic-potentials">Electrostatic Potentials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Visualization.html#using-write-transformed-pdb-for-chimera-chimerax-electric-field-schemes">Using <cite>write_transformed_pdb</cite> for Chimera/ChimeraX Electric Field Schemes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Visualization.html#api-examples-for-other-data-visualizations">API Examples for other Data Visualizations</a></li>
 </ul>
 </li>
@@ -300,7 +310,11 @@
 <li class="toctree-l2"><a class="reference internal" href="citation.html#references">References</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="apiref.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="apiref.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="apiref.html#CPET.source.calculator.calculator"><code class="docutils literal notranslate"><span class="pre">calculator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apiref.html#CPET.source.CPET.CPET"><code class="docutils literal notranslate"><span class="pre">CPET</span></code></a></li>
+</ul>
+</li>
 </ul>
 </div>
 </section>
@@ -353,10 +367,9 @@
     </aside>
   </div>
 </div><script src="_static/documentation_options.js?v=9eb32ce0"></script>
-    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
     <script src="_static/scripts/sphinx-book-theme.js"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     </body>
 </html>

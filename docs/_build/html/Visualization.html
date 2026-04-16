@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Dynamics of 3-D E-Fields and Potentials" href="Dynamics.html"><link rel="prev" title="Computing Electric Fields, Electric Field Topologies, and Electrostatic Potentials" href="FieldTopESP.html">
 
-    <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
         <title>Visualization - pycpet documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
@@ -194,6 +194,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="GetStarted.html">Getting Started - Input Options File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AtomSpec.html">Atom Specification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="FieldTopESP.html">Computing Electric Fields, Electric Field Topologies, and Electrostatic Potentials</a></li>
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Dynamics.html">Dynamics of 3-D E-Fields and Potentials</a></li>
@@ -247,6 +248,18 @@
 </section>
 <section id="electrostatic-potentials">
 <h2>Electrostatic Potentials<a class="headerlink" href="#electrostatic-potentials" title="Link to this heading">¶</a></h2>
+<p>To be added.</p>
+</section>
+<section id="using-write-transformed-pdb-for-chimera-chimerax-electric-field-schemes">
+<h2>Using <cite>write_transformed_pdb</cite> for Chimera/ChimeraX Electric Field Schemes<a class="headerlink" href="#using-write-transformed-pdb-for-chimera-chimerax-electric-field-schemes" title="Link to this heading">¶</a></h2>
+<p>Chimera/ChimeraX unfortunately can only make boxes that are oriented in the softwares global frame, which is where <cite>write_transformed_pdb</cite> comes in handy.
+By using <cite>write_transformed_pdb: True</cite> and <cite>strip_filter: False</cite> in the options file along with writing a <a class="reference external" href="https://www.cgl.ucsf.edu/chimerax/docs/user/formats/bild.html">.bild</a> file as follows:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">.transparency 0.5</span>
+<span class="go">.color blue</span>
+<span class="go">.box x1 y1 z1 x2 y2 z2</span>
+</pre></div>
+</div>
+<p>, replacing x1 y1 z1 and x2 y2 z2 with the negative of the <cite>dimensions</cite> option and the <cite>dimensions</cite> option itself, you can get great schemes like this to show your volume calculation:</p>
 <p>To be added.</p>
 </section>
 <section id="api-examples-for-other-data-visualizations">
@@ -315,6 +328,7 @@ The API provided through pycpet makes this pretty straightforward.</p>
 <li><a class="reference internal" href="#">Visualization</a><ul>
 <li><a class="reference internal" href="#electric-fields">Electric Fields</a></li>
 <li><a class="reference internal" href="#electrostatic-potentials">Electrostatic Potentials</a></li>
+<li><a class="reference internal" href="#using-write-transformed-pdb-for-chimera-chimerax-electric-field-schemes">Using <cite>write_transformed_pdb</cite> for Chimera/ChimeraX Electric Field Schemes</a></li>
 <li><a class="reference internal" href="#api-examples-for-other-data-visualizations">API Examples for other Data Visualizations</a></li>
 </ul>
 </li>
@@ -328,7 +342,7 @@ The API provided through pycpet makes this pretty straightforward.</p>
     </aside>
   </div>
 </div><script src="_static/documentation_options.js?v=9eb32ce0"></script>
-    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
     <script src="_static/scripts/sphinx-book-theme.js"></script>
