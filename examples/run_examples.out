@@ -1,0 +1,858 @@
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+Instantiating CPET, method: point_field
+(11444, 3)
+(11444, 1)
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+04:11:01 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+04:11:01 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:11:01 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:11:01 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:11:01 DEBUG [CPET.utils.io] pos considered for center: [array([43.492, 31.142, 41.702], dtype=float32), array([44.566, 30.653, 41.775], dtype=float32)]
+04:11:01 INFO [CPET.source.calculator] No x specified, calculating in input file reference frame. Ignoring y...
+04:11:01 INFO [CPET.source.calculator] Not computing y since x is not specified
+04:11:01 INFO [CPET.utils.io] Filtering by attributes: ['resid', 'resnum']
+04:11:01 INFO [CPET.utils.io] Filtering by an ordered intersection of filters
+04:11:01 DEBUG [CPET.utils.io] Length before filtering: 11466, 11466, 11466
+04:11:01 INFO [CPET.utils.io] Number of atoms filtered out: 22
+04:11:01 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:11:01 DEBUG [CPET.source.calculator] r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:11:01 DEBUG [CPET.source.calculator] New r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:11:01 INFO [CPET.source.calculator] Not rotating coordinates since no y-vector is provided
+04:11:01 INFO [CPET.source.calculator] Center: [44.029    30.8975   41.738503]
+Instantiating CPET, method: point_field
+(11444, 3)
+(11444, 1)
+(11444,)
+(11444,)
+radius filter leaves: 7890
+[ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+Traceback (most recent call last):
+  File "/jet/home/ajmera/.conda/envs/pycpet-env/bin/cpet.py", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/jet/home/ajmera/programs/pycpet/CPET/source/scripts/cpet.py", line 94, in main
+    cpet.run()
+  File "/jet/home/ajmera/programs/pycpet/CPET/source/CPET.py", line 73, in run
+    self.run_point()
+  File "/jet/home/ajmera/programs/pycpet/CPET/source/CPET.py", line 179, in run_point
+    self.calculator = calculator(self.options, path_to_pdb=file)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/jet/home/ajmera/programs/pycpet/CPET/source/calculator.py", line 395, in __init__
+    self.log.info(f"x vector point: {self.x_vec_pt}")
+                                     ^^^^^^^^^^^^^
+AttributeError: 'calculator' object has no attribute 'x_vec_pt'
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+04:12:20 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+04:12:20 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:12:20 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:12:20 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:12:20 DEBUG [CPET.utils.io] pos considered for center: [array([43.492, 31.142, 41.702], dtype=float32), array([44.566, 30.653, 41.775], dtype=float32)]
+04:12:20 INFO [CPET.source.calculator] No x specified, calculating in input file reference frame. Ignoring y...
+04:12:20 INFO [CPET.source.calculator] Not computing y since x is not specified
+04:12:20 INFO [CPET.utils.io] Filtering by attributes: ['resid', 'resnum']
+04:12:20 INFO [CPET.utils.io] Filtering by an ordered intersection of filters
+04:12:20 DEBUG [CPET.utils.io] Length before filtering: 11466, 11466, 11466
+04:12:20 INFO [CPET.utils.io] Number of atoms filtered out: 22
+04:12:20 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:12:20 DEBUG [CPET.source.calculator] r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:12:20 DEBUG [CPET.source.calculator] New r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:12:20 INFO [CPET.source.calculator] Not rotating coordinates since no y-vector is provided
+04:12:20 INFO [CPET.source.calculator] Center: [44.029    30.8975   41.738503]
+04:12:20 INFO [CPET.source.CPET] protein file: 1_alcdehydro_run1
+04:12:20 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:12:20 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:12:20 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:12:20 DEBUG [CPET.utils.io] pos considered for center: [array([43.645, 30.592, 41.999], dtype=float32), array([44.682, 29.973, 42.155], dtype=float32)]
+04:12:20 INFO [CPET.source.calculator] No x specified, calculating in input file reference frame. Ignoring y...
+04:12:20 INFO [CPET.source.calculator] Not computing y since x is not specified
+04:12:20 INFO [CPET.utils.io] Filtering by attributes: ['resid', 'resnum']
+04:12:20 INFO [CPET.utils.io] Filtering by an ordered intersection of filters
+04:12:20 DEBUG [CPET.utils.io] Length before filtering: 11466, 11466, 11466
+04:12:20 INFO [CPET.utils.io] Number of atoms filtered out: 22
+04:12:20 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:12:20 DEBUG [CPET.source.calculator] r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:12:20 DEBUG [CPET.source.calculator] New r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:12:20 INFO [CPET.source.calculator] Not rotating coordinates since no y-vector is provided
+04:12:20 INFO [CPET.source.calculator] Center: [44.163498 30.2825   42.077   ]
+04:12:20 INFO [CPET.source.CPET] protein file: 2_alcdehydro_run1
+Instantiating CPET, method: point_field
+(11444, 3)
+(11444, 1)
+(11444,)
+(11444,)
+radius filter leaves: 7890
+[ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+... > Initialized Calculator!
+... > Computing Point Field (Vector)!
+Number of charges: 7890
+point: [44.029    30.8975   41.738503]
+x shape: (7890, 3)
+Q shape: (7890, 1)
+First few lines of x: [[-10.156998   9.716499 -31.765503]
+ [-10.960999   9.6605   -32.374504]
+ [ -9.661999  10.495502 -32.173504]
+ [ -9.583      8.886501 -31.802502]
+ [-10.556999  10.003502 -30.355503]]
+0.00025200843811035156
+(11444, 3)
+(11444, 1)
+(11444,)
+(11444,)
+radius filter leaves: 7894
+[ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+... > Initialized Calculator!
+... > Computing Point Field (Vector)!
+Number of charges: 7894
+point: [44.163498 30.2825   42.077   ]
+x shape: (7894, 3)
+Q shape: (7894, 1)
+First few lines of x: [[ -7.8774986  11.7955    -31.932999 ]
+ [ -7.5634995  12.685499  -32.291    ]
+ [ -7.1084976  11.1425    -31.881    ]
+ [ -8.553497   11.4135    -32.579    ]
+ [ -8.526497   11.964502  -30.612999 ]]
+0.0001289844512939453
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+04:12:34 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+04:12:34 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:12:34 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:12:34 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:12:34 DEBUG [CPET.utils.io] pos considered for center: [array([43.492, 31.142, 41.702], dtype=float32), array([44.566, 30.653, 41.775], dtype=float32)]
+04:12:34 DEBUG [CPET.utils.io] [{'O9': 378}]
+04:12:34 INFO [CPET.utils.io] centering atoms for x: [('O9', 378)]
+04:12:34 DEBUG [CPET.utils.io] pos considered for x: [array([44.566, 30.653, 41.775], dtype=float32)]
+04:12:34 DEBUG [CPET.utils.io] [{'N8': 378}]
+04:12:34 INFO [CPET.utils.io] centering atoms for y: [('N8', 378)]
+04:12:34 DEBUG [CPET.utils.io] pos considered for y: [array([42.334, 30.684, 42.232], dtype=float32)]
+04:12:34 INFO [CPET.utils.io] Filtering by attributes: ['resid', 'resnum']
+04:12:34 INFO [CPET.utils.io] Filtering by an ordered intersection of filters
+04:12:34 DEBUG [CPET.utils.io] Length before filtering: 11466, 11466, 11466
+04:12:34 INFO [CPET.utils.io] Number of atoms filtered out: 22
+04:12:34 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:12:34 DEBUG [CPET.source.calculator] r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:12:34 DEBUG [CPET.source.calculator] New r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:12:34 DEBUG [CPET.utils.calculator] Original grid shape: [0, 0, 0]
+04:12:34 DEBUG [CPET.utils.calculator] Final grid shape: (0, 0, 0, 3)
+04:12:34 INFO [CPET.source.calculator] Rotating coordinates
+04:12:34 INFO [CPET.source.calculator] Center: [44.029    30.8975   41.738503]
+04:12:34 INFO [CPET.source.calculator] x vector point: [44.566 30.653 41.775]
+04:12:34 INFO [CPET.source.calculator] y vector point: [42.334 30.684 42.232]
+04:12:34 INFO [CPET.source.CPET] protein file: 1_alcdehydro_run1
+04:12:34 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:12:34 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:12:34 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:12:34 DEBUG [CPET.utils.io] pos considered for center: [array([43.645, 30.592, 41.999], dtype=float32), array([44.682, 29.973, 42.155], dtype=float32)]
+04:12:34 DEBUG [CPET.utils.io] [{'O9': 378}]
+04:12:34 INFO [CPET.utils.io] centering atoms for x: [('O9', 378)]
+04:12:34 DEBUG [CPET.utils.io] pos considered for x: [array([44.682, 29.973, 42.155], dtype=float32)]
+04:12:34 DEBUG [CPET.utils.io] [{'N8': 378}]
+04:12:34 INFO [CPET.utils.io] centering atoms for y: [('N8', 378)]
+04:12:34 DEBUG [CPET.utils.io] pos considered for y: [array([42.562, 30.483, 42.848], dtype=float32)]
+04:12:34 INFO [CPET.utils.io] Filtering by attributes: ['resid', 'resnum']
+04:12:34 INFO [CPET.utils.io] Filtering by an ordered intersection of filters
+04:12:34 DEBUG [CPET.utils.io] Length before filtering: 11466, 11466, 11466
+04:12:34 INFO [CPET.utils.io] Number of atoms filtered out: 22
+04:12:34 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:12:34 DEBUG [CPET.source.calculator] r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:12:34 DEBUG [CPET.source.calculator] New r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:12:34 DEBUG [CPET.utils.calculator] Original grid shape: [0, 0, 0]
+04:12:34 DEBUG [CPET.utils.calculator] Final grid shape: (0, 0, 0, 3)
+04:12:34 INFO [CPET.source.calculator] Rotating coordinates
+04:12:34 INFO [CPET.source.calculator] Center: [44.163498 30.2825   42.077   ]
+04:12:34 INFO [CPET.source.calculator] x vector point: [44.682 29.973 42.155]
+04:12:34 INFO [CPET.source.calculator] y vector point: [42.562 30.483 42.848]
+04:12:34 INFO [CPET.source.CPET] protein file: 2_alcdehydro_run1
+Instantiating CPET, method: point_field
+(11444, 3)
+(11444, 1)
+(11444,)
+(11444,)
+radius filter leaves: 7890
+[ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+Initializing box points uniformly...
+... > Initialized Calculator!
+... > Computing Point Field (Vector)!
+Number of charges: 7890
+point: [44.029    30.8975   41.738503]
+x shape: (7890, 3)
+Q shape: (7890, 1)
+First few lines of x: [[-15.206111  -20.70864    23.37838  ]
+ [-15.950881  -20.693731   24.060678 ]
+ [-15.103842  -21.701342   23.228645 ]
+ [-14.3437195 -20.323849   23.736088 ]
+ [-15.601106  -20.005947   22.121132 ]]
+0.0002892017364501953
+(11444, 3)
+(11444, 1)
+(11444,)
+(11444,)
+radius filter leaves: 7894
+[ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+Initializing box points uniformly...
+... > Initialized Calculator!
+... > Computing Point Field (Vector)!
+Number of charges: 7894
+point: [44.163498 30.2825   42.077   ]
+x shape: (7894, 3)
+Q shape: (7894, 1)
+First few lines of x: [[-16.79507  -28.256788  11.848408]
+ [-17.025942 -29.050837  11.269577]
+ [-15.801604 -28.225895  12.028816]
+ [-17.259317 -28.366577  12.738708]
+ [-17.264555 -27.00057   11.220984]]
+0.00013637542724609375
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+04:12:44 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+04:12:44 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:12:44 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:12:44 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:12:44 DEBUG [CPET.utils.io] pos considered for center: [array([43.492, 31.142, 41.702], dtype=float32), array([44.566, 30.653, 41.775], dtype=float32)]
+04:12:44 DEBUG [CPET.utils.io] [{'O9': 378}]
+04:12:44 INFO [CPET.utils.io] centering atoms for x: [('O9', 378)]
+04:12:44 DEBUG [CPET.utils.io] pos considered for x: [array([44.566, 30.653, 41.775], dtype=float32)]
+04:12:44 DEBUG [CPET.utils.io] [{'N8': 378}]
+04:12:44 INFO [CPET.utils.io] centering atoms for y: [('N8', 378)]
+04:12:44 DEBUG [CPET.utils.io] pos considered for y: [array([42.334, 30.684, 42.232], dtype=float32)]
+04:12:44 INFO [CPET.utils.io] Filtering by attributes: ['resid', 'resnum']
+04:12:44 INFO [CPET.utils.io] Filtering by an ordered intersection of filters
+04:12:44 DEBUG [CPET.utils.io] Length before filtering: 11466, 11466, 11466
+04:12:44 INFO [CPET.utils.io] Number of atoms filtered out: 22
+04:12:44 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:12:44 DEBUG [CPET.source.calculator] r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:12:44 DEBUG [CPET.source.calculator] New r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:12:44 DEBUG [CPET.utils.calculator] Original grid shape: [10, 10, 10]
+04:12:44 DEBUG [CPET.utils.calculator] Final grid shape: (11, 11, 11, 3)
+04:12:44 INFO [CPET.source.calculator] Rotating coordinates
+04:12:44 INFO [CPET.source.calculator] Center: [44.029    30.8975   41.738503]
+04:12:44 INFO [CPET.source.calculator] x vector point: [44.566 30.653 41.775]
+04:12:44 INFO [CPET.source.calculator] y vector point: [42.334 30.684 42.232]
+04:12:44 INFO [CPET.source.CPET] protein file: 1_alcdehydro_run1
+04:12:44 DEBUG [CPET.source.CPET] Files done: ['2_alcdehydro_run1_efield.dat', '1_alcdehydro_run1_efield.dat']
+04:12:44 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:12:44 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:12:44 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:12:44 DEBUG [CPET.utils.io] pos considered for center: [array([43.645, 30.592, 41.999], dtype=float32), array([44.682, 29.973, 42.155], dtype=float32)]
+04:12:44 DEBUG [CPET.utils.io] [{'O9': 378}]
+04:12:44 INFO [CPET.utils.io] centering atoms for x: [('O9', 378)]
+04:12:44 DEBUG [CPET.utils.io] pos considered for x: [array([44.682, 29.973, 42.155], dtype=float32)]
+04:12:44 DEBUG [CPET.utils.io] [{'N8': 378}]
+04:12:44 INFO [CPET.utils.io] centering atoms for y: [('N8', 378)]
+04:12:44 DEBUG [CPET.utils.io] pos considered for y: [array([42.562, 30.483, 42.848], dtype=float32)]
+04:12:44 INFO [CPET.utils.io] Filtering by attributes: ['resid', 'resnum']
+04:12:44 INFO [CPET.utils.io] Filtering by an ordered intersection of filters
+04:12:44 DEBUG [CPET.utils.io] Length before filtering: 11466, 11466, 11466
+04:12:44 INFO [CPET.utils.io] Number of atoms filtered out: 22
+04:12:44 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:12:44 DEBUG [CPET.source.calculator] r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:12:44 DEBUG [CPET.source.calculator] New r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:12:44 DEBUG [CPET.utils.calculator] Original grid shape: [10, 10, 10]
+04:12:44 DEBUG [CPET.utils.calculator] Final grid shape: (11, 11, 11, 3)
+04:12:44 INFO [CPET.source.calculator] Rotating coordinates
+04:12:44 INFO [CPET.source.calculator] Center: [44.163498 30.2825   42.077   ]
+04:12:44 INFO [CPET.source.calculator] x vector point: [44.682 29.973 42.155]
+04:12:44 INFO [CPET.source.calculator] y vector point: [42.562 30.483 42.848]
+04:12:44 INFO [CPET.source.CPET] protein file: 2_alcdehydro_run1
+04:12:44 DEBUG [CPET.source.CPET] Files done: ['2_alcdehydro_run1_efield.dat', '1_alcdehydro_run1_efield.dat']
+Instantiating CPET, method: volume
+(11444, 3)
+(11444, 1)
+(11444,)
+(11444,)
+radius filter leaves: 7890
+[ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+Initializing box points uniformly...
+... > Initialized Calculator!
+(11444, 3)
+(11444, 1)
+(11444,)
+(11444,)
+radius filter leaves: 7894
+[ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+Initializing box points uniformly...
+... > Initialized Calculator!
+No more files to process!
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+04:12:50 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+Instantiating CPET, method: visualize_field
+... > Visualizing the electric field or electrostatic potential for use in Chimera/ChimeraX
+field matches sample density, check passed, continuing...
+Sparsification factor modified to:  1  to give grid-like visualization.
+Max field magnitude:  2.4340069914882068
+Min field magnitude:  0.593924223739023
+Original field has  11  X  11  X  11  points.
+Sparsified field has  11  X  11  X  11  points before filtering.
+field matches sample density, check passed, continuing...
+Sparsification factor modified to:  1  to give grid-like visualization.
+Max field magnitude:  2.9933841295431853
+Min field magnitude:  0.6657243918220693
+Original field has  11  X  11  X  11  points.
+Sparsified field has  11  X  11  X  11  points before filtering.
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+04:12:55 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+Traceback (most recent call last):
+  File "/jet/home/ajmera/.conda/envs/pycpet-env/bin/cpet.py", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/jet/home/ajmera/programs/pycpet/CPET/source/scripts/cpet.py", line 78, in main
+    raise FileNotFoundError(f"Options File {args.o} not found!")
+FileNotFoundError: Options File options/options.json not found!
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+04:14:46 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+04:14:47 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:14:47 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:14:47 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:14:47 DEBUG [CPET.utils.io] pos considered for center: [array([43.492, 31.142, 41.702], dtype=float32), array([44.566, 30.653, 41.775], dtype=float32)]
+04:14:47 INFO [CPET.source.calculator] No x specified, calculating in input file reference frame. Ignoring y...
+04:14:47 INFO [CPET.source.calculator] Not computing y since x is not specified
+04:14:47 INFO [CPET.utils.io] Filtering by attributes: ['resid', 'resnum']
+04:14:47 INFO [CPET.utils.io] Filtering by an ordered intersection of filters
+04:14:47 DEBUG [CPET.utils.io] Length before filtering: 11466, 11466, 11466
+04:14:47 INFO [CPET.utils.io] Number of atoms filtered out: 22
+04:14:47 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:14:47 DEBUG [CPET.source.calculator] r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:14:47 DEBUG [CPET.source.calculator] New r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:14:47 INFO [CPET.source.calculator] Not rotating coordinates since no y-vector is provided
+04:14:47 INFO [CPET.source.calculator] Center: [44.029    30.8975   41.738503]
+04:14:47 INFO [CPET.source.CPET] protein file: 1_alcdehydro_run1
+04:14:47 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:14:47 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:14:47 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:14:47 DEBUG [CPET.utils.io] pos considered for center: [array([43.645, 30.592, 41.999], dtype=float32), array([44.682, 29.973, 42.155], dtype=float32)]
+04:14:47 INFO [CPET.source.calculator] No x specified, calculating in input file reference frame. Ignoring y...
+04:14:47 INFO [CPET.source.calculator] Not computing y since x is not specified
+04:14:47 INFO [CPET.utils.io] Filtering by attributes: ['resid', 'resnum']
+04:14:47 INFO [CPET.utils.io] Filtering by an ordered intersection of filters
+04:14:47 DEBUG [CPET.utils.io] Length before filtering: 11466, 11466, 11466
+04:14:47 INFO [CPET.utils.io] Number of atoms filtered out: 22
+04:14:47 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:14:47 DEBUG [CPET.source.calculator] r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:14:47 DEBUG [CPET.source.calculator] New r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:14:47 INFO [CPET.source.calculator] Not rotating coordinates since no y-vector is provided
+04:14:47 INFO [CPET.source.calculator] Center: [44.163498 30.2825   42.077   ]
+04:14:47 INFO [CPET.source.CPET] protein file: 2_alcdehydro_run1
+Instantiating CPET, method: point_field
+(11444, 3)
+(11444, 1)
+(11444,)
+(11444,)
+radius filter leaves: 7890
+[ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+... > Initialized Calculator!
+... > Computing Point Field (Vector)!
+Number of charges: 7890
+point: [44.029    30.8975   41.738503]
+x shape: (7890, 3)
+Q shape: (7890, 1)
+First few lines of x: [[-10.156998   9.716499 -31.765503]
+ [-10.960999   9.6605   -32.374504]
+ [ -9.661999  10.495502 -32.173504]
+ [ -9.583      8.886501 -31.802502]
+ [-10.556999  10.003502 -30.355503]]
+0.0002410411834716797
+(11444, 3)
+(11444, 1)
+(11444,)
+(11444,)
+radius filter leaves: 7894
+[ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+... > Initialized Calculator!
+... > Computing Point Field (Vector)!
+Number of charges: 7894
+point: [44.163498 30.2825   42.077   ]
+x shape: (7894, 3)
+Q shape: (7894, 1)
+First few lines of x: [[ -7.8774986  11.7955    -31.932999 ]
+ [ -7.5634995  12.685499  -32.291    ]
+ [ -7.1084976  11.1425    -31.881    ]
+ [ -8.553497   11.4135    -32.579    ]
+ [ -8.526497   11.964502  -30.612999 ]]
+0.0001316070556640625
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+04:14:59 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+04:14:59 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:14:59 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:14:59 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:14:59 DEBUG [CPET.utils.io] pos considered for center: [array([43.492, 31.142, 41.702], dtype=float32), array([44.566, 30.653, 41.775], dtype=float32)]
+04:14:59 DEBUG [CPET.utils.io] [{'O9': 378}]
+04:14:59 INFO [CPET.utils.io] centering atoms for x: [('O9', 378)]
+04:14:59 DEBUG [CPET.utils.io] pos considered for x: [array([44.566, 30.653, 41.775], dtype=float32)]
+04:14:59 DEBUG [CPET.utils.io] [{'N8': 378}]
+04:14:59 INFO [CPET.utils.io] centering atoms for y: [('N8', 378)]
+04:14:59 DEBUG [CPET.utils.io] pos considered for y: [array([42.334, 30.684, 42.232], dtype=float32)]
+04:14:59 INFO [CPET.utils.io] Filtering by attributes: ['resid', 'resnum']
+04:14:59 INFO [CPET.utils.io] Filtering by an ordered intersection of filters
+04:14:59 DEBUG [CPET.utils.io] Length before filtering: 11466, 11466, 11466
+04:14:59 INFO [CPET.utils.io] Number of atoms filtered out: 22
+04:14:59 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:14:59 DEBUG [CPET.source.calculator] r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:14:59 DEBUG [CPET.source.calculator] New r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:14:59 DEBUG [CPET.utils.calculator] Original grid shape: [0, 0, 0]
+04:14:59 DEBUG [CPET.utils.calculator] Final grid shape: (0, 0, 0, 3)
+04:14:59 INFO [CPET.source.calculator] Rotating coordinates
+04:14:59 INFO [CPET.source.calculator] Center: [44.029    30.8975   41.738503]
+04:14:59 INFO [CPET.source.calculator] x vector point: [44.566 30.653 41.775]
+04:14:59 INFO [CPET.source.calculator] y vector point: [42.334 30.684 42.232]
+04:14:59 INFO [CPET.source.CPET] protein file: 1_alcdehydro_run1
+04:14:59 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:14:59 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:14:59 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:14:59 DEBUG [CPET.utils.io] pos considered for center: [array([43.645, 30.592, 41.999], dtype=float32), array([44.682, 29.973, 42.155], dtype=float32)]
+04:14:59 DEBUG [CPET.utils.io] [{'O9': 378}]
+04:14:59 INFO [CPET.utils.io] centering atoms for x: [('O9', 378)]
+04:14:59 DEBUG [CPET.utils.io] pos considered for x: [array([44.682, 29.973, 42.155], dtype=float32)]
+04:14:59 DEBUG [CPET.utils.io] [{'N8': 378}]
+04:14:59 INFO [CPET.utils.io] centering atoms for y: [('N8', 378)]
+04:14:59 DEBUG [CPET.utils.io] pos considered for y: [array([42.562, 30.483, 42.848], dtype=float32)]
+04:14:59 INFO [CPET.utils.io] Filtering by attributes: ['resid', 'resnum']
+04:14:59 INFO [CPET.utils.io] Filtering by an ordered intersection of filters
+04:14:59 DEBUG [CPET.utils.io] Length before filtering: 11466, 11466, 11466
+04:14:59 INFO [CPET.utils.io] Number of atoms filtered out: 22
+04:14:59 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:14:59 DEBUG [CPET.source.calculator] r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:14:59 DEBUG [CPET.source.calculator] New r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:14:59 DEBUG [CPET.utils.calculator] Original grid shape: [0, 0, 0]
+04:14:59 DEBUG [CPET.utils.calculator] Final grid shape: (0, 0, 0, 3)
+04:14:59 INFO [CPET.source.calculator] Rotating coordinates
+04:14:59 INFO [CPET.source.calculator] Center: [44.163498 30.2825   42.077   ]
+04:14:59 INFO [CPET.source.calculator] x vector point: [44.682 29.973 42.155]
+04:14:59 INFO [CPET.source.calculator] y vector point: [42.562 30.483 42.848]
+04:14:59 INFO [CPET.source.CPET] protein file: 2_alcdehydro_run1
+Instantiating CPET, method: point_field
+(11444, 3)
+(11444, 1)
+(11444,)
+(11444,)
+radius filter leaves: 7890
+[ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+Initializing box points uniformly...
+... > Initialized Calculator!
+... > Computing Point Field (Vector)!
+Number of charges: 7890
+point: [44.029    30.8975   41.738503]
+x shape: (7890, 3)
+Q shape: (7890, 1)
+First few lines of x: [[-15.206111  -20.70864    23.37838  ]
+ [-15.950881  -20.693731   24.060678 ]
+ [-15.103842  -21.701342   23.228645 ]
+ [-14.3437195 -20.323849   23.736088 ]
+ [-15.601106  -20.005947   22.121132 ]]
+0.0002605915069580078
+(11444, 3)
+(11444, 1)
+(11444,)
+(11444,)
+radius filter leaves: 7894
+[ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+Initializing box points uniformly...
+... > Initialized Calculator!
+... > Computing Point Field (Vector)!
+Number of charges: 7894
+point: [44.163498 30.2825   42.077   ]
+x shape: (7894, 3)
+Q shape: (7894, 1)
+First few lines of x: [[-16.79507  -28.256788  11.848408]
+ [-17.025942 -29.050837  11.269577]
+ [-15.801604 -28.225895  12.028816]
+ [-17.259317 -28.366577  12.738708]
+ [-17.264555 -27.00057   11.220984]]
+0.00013184547424316406
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+04:15:11 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+04:15:11 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:15:11 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:15:11 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:15:11 DEBUG [CPET.utils.io] pos considered for center: [array([43.645, 30.592, 41.999], dtype=float32), array([44.682, 29.973, 42.155], dtype=float32)]
+04:15:11 DEBUG [CPET.utils.io] [{'O9': 378}]
+04:15:11 INFO [CPET.utils.io] centering atoms for x: [('O9', 378)]
+04:15:11 DEBUG [CPET.utils.io] pos considered for x: [array([44.682, 29.973, 42.155], dtype=float32)]
+04:15:11 DEBUG [CPET.utils.io] [{'N8': 378}]
+04:15:11 INFO [CPET.utils.io] centering atoms for y: [('N8', 378)]
+04:15:11 DEBUG [CPET.utils.io] pos considered for y: [array([42.562, 30.483, 42.848], dtype=float32)]
+04:15:11 INFO [CPET.utils.io] Filtering by attributes: ['resid', 'resnum']
+04:15:11 INFO [CPET.utils.io] Filtering by an ordered intersection of filters
+04:15:11 DEBUG [CPET.utils.io] Length before filtering: 11466, 11466, 11466
+04:15:11 INFO [CPET.utils.io] Number of atoms filtered out: 22
+04:15:11 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:15:11 DEBUG [CPET.source.calculator] r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:15:11 DEBUG [CPET.source.calculator] New r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:15:11 DEBUG [CPET.utils.calculator] Original grid shape: [10, 10, 10]
+04:15:11 DEBUG [CPET.utils.calculator] Final grid shape: (11, 11, 11, 3)
+04:15:11 INFO [CPET.source.calculator] Rotating coordinates
+04:15:11 INFO [CPET.source.calculator] Center: [44.163498 30.2825   42.077   ]
+04:15:11 INFO [CPET.source.calculator] x vector point: [44.682 29.973 42.155]
+04:15:11 INFO [CPET.source.calculator] y vector point: [42.562 30.483 42.848]
+04:15:11 INFO [CPET.source.CPET] protein file: 2_alcdehydro_run1
+04:15:11 DEBUG [CPET.source.CPET] Files done: ['2_alcdehydro_run1_efield.dat', '1_alcdehydro_run1_efield.dat']
+04:15:11 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:15:11 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:15:11 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:15:11 DEBUG [CPET.utils.io] pos considered for center: [array([43.492, 31.142, 41.702], dtype=float32), array([44.566, 30.653, 41.775], dtype=float32)]
+04:15:11 DEBUG [CPET.utils.io] [{'O9': 378}]
+04:15:11 INFO [CPET.utils.io] centering atoms for x: [('O9', 378)]
+04:15:11 DEBUG [CPET.utils.io] pos considered for x: [array([44.566, 30.653, 41.775], dtype=float32)]
+04:15:11 DEBUG [CPET.utils.io] [{'N8': 378}]
+04:15:11 INFO [CPET.utils.io] centering atoms for y: [('N8', 378)]
+04:15:11 DEBUG [CPET.utils.io] pos considered for y: [array([42.334, 30.684, 42.232], dtype=float32)]
+04:15:11 INFO [CPET.utils.io] Filtering by attributes: ['resid', 'resnum']
+04:15:11 INFO [CPET.utils.io] Filtering by an ordered intersection of filters
+04:15:11 DEBUG [CPET.utils.io] Length before filtering: 11466, 11466, 11466
+04:15:11 INFO [CPET.utils.io] Number of atoms filtered out: 22
+04:15:11 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:15:11 DEBUG [CPET.source.calculator] r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:15:11 DEBUG [CPET.source.calculator] New r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:15:11 DEBUG [CPET.utils.calculator] Original grid shape: [10, 10, 10]
+04:15:11 DEBUG [CPET.utils.calculator] Final grid shape: (11, 11, 11, 3)
+04:15:11 INFO [CPET.source.calculator] Rotating coordinates
+04:15:11 INFO [CPET.source.calculator] Center: [44.029    30.8975   41.738503]
+04:15:11 INFO [CPET.source.calculator] x vector point: [44.566 30.653 41.775]
+04:15:11 INFO [CPET.source.calculator] y vector point: [42.334 30.684 42.232]
+04:15:11 INFO [CPET.source.CPET] protein file: 1_alcdehydro_run1
+04:15:11 DEBUG [CPET.source.CPET] Files done: ['2_alcdehydro_run1_efield.dat', '1_alcdehydro_run1_efield.dat']
+Instantiating CPET, method: volume
+(11444, 3)
+(11444, 1)
+(11444,)
+(11444,)
+radius filter leaves: 7894
+[ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+Initializing box points uniformly...
+... > Initialized Calculator!
+(11444, 3)
+(11444, 1)
+(11444,)
+(11444,)
+radius filter leaves: 7890
+[ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+Initializing box points uniformly...
+... > Initialized Calculator!
+No more files to process!
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+04:15:21 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+Instantiating CPET, method: visualize_field
+... > Visualizing the electric field or electrostatic potential for use in Chimera/ChimeraX
+field matches sample density, check passed, continuing...
+Sparsification factor modified to:  1  to give grid-like visualization.
+Max field magnitude:  2.4340069914882068
+Min field magnitude:  0.593924223739023
+Original field has  11  X  11  X  11  points.
+Sparsified field has  11  X  11  X  11  points before filtering.
+field matches sample density, check passed, continuing...
+Sparsification factor modified to:  1  to give grid-like visualization.
+Max field magnitude:  2.9933841295431853
+Min field magnitude:  0.6657243918220693
+Original field has  11  X  11  X  11  points.
+Sparsified field has  11  X  11  X  11  points before filtering.
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+04:15:32 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+04:15:32 INFO [CPET.source.CPET] Protein file: 2_alcdehydro_run1
+04:15:32 INFO [CPET.source.CPET] Already done for protein: 2_alcdehydro_run1, skipping...
+04:15:32 INFO [CPET.source.CPET] Protein file: 1_alcdehydro_run1
+04:15:32 INFO [CPET.source.CPET] Already done for protein: 1_alcdehydro_run1, skipping...
+Instantiating CPET, method: topo
+No more files to process!
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+04:15:43 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+Instantiating CPET, method: topo-benchmark
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+04:15:52 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+04:15:52 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:15:52 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:15:52 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:15:52 DEBUG [CPET.utils.io] pos considered for center: [array([43.492, 31.142, 41.702], dtype=float32), array([44.566, 30.653, 41.775], dtype=float32)]
+04:15:52 INFO [CPET.source.calculator] No x specified, calculating in input file reference frame. Ignoring y...
+04:15:52 INFO [CPET.source.calculator] Not computing y since x is not specified
+04:15:52 INFO [CPET.source.calculator] No atom spec filtering specified, using all atoms
+04:15:52 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:15:52 DEBUG [CPET.source.calculator] r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:15:52 DEBUG [CPET.source.calculator] New r [ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+04:15:52 INFO [CPET.source.calculator] Not rotating coordinates since no y-vector is provided
+04:15:52 INFO [CPET.source.calculator] Center: [44.029    30.8975   41.738503]
+04:15:52 INFO [CPET.source.CPET] protein file: 1_alcdehydro_run1
+04:15:52 DEBUG [CPET.source.calculator] ['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+04:15:52 DEBUG [CPET.utils.io] [{'C7': 378}, {'O9': 378}]
+04:15:52 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+04:15:52 DEBUG [CPET.utils.io] pos considered for center: [array([43.645, 30.592, 41.999], dtype=float32), array([44.682, 29.973, 42.155], dtype=float32)]
+04:15:52 INFO [CPET.source.calculator] No x specified, calculating in input file reference frame. Ignoring y...
+04:15:52 INFO [CPET.source.calculator] Not computing y since x is not specified
+04:15:52 INFO [CPET.source.calculator] No atom spec filtering specified, using all atoms
+04:15:52 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+04:15:52 DEBUG [CPET.source.calculator] r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:15:52 DEBUG [CPET.source.calculator] New r [ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+04:15:52 INFO [CPET.source.calculator] Not rotating coordinates since no y-vector is provided
+04:15:52 INFO [CPET.source.calculator] Center: [44.163498 30.2825   42.077   ]
+04:15:52 INFO [CPET.source.CPET] protein file: 2_alcdehydro_run1
+Instantiating CPET, method: point_field
+(11466, 3)
+(11466, 1)
+(11466,)
+(11466,)
+radius filter leaves: 7912
+[ 53.817005  53.161343  54.643944 ... 100.410416 101.80576  101.445946]
+... > Initialized Calculator!
+... > Computing Point Field (Vector)!
+Number of charges: 7912
+point: [44.029    30.8975   41.738503]
+x shape: (7912, 3)
+Q shape: (7912, 1)
+First few lines of x: [[-10.156998   9.716499 -31.765503]
+ [-10.960999   9.6605   -32.374504]
+ [ -9.661999  10.495502 -32.173504]
+ [ -9.583      8.886501 -31.802502]
+ [-10.556999  10.003502 -30.355503]]
+0.0005068778991699219
+(11466, 3)
+(11466, 1)
+(11466,)
+(11466,)
+radius filter leaves: 7916
+[ 56.481255  57.28503   56.507187 ... 100.33159  101.27223  101.04202 ]
+... > Initialized Calculator!
+... > Computing Point Field (Vector)!
+Number of charges: 7916
+point: [44.163498 30.2825   42.077   ]
+x shape: (7916, 3)
+Q shape: (7916, 1)
+First few lines of x: [[ -7.8774986  11.7955    -31.932999 ]
+ [ -7.5634995  12.685499  -32.291    ]
+ [ -7.1084976  11.1425    -31.881    ]
+ [ -8.553497   11.4135    -32.579    ]
+ [ -8.526497   11.964502  -30.612999 ]]
+0.00019550323486328125

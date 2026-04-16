@@ -1,0 +1,33 @@
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+10:12:22 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+Instantiating CPET, method: visualize_field
+... > Visualizing the electric field or electrostatic potential for use in Chimera/ChimeraX
+field matches sample density, check passed, continuing...
+Sparsification factor modified to:  1  to give grid-like visualization.
+Max field magnitude:  2.4340069914882068
+Min field magnitude:  0.593924223739023
+Original field has  11  X  11  X  11  points.
+Sparsified field has  11  X  11  X  11  points before filtering.
+field matches sample density, check passed, continuing...
+Sparsification factor modified to:  1  to give grid-like visualization.
+Max field magnitude:  2.9933841295431853
+Min field magnitude:  0.6657243918220693
+Original field has  11  X  11  X  11  points.
+Sparsified field has  11  X  11  X  11  points before filtering.

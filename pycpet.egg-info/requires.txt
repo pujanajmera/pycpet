@@ -1,0 +1,12 @@
+torch
+numba
+numpy<2
+pandas
+scikit-learn
+kneed
+tensorly
+matplotlib
+tqdm
+seaborn
+scikit-learn-extra
+psutil
