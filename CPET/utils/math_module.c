@@ -332,6 +332,7 @@ void calc_field_base(float E[3], float x_init[3], int n_charges, float x[n_charg
     }
 }
 
+
 void calc_field_base_dipole(float E[3], float x_init[3], int n_dipoles, float x[n_dipoles][3], float mu[n_dipoles][3]){
     // calculate the field for dipoles
 
@@ -370,6 +371,56 @@ void calc_field_base_dipole(float E[3], float x_init[3], int n_dipoles, float x[
     }
 }
 
+
+void calc_field_base_amoeba(float E[3], float x_init[3], int n_charges, float x[n_charges][3], float Q[n_charges], float mu[n_charges][3], float t[n_charges][6]){
+    // calculate the field for amoeba force field from quadrupoles, dipoles, and charges
+
+    // subtract x_init from x
+    float R[3];
+    float r_norm;
+    float r_norm_inv;
+    float r_mag_sq;
+    float r_mag_third;
+    float r_mag_fifth;
+    float mu_dot_r;
+    float t_dot_r[3];
+    float r_dot_t_dot_r_divided_by_r_mag_sq;
+
+    float factor = 14.3996451;
+    float E_temp[n_charges][3];
+
+    // # pragma omp parallel for (Keeping in outer loop only!)
+    for (int i = 0; i < n_charges; i++)
+    {
+        //get difference of x and x_init
+        R[0] = x_init[0] - x[i][0];
+        R[1] = x_init[1] - x[i][1];
+        R[2] = x_init[2] - x[i][2];
+
+        r_mag_sq = R[0]*R[0] + R[1]*R[1] + R[2]*R[2];
+        r_norm = sqrtf(r_mag_sq);
+        r_norm_inv = 1.0f / r_norm;
+        r_mag_third = r_norm_inv * r_norm_inv * r_norm_inv;
+        r_mag_fifth = r_mag_third * r_norm_inv * r_norm_inv;
+
+        mu_dot_r = mu[i][0] * R[0] + mu[i][1] * R[1] + mu[i][2] * R[2];
+        t_dot_r[0] = t[i][0] * R[0] + t[i][1] * R[1] + t[i][2] * R[2];
+        t_dot_r[1] = t[i][1] * R[0] + t[i][3] * R[1] + t[i][4] * R[2];
+        t_dot_r[2] = t[i][2] * R[0] + t[i][4] * R[1] + t[i][5] * R[2];
+        r_dot_t_dot_r_divided_by_r_mag_sq = (R[0] * t_dot_r[0] + R[1] * t_dot_r[1] + R[2] * t_dot_r[2]) / r_mag_sq;
+
+        E_temp[i][0] = factor * (r_mag_third * Q[i] * R[0] + r_mag_fifth * ((3 * mu_dot_r + 5 * r_dot_t_dot_r_divided_by_r_mag_sq) * R[0] - r_mag_sq * mu[i][0] - 2 * t_dot_r[0]));
+        E_temp[i][1] = factor * (r_mag_third * Q[i] * R[1] + r_mag_fifth * ((3 * mu_dot_r + 5 * r_dot_t_dot_r_divided_by_r_mag_sq) * R[1] - r_mag_sq * mu[i][1] - 2 * t_dot_r[1]));
+        E_temp[i][2] = factor * (r_mag_third * Q[i] * R[2] + r_mag_fifth * ((3 * mu_dot_r + 5 * r_dot_t_dot_r_divided_by_r_mag_sq) * R[2] - r_mag_sq * mu[i][2] - 2 * t_dot_r[2]));
+    }
+    for (int i = 0; i < n_charges; i++)
+    {
+        E[0] += E_temp[i][0];
+        E[1] += E_temp[i][1];
+        E[2] += E_temp[i][2];
+    }
+}
+
 // Compute electric field by giving batches of 100
 void compute_batched_field(int total_points, int batch_size, int n_charges, float x_0[total_points][3], float x[n_charges][3], float Q[n_charges], float E[total_points][3]) {
     for(int start = 0; start < total_points; start += batch_size) {
@@ -401,6 +452,7 @@ void compute_batched_field(int total_points, int batch_size, int n_charges, floa
         free(E_batch);
     }
 }
+
 
 void compute_looped_field(int total_points, int n_charges, float x_0[total_points][3], float x[n_charges][3], float Q[n_charges], float E[total_points][3]) {
     
@@ -449,6 +501,23 @@ void compute_looped_field(int total_points, int n_charges, float x_0[total_point
         E[start][2] = E_temp[2];
     }
 }
+
+
+void compute_looped_field_amoeba(int total_points, int n_charges, float x_0[total_points][3], float x[n_charges][3], float Q[n_charges], float mu[n_charges][3], float t[n_charges][6], float E[total_points][3]) {
+    // calculate the field for amoeba force field from quadrupoles, dipoles, and charges
+
+    #pragma omp parallel for
+    for (int start = 0; start < total_points; start++) {
+
+        // Use pre-written amoeba function to get the field for each point
+        float E_amoeba[3] = {0.0f, 0.0f, 0.0f};
+        calc_field_base_amoeba(E_amoeba, x_0[start], n_charges, x, Q, mu, t);
+        E[start][0] = E_amoeba[0];
+        E[start][1] = E_amoeba[1];
+        E[start][2] = E_amoeba[2];
+    }
+}
+
 
 void calc_esp_base(float ESP[1], float x_init[3], int n_charges, float x[n_charges][3], float Q[n_charges]){
     // calculate the electrostatic potential
@@ -589,6 +658,7 @@ void thread_operation(int n_charges, int n_iter, float step_size, float x_0[3], 
     ret[1] = curve_mean;
 
 }
+
 
 void thread_operation_dipole(int n_dipoles, int n_iter, float step_size, float x_0[3], float dimensions[3], float x[n_dipoles][3], float mu[n_dipoles][3], float ret[2]){
     bool bool_inside = true;

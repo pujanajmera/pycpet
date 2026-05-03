@@ -440,6 +440,27 @@ def compute_field_on_grid(grid_coords, x, Q):
     return field_concat
 
 
+def compute_field_on_grid_amoeba(grid_coords, x, Q, mu, t):
+    """
+    Computes electric field at each point in a meshgrid given positions of charges and polarizability.
+
+    Takes:
+        grid_coords(array): Meshgrid of points with shape (M, M, M, 3) where M is the number of points along each dimension.
+        x(array): Positions of charges of shape (N, 3).
+        Q(array): Magnitude and sign of charges of shape (N, 1).
+        mu(array): Dipole moments of shape (N, 3).
+        t(array): Quadrupole tensor (symmetric and traceless) of shape (N, 6).
+    Returns:
+        E(array): Electric field at each point in the meshgrid of shape (M, M, M, 3).
+    """
+    # Reshape meshgrid to a 2D array of shape (M*M*M, 3)
+    x_0 = grid_coords.reshape(-1, 3)
+
+    # Compute the field using loop c-shared library
+    E = Math.compute_looped_field_amoeba(x_0, x, Q, mu, t)
+    field_concat = np.concatenate((x_0, E), axis=1)
+    return field_concat
+
 def compute_ESP_on_grid(grid_coords, x, Q):
     """
     Computes electrostatic potential at each point in a meshgrid given positions of charges.

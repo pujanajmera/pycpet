@@ -37,7 +37,7 @@ def rotate_dipoles_quadrupoles(r,d,t):
         t: rotated quadrupole moments
     """
     d = np.einsum('nij,nj->ni', r, d)
-    t = np.einsum('nij,njk->nik', r, t)
+    t = np.einsum('nik,nkl,njl->nij', r, t, r)
 
     return d, t
 
