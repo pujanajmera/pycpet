@@ -1,0 +1,6 @@
+{
+        "CPET_method": "visualize_field",
+        "inputpath": ".",
+        "outputpath": ".",
+        "_comment": "WARNING: keeping filter_res_radius will overwrite filter_radius and filter_resname"
+}

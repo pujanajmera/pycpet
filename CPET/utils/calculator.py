@@ -456,6 +456,8 @@ def compute_field_on_grid_amoeba(grid_coords, x, Q, mu, t):
     # Reshape meshgrid to a 2D array of shape (M*M*M, 3)
     x_0 = grid_coords.reshape(-1, 3)
 
+    print(x_0.shape, x.shape, Q.shape, mu.shape, t.shape)
+
     # Compute the field using loop c-shared library
     E = Math.compute_looped_field_amoeba(x_0, x, Q, mu, t)
     field_concat = np.concatenate((x_0, E), axis=1)

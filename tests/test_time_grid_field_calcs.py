@@ -4,6 +4,7 @@ import warnings
 import time
 import matplotlib.pyplot as plt
 import json
+import importlib.util
 
 warnings.filterwarnings(action="ignore")
 import torch
@@ -20,7 +21,7 @@ from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
 from CPET.utils.c_ops import Math_ops
 
 spec = importlib.util.find_spec("CPET.utils.math_module")
-if spec if None or spec.origin is None:
+if spec is None or spec.origin is None:
     raise ImportError(
         "Could not find the c-shared library 'math_module'. Please ensure it is installed correctly."
     )
@@ -76,7 +77,10 @@ def test_specific_field_grid_loop(x_0, x, Q, field_func):
     """
     start = time.time()
     total_field = np.zeros_like(x_0)
+    print(total_field.shape)
     for i in range(len(x_0)):
+        temp = field_func(x_0[i], x, Q)
+        print(temp.shape)
         total_field[i] = field_func(x_0[i], x, Q)
     end = time.time()
     dt = end - start
@@ -105,7 +109,8 @@ def main():
 
     plot = True
 
-    radius_filter_dict = {"tiny": 12, "small": 30, "medium": None, "large": None}
+    # radius_filter_dict = {"tiny": 12, "small": 30, "medium": None, "large": None}
+    radius_filter_dict = {"medium": None, "large": None}
 
     results = []
     function_list_single = [
@@ -114,7 +119,7 @@ def main():
         # calculate_field_at_point,
     ]
     function_list_grid = [
-        calculate_electric_field_torch_batch_gpu,
+        # calculate_electric_field_torch_batch_gpu,
         loop_field_simult_c_shared_full,
         grid_field_simult_c_shared_full,
     ]
@@ -122,8 +127,8 @@ def main():
     function_list = function_list_single + function_list_grid
 
     for i in [
-        "tiny",
-        "small",
+        #"tiny",
+        #"small",
         "medium",
     ]:  # Skipping large for now, not benchmarking on systems this large
         "Running tests for {} system".format(i)

@@ -463,6 +463,7 @@ void compute_looped_field(int total_points, int n_charges, float x_0[total_point
 
     float factor = 14.3996451;
     
+    #pragma omp parallel for
     for (int start = 0; start < total_points; start++) {
         
         float E_temp[3] = {0.0f, 0.0f, 0.0f};
