@@ -245,7 +245,11 @@ def tinker_energy_eval(parameter_path, coordinate_path, analyze_tinker_outfile):
 def main():
     parser = argparse.ArgumentParser(description="Calculate electric field on an oriented grid from a AMOEBA force field")
     parser.add_argument("-o", "--options", type=json.loads, help="Options for CPET", default=json.load(open("./options/options.json")))
-    parser.add_argument("-n", "--name", type=str, help="Name for input and output files. Note that prm, xyz, uind, pdb must all have the same prefix, and the same prefix will be used for all TINKER and field outputs", default="test", required=True)
+    parser.add_argument("--xyz", type=str, help="Path to the .xyz coordinate file", required=True)
+    parser.add_argument("--prm", type=str, help="Path to the .prm parameter file", required=True)
+    parser.add_argument("--uind", type=str, help="Path to the .uind induced dipole file", required=True)
+    parser.add_argument("--pdb", type=str, help="Path to the .pdb file used for parsing and zeroing point charges", required=True)
+    parser.add_argument("--output", type=str, help="Path to save the output field data", required=True)
     args = parser.parse_args()
 
     """
@@ -255,11 +259,11 @@ def main():
     options = args.o
     inputpath = options["inputpath"]
     outputpath = options["outputpath"]
-    parameter_path = f"{inputpath}/{name}.prm" #Includes permanent charges, dipoles, and quadrupoles
+    parameter_path = args.prm #Includes permanent charges, dipoles, and quadrupoles
     analyze_tinker_outfile = f"{outputpath}/{name}.out" #From energy evaluation in TINKER
-    coordinate_path = f"{inputpath}/{name}.xyz" #Includes connectivity information
-    induced_dipole_path = f"{inputpath}/{name}.uind" #Includes induced dipoles
-    path_to_pdb = f"{inputpath}/{name}.pdb" #Used for parsing and zeroing point charges as well as defining local molecule reference frame, but not for coordinates/charge/dipole/quadrupole values
+    coordinate_path = args.xyz #Includes connectivity information
+    induced_dipole_path = args.uind #Includes induced dipoles
+    path_to_pdb = args.pdb #Used for parsing and zeroing point charges as well as defining local molecule reference frame, but not for coordinates/charge/dipole/quadrupole values
     field_output_path = os.path.join(options["outputpath"], coordinate_path.split("/")[-1].split(".")[0] + "_field.dat")
 
     """
