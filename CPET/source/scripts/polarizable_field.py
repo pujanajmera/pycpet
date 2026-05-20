@@ -40,11 +40,13 @@ def parse_coordinates(coordinate_filepath, analyze_tinker_outfile, induced_dipol
         lines = f.readlines()
     for line in lines:
         values = line.split()
-        if len(values) < 4: #Expecting at least index, element, x, y, z
+        print(values)
+        try:
+            float(values[2])
+            x.append([float(values[2]), float(values[3]), float(values[4])])
+        except:
             continue
-        x.append([float(values[2]), float(values[3]), float(values[4])])
     x = np.array(x)
-
     # Next, parse TINKER output for charges, dipoles, and multipoles
     q = [] #parameter file
     d = [] #parameter file
@@ -60,7 +62,6 @@ def parse_coordinates(coordinate_filepath, analyze_tinker_outfile, induced_dipol
 
     In first row, 3 or 4 indices may be present after the atom number
     """
-    parms = {}
     read_index = 0
     start_reading = False
     temp_quad = []
@@ -72,7 +73,9 @@ def parse_coordinates(coordinate_filepath, analyze_tinker_outfile, induced_dipol
             start_reading = True
             print("Found line! Continuing to read")
             continue
-        if "Atom   Z-Axis X-Axis Y-Axis  Frame           Multipole Moments" in line:
+        if len(line.strip())==0:# Line is empty
+            continue
+        if "Multipole Moments" in line:
             continue
         if start_reading:
             if "Dipole Polarizability Parameters" in line: #Stop reading when reached the next section
@@ -102,9 +105,16 @@ def parse_coordinates(coordinate_filepath, analyze_tinker_outfile, induced_dipol
                 temp_quad = []
                 read_index = 0
             
-    q = np.array(q)
-    d = np.array(d)
-    t = np.array(t)
+    q = np.array(q) #e
+    d = np.array(d) #e * bohr
+    t = np.array(t) #e * bohr^2
+    
+    BOHR_TO_ANG = 0.52917721067121
+
+    d = d * BOHR_TO_ANG
+    t = t * BOHR_TO_ANG**2
+
+
     if q.shape[0] == 0 or d.shape[0] == 0 or t.shape[0] == 0 or x.shape[0] == 0:
         raise ValueError("Failed to parse coordinates, charges, dipoles, or quadrupoles (lengths: {}, {}, {}, {}). Please check the formatting of the input files.".format(x.shape[0], q.shape[0], d.shape[0], t.shape[0]))
 
@@ -129,15 +139,16 @@ def parse_coordinates(coordinate_filepath, analyze_tinker_outfile, induced_dipol
             ind_dips.append(ind_dip)
         except:
             raise ValueError(f"Error parsing induced dipole values in line: {lines[i]}")
-    ind_dips = np.array(ind_dips, dtype=np.float32)
+    ind_dips = np.array(ind_dips, dtype=np.float64)
     if ind_dips.shape[0] != d.shape[0]:
         raise ValueError(f"Number of induced dipoles ({ind_dips.shape[0]}) does not match number of dipole entries from parameter file ({d.shape[0]})")
     if not (x.shape[0] == q.shape[0] == d.shape[0] == t.shape[0]):
         raise ValueError(f"Number of atoms in coordinate file ({x.shape[0]}) does not match number of entries in parameter file ({q.shape[0]}, {d.shape[0]}, {t.shape[0]})")
 
-    d += ind_dips
-
-    return x, q, d, t
+    DEBYE_TO_ATOMIC = 0.3934303
+    ind_dips = ind_dips * DEBYE_TO_ATOMIC * BOHR_TO_ANG
+    
+    return x, q, d, t, ind_dips
 
 
 def parse_rotation_matrix(analyze_tinker_outfile, n_atoms):
@@ -230,25 +241,29 @@ def tinker_energy_eval(parameter_path, coordinate_path, analyze_tinker_outfile):
     return 0
 
 def main():
-    parameter_path = "./test.prm" #Includes permanent charges, dipoles, and quadrupoles
+    parameter_path = "./cyanide.prm" #Includes permanent charges, dipoles, and quadrupoles
     analyze_tinker_outfile = "./test.out" #From energy evaluation in TINKER
-    coordinate_path = "./test.xyz" #Includes connectivity information
-    induced_dipole_path = "./test.uind" #Includes induced dipoles
+    coordinate_path = "./cyanide.xyz" #Includes connectivity information
+    induced_dipole_path = "./cyanide.uind" #Includes induced dipoles
     field_output = "./output_efield.dat" #Output path for computed field on grid
 
-    tinker_energy_eval(parameter_path, coordinate_path, analyze_tinker_outfile)
-    x, q, d, t = parse_coordinates(coordinate_path, analyze_tinker_outfile, induced_dipole_path)
+    if not os.path.exists(analyze_tinker_outfile):
+        tinker_energy_eval(parameter_path, coordinate_path, analyze_tinker_outfile)
+    else:
+        print(f"TINKER output file {analyze_tinker_outfile} already exists. Skipping energy evaluation.")
+    x, q, d, t, ind_dips = parse_coordinates(coordinate_path, analyze_tinker_outfile, induced_dipole_path)
     print(x.shape, q.shape, d.shape, t.shape)
     print(x[:5], q[:5], d[:5], t[:5])
     r = parse_rotation_matrix(analyze_tinker_outfile, n_atoms=len(x))
     print(len(r))
     print(r[:5])
     d, t = rotate_dipoles_quadrupoles(r, d, t)
+    d += ind_dips
     print(d.shape, t.shape)
     print(d[:5], t[:5])
     # x, d, t = rotate_to_box_reference(x, d, t)
     N = 10 #Total test points in each dimension
-    x_0 = np.zeros((20, 20, 20, 3), dtype=np.float32)
+    x_0 = np.array([[1,0,0]], dtype=np.float32) #Test point at (1,0,0)
     # Flatten t so that each t only has Qxx Qxy Qxz Qyy Qyz Qzz (right now it has shape Nx3x3)
     t_flat = np.zeros((t.shape[0], 6), dtype=np.float32)
     t_flat[:, 0] = t[:, 0, 0] #Qxx
@@ -259,7 +274,7 @@ def main():
     t_flat[:, 5] = t[:, 2, 2] #Qzz
     print("T flattened")
     print(x_0.shape, x.shape, q.shape, d.shape, t_flat.shape)
-    override_points = True
+    override_points = False
     if override_points == True:
         #x_0 is a grid from -1 to 1 in each dimension with N points in each dimension
         x_0 = np.zeros((N**3, 3), dtype=np.float32)

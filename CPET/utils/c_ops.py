@@ -162,12 +162,12 @@ class Math_ops:
         self.math.compute_looped_field_amoeba.argtypes = [
             ctypes.c_int,  # total_points
             ctypes.c_int,  # n_charges
-            self.array_2d_float,  # x_0
-            self.array_2d_float,  # x
-            self.array_1d_float,  # Q
-            self.array_2d_float,  # mu
-            self.array_2d_float,  # t (flattened due to symmetry)
-            self.array_2d_float,  # E
+            self.array_2d_double,  # x_0
+            self.array_2d_double,  # x
+            self.array_1d_double,  # Q
+            self.array_2d_double,  # mu
+            self.array_2d_double,  # t (flattened due to symmetry)
+            self.array_2d_double,  # E
         ]
 
     def sparse_dot(self, A, B):
@@ -275,20 +275,18 @@ class Math_ops:
         return res
     
     def compute_looped_field_amoeba(self, x_0, x, Q, mu, t):
-        res = np.zeros_like(x_0, dtype="float32")
+        res = np.zeros_like(x_0, dtype="double")
         self.math.compute_looped_field_amoeba.restype = None
         Q = Q.reshape(-1)
-        # mu = mu.reshape(-1)
-        # t = t.reshape(-1)
         print(x_0.shape, x.shape, Q.shape, mu.shape, t.shape, res.shape)
         self.math.compute_looped_field_amoeba(
             int(x_0.shape[0]),
             len(Q),
-            np.array(x_0, dtype="float32"),
-            np.array(x, dtype="float32"),
-            np.array(Q, dtype="float32"),
-            np.array(mu, dtype="float32"),
-            np.array(t, dtype="float32"),
+            np.array(x_0, dtype="double"),
+            np.array(x, dtype="double"),
+            np.array(Q, dtype="double"),
+            np.array(mu, dtype="double"),
+            np.array(t, dtype="double"),
             res,
         )
 
