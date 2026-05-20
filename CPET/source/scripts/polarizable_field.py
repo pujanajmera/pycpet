@@ -9,6 +9,7 @@ import os
 import argparse
 import time
 import numpy as np
+import json
 
 """
 Section required for fortran binding imports, or consider just compiling fortran code with pip and then calling it directly
@@ -20,13 +21,14 @@ This script is for polarizable force field calculations of electric field.
 Current status: Base features built, file parsing not fully complete
 """
 
-def parse_coordinates(coordinate_filepath, analyze_tinker_outfile, induced_dipole_path):
+def parse_coordinates(coordinate_filepath, analyze_tinker_outfile, induced_dipole_path, filter_idxs=None):
     """
     Parses the coordinate and parameter files to extract the coordinates, charges, dipoles, and quadrupoles
     Takes:
         coordinate_filepath: Path to the coordinate file (includes connectivity information)
         analyze_tinker_outfile: Path to the TINKER analyze output file that contains permanent multipole info for each atom
         induced_dipole_path: Path to the induced dipole file (includes induced dipoles)
+        filter_idxs: List of atom indices to filter out, determined from pycpet filtering object
     Returns:
         x (np.ndarray): coordinates of the atoms of shape (N, 3)
         q (np.ndarray): charges of the atoms of shape (N,)
@@ -147,6 +149,12 @@ def parse_coordinates(coordinate_filepath, analyze_tinker_outfile, induced_dipol
 
     DEBYE_TO_ATOMIC = 0.3934303
     ind_dips = ind_dips * DEBYE_TO_ATOMIC * BOHR_TO_ANG
+
+    x = np.delete(x, filter_idxs, axis=0)
+    q = np.delete(q, filter_idxs, axis=0)
+    d = np.delete(d, filter_idxs, axis=0)
+    t = np.delete(t, filter_idxs, axis=0)
+    ind_dips = np.delete(ind_dips, filter_idxs, axis=0)
     
     return x, q, d, t, ind_dips
 
@@ -204,15 +212,8 @@ def rotate_to_box_reference(path_to_pdb, options, x, d, t):
         path_to_pdb: Path to the pdb file used for parsing and zeroing point charges
         options: PyCPET options file
     """
-
+    
     return x, d, t
-
-
-def save_field(field, output_path):
-    """
-    Saves the computed field to the output path
-    """
-    return 0
 
 
 def tinker_energy_eval(parameter_path, coordinate_path, analyze_tinker_outfile):
@@ -240,18 +241,46 @@ def tinker_energy_eval(parameter_path, coordinate_path, analyze_tinker_outfile):
     print(f"Finished TINKER energy evaluation. Output saved to {analyze_tinker_outfile}")
     return 0
 
-def main():
-    parameter_path = "./cyanide.prm" #Includes permanent charges, dipoles, and quadrupoles
-    analyze_tinker_outfile = "./test.out" #From energy evaluation in TINKER
-    coordinate_path = "./cyanide.xyz" #Includes connectivity information
-    induced_dipole_path = "./cyanide.uind" #Includes induced dipoles
-    field_output = "./output_efield.dat" #Output path for computed field on grid
 
+def main():
+    parser = argparse.ArgumentParser(description="Calculate electric field on an oriented grid from a AMOEBA force field")
+    parser.add_argument("-o", "--options", type=json.loads, help="Options for CPET", default=json.load(open("./options/options.json")))
+    parser.add_argument("-n", "--name", type=str, help="Name for input and output files. Note that prm, xyz, uind, pdb must all have the same prefix, and the same prefix will be used for all TINKER and field outputs", default="test", required=True)
+    args = parser.parse_args()
+
+    """
+    File input section
+    """
+    name = args.n
+    options = args.o
+    inputpath = options["inputpath"]
+    outputpath = options["outputpath"]
+    parameter_path = f"{inputpath}/{name}.prm" #Includes permanent charges, dipoles, and quadrupoles
+    analyze_tinker_outfile = f"{outputpath}/{name}.out" #From energy evaluation in TINKER
+    coordinate_path = f"{inputpath}/{name}.xyz" #Includes connectivity information
+    induced_dipole_path = f"{inputpath}/{name}.uind" #Includes induced dipoles
+    path_to_pdb = f"{inputpath}/{name}.pdb" #Used for parsing and zeroing point charges as well as defining local molecule reference frame, but not for coordinates/charge/dipole/quadrupole values
+    field_output_path = os.path.join(options["outputpath"], coordinate_path.split("/")[-1].split(".")[0] + "_field.dat")
+
+    """
+    Pycpet initialization section, need grid, box dimension info, x indices, and rotation vectors
+    """
+    calculator_object = calculator(options, path_to_pdb)
+    global2local_rotmat = calculator_object.transformation_matrix
+    local_mesh = calculator_object.mesh
+    dimensions = calculator_object.dimensions
+    step_size = calculator_object.step_size
+    center = calculator_object.center
+    filter_idxs = calculator_object.filter_idxs
+
+    """
+    Calculation section
+    """
     if not os.path.exists(analyze_tinker_outfile):
         tinker_energy_eval(parameter_path, coordinate_path, analyze_tinker_outfile)
     else:
         print(f"TINKER output file {analyze_tinker_outfile} already exists. Skipping energy evaluation.")
-    x, q, d, t, ind_dips = parse_coordinates(coordinate_path, analyze_tinker_outfile, induced_dipole_path)
+    x, q, d, t, ind_dips = parse_coordinates(coordinate_path, analyze_tinker_outfile, induced_dipole_path, filter_idxs)
     print(x.shape, q.shape, d.shape, t.shape)
     print(x[:5], q[:5], d[:5], t[:5])
     r = parse_rotation_matrix(analyze_tinker_outfile, n_atoms=len(x))
@@ -261,9 +290,8 @@ def main():
     d += ind_dips
     print(d.shape, t.shape)
     print(d[:5], t[:5])
-    # x, d, t = rotate_to_box_reference(x, d, t)
-    N = 10 #Total test points in each dimension
-    x_0 = np.array([[1,0,0]], dtype=np.float32) #Test point at (1,0,0)
+    x, d, t = rotate_to_box_reference(x, d, t)
+    
     # Flatten t so that each t only has Qxx Qxy Qxz Qyy Qyz Qzz (right now it has shape Nx3x3)
     t_flat = np.zeros((t.shape[0], 6), dtype=np.float32)
     t_flat[:, 0] = t[:, 0, 0] #Qxx
@@ -273,10 +301,11 @@ def main():
     t_flat[:, 4] = t[:, 1, 2] #Qyz
     t_flat[:, 5] = t[:, 2, 2] #Qzz
     print("T flattened")
-    print(x_0.shape, x.shape, q.shape, d.shape, t_flat.shape)
-    override_points = False
+    print(local_mesh.shape, x.shape, q.shape, d.shape, t_flat.shape)
+    override_points = False # ALWAYS LEAVE AS FALSE UNLESS YOU ARE RUNNING SPECIAL TESTS
     if override_points == True:
         #x_0 is a grid from -1 to 1 in each dimension with N points in each dimension
+        N = 10 #Total test points in each dimension
         x_0 = np.zeros((N**3, 3), dtype=np.float32)
         grid_points = np.linspace(-1, 1, N)
         index = 0
@@ -295,28 +324,22 @@ def main():
         print("Test points overridden")
 
     time_start = time.time()
-    field = compute_field_on_grid_amoeba(x_0, x, q, d, t_flat)
+    field = compute_field_on_grid_amoeba(local_mesh, x, q, d, t_flat)
     time_end = time.time()
     print(f"Time for grid calculation: {time_end - time_start} seconds. Time per grid point: {(time_end - time_start) / (N**3)} seconds")
     print(field.shape)
-    mesh_shape = (N, N, N, 3)
     meta_data = {
-        "dimensions": [1.0, 1.0, 1.0],
-        "step_size": [0.1, 0.1, 0.1],
-        "num_steps": [mesh_shape[0], mesh_shape[1], mesh_shape[2]],
-        "transformation_matrix": np.array([[1.0, 0.0, 0.0],
-                                           [0.0, 1.0, 0.0],
-                                           [0.0, 0.0, 1.0]]),
-        "center": np.array([0.0, 0.0, 0.0]),
+        "dimensions": dimensions,
+        "step_size": [step_size, step_size, step_size],
+        "num_steps": [local_mesh.shape[0], local_mesh.shape[1], local_mesh.shape[2]],
+        "transformation_matrix": global2local_rotmat,
+        "center": center,
     }
-
     save_numpy_as_dat(
-        name=field_output,
+        name=field_output_path,
         volume=field,
         meta_data=meta_data,
     )
-    # save_field(field, "path/to/output")
-    return 0
 
 if __name__ == "__main__":
     main()

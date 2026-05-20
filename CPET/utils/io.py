@@ -334,7 +334,7 @@ def filter_radius_whole_residue(x, Q, ID, center, radius=2.0):
     ID_filtered = np.delete(ID, indices_to_filter_out, axis=0)
     print("radius filter leaves: {}".format(len(Q_filtered)))
     print(np.linalg.norm(x_filtered, axis=1))
-    return x_filtered, Q_filtered, ID_filtered
+    return x_filtered, Q_filtered, ID_filtered, indices_to_filter_out
 
 
 def filter_atomspec(x, Q, ID, filter_dict, intersect):
@@ -415,7 +415,7 @@ def filter_atomspec(x, Q, ID, filter_dict, intersect):
     if len(x_filtered) != len(Q_filtered) or len(x_filtered) != len(ID_filtered):
         raise ValueError("Unexpected: filtered arrays have different lengths")
     log.info(f"Number of atoms filtered out: {len(filter_idx)}")
-    return x_filtered, Q_filtered, ID_filtered
+    return x_filtered, Q_filtered, ID_filtered, filter_idx
 
 
 def filter_in_box(x, Q, ID, center, dimensions):

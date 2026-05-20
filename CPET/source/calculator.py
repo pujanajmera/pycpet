@@ -221,11 +221,14 @@ class calculator:
         if hasattr(self, "chains"):
             self.chains_copy = deepcopy(self.chains)
 
+        self.filter_idxs = []
+
         # Any sort of filtering related to atom identity information
         if "filter" in options.keys():
-            self.x, self.Q, self.ID = filter_atomspec(
+            self.x, self.Q, self.ID, filter_idxs = filter_atomspec(
                 self.x, self.Q, self.ID, options["filter"], options["filter_intersect"]
             )
+            self.filter_idxs.append(filter_idxs)
             # If chains is a list of nones, delete it as an attribute
             if all(c is None for c in self.chains):
                 del self.chains
@@ -248,13 +251,14 @@ class calculator:
             self.log.info(f"filtering by radius: {options['filter_radius']} Ang")
             r = np.linalg.norm(self.x, axis=1)  # Distance from origin
             self.log.debug(f"r {r}")
-            self.x, self.Q, self.ID = filter_radius_whole_residue(
+            self.x, self.Q, self.ID, filter_idxs = filter_radius_whole_residue(
                 x=self.x,
                 Q=self.Q,
                 ID=self.ID,
                 center=self.center,
                 radius=float(options["filter_radius"]),
             )
+            self.filter_idxs.append(filter_idxs)
             r = np.linalg.norm(self.x, axis=1)
             self.log.debug(f"New r {r}")
 
