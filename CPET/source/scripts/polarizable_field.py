@@ -205,14 +205,23 @@ def rotate_dipoles_quadrupoles(r, d, t):
     return d, t
 
 
-def rotate_to_box_reference(path_to_pdb, options, x, d, t):
+def rotate_and_translate_to_box_reference(x, d, t, center, rot):
     """
-    Rotates coordinates, dipoles, and quadrupoles to align with the box reference frame
+    Rotates and translatescoordinates, dipoles, and quadrupoles to align with the box reference frame
     Takes:
-        path_to_pdb: Path to the pdb file used for parsing and zeroing point charges
-        options: PyCPET options file
+    x: coordinates of the atoms of shape (N, 3)
+    d: dipole moments of the polarizable atoms of shape (N, 3)
+    t: quadrupole moments of the polarizable atoms of shape (N, 3
+    center: center of the box for translation
+    rot: rotation matrix for rotation
+    Returns:
+    x: rotated and translated coordinates of the atoms of shape (N, 3)
+    d: rotated and translated dipole moments of the polarizable atoms of shape (N, 3)
+    t: rotated and translated quadrupole moments of the polarizable atoms of shape (N, 3, 3)
     """
-    
+    x = (x - center) @ np.linalg.inv(rot)
+    d = np.einsum('nij,nj->ni', np.linalg.inv(rot), d)
+    t = np.einsum('nik,nkl,njl->nij', np.linalg.inv(rot), t, np.linalg.inv(rot))
     return x, d, t
 
 
@@ -294,7 +303,7 @@ def main():
     d += ind_dips
     print(d.shape, t.shape)
     print(d[:5], t[:5])
-    x, d, t = rotate_to_box_reference(x, d, t)
+    x, d, t = rotate_and_translate_to_box_reference(x, d, t, center, global2local_rotmat)
     
     # Flatten t so that each t only has Qxx Qxy Qxz Qyy Qyz Qzz (right now it has shape Nx3x3)
     t_flat = np.zeros((t.shape[0], 6), dtype=np.float32)
