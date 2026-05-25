@@ -250,7 +250,7 @@ def tinker_energy_eval(parameter_path, coordinate_path, analyze_tinker_outfile):
 def main():
     parser = argparse.ArgumentParser(description="Calculate electric field on an oriented grid from a AMOEBA force field")
     parser.add_argument("-n","--name", type=str, help="Name for the system, used for saving output files", required=True)
-    parser.add_argument("-o", "--options", type=json.loads, help="Options for CPET", default=json.load(open("./options/options.json")))
+    parser.add_argument("-o", "--options", type=str, help="Options for CPET", default="./options/options.json")
     parser.add_argument("--xyz", type=str, help="Path to the .xyz coordinate file", required=True)
     parser.add_argument("--prm", type=str, help="Path to the .prm parameter file", required=True)
     parser.add_argument("--uind", type=str, help="Path to the .uind induced dipole file", required=True)
@@ -262,7 +262,7 @@ def main():
     File input section
     """
     name = args.n
-    options = args.o
+    options = json.load(open(args.o))
     outputpath = options["outputpath"]
     parameter_path = args.prm #Includes permanent charges, dipoles, and quadrupoles
     analyze_tinker_outfile = f"{outputpath}/{name}.out" #From energy evaluation in TINKER
