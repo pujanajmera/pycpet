@@ -17,7 +17,7 @@ This script is for polarizable force field calculations of electric field.
 Current status: Testing phase
 """
 
-def parse_coordinates(coordinate_filepath, analyze_tinker_outfile, induced_dipole_path, filter_idxs=None):
+def parse_coordinates(coordinate_filepath, analyze_tinker_outfile, induced_dipole_path, filter_idxs):
     """
     Parses the coordinate and parameter files to extract the coordinates, charges, dipoles, and quadrupoles
     Takes:
@@ -155,7 +155,7 @@ def parse_coordinates(coordinate_filepath, analyze_tinker_outfile, induced_dipol
     return x, q, d, t, ind_dips
 
 
-def parse_rotation_matrix(analyze_tinker_outfile, n_atoms):
+def parse_rotation_matrix(analyze_tinker_outfile, n_atoms, filter_idxs):
     """
     Parses the rotation matrix file (from energy evaluation in TINKER)
     Takes:
@@ -178,9 +178,15 @@ def parse_rotation_matrix(analyze_tinker_outfile, n_atoms):
                 values = line.split()[6:15]
                 rot_mat = np.array(values, dtype=float).reshape(3, 3)
                 rot_mats.append(rot_mat)
-    if len(rot_mats) != n_atoms:
+    if filter_idxs == None:
+        rot_mats_filter = rot_mats
+    elif len(filter_idxs) == 1:
+        rot_mats_filter = [v for i, v in enumerate(rot_mats) if i not in filter_idxs[0]]
+    else:
+        raise ValueError(f"Filtering indices not supported this way (e.g. radius and atom-based). Please edit options file")
+    if len(rot_mats_filter) != n_atoms:
         raise ValueError(f"Expected {n_atoms} rotation matrices, but found {len(rot_mats)} in {analyze_tinker_outfile}")
-    return rot_mats
+    return rot_mats_filter
 
 
 def rotate_dipoles_quadrupoles(r, d, t):
@@ -194,7 +200,8 @@ def rotate_dipoles_quadrupoles(r, d, t):
         d: rotated dipole moments
         t: rotated quadrupole moments
     """
-
+    print("ROTATING DIPOLE AND QUADRUPOLE TO GLOBAL FRAME")
+    print(d.shape, t.shape, r)
     d = np.einsum('nij,nj->ni', r, d)
     t = np.einsum('nik,nkl,njl->nij', r, t, r)
 
@@ -209,15 +216,19 @@ def rotate_and_translate_to_box_reference(x, d, t, center, rot):
     d: dipole moments of the polarizable atoms of shape (N, 3)
     t: quadrupole moments of the polarizable atoms of shape (N, 3
     center: center of the box for translation
-    rot: rotation matrix for rotation
+    rot: rotation matrix for rotation of shape (3,3)
     Returns:
     x: rotated and translated coordinates of the atoms of shape (N, 3)
     d: rotated and translated dipole moments of the polarizable atoms of shape (N, 3)
     t: rotated and translated quadrupole moments of the polarizable atoms of shape (N, 3, 3)
     """
+    print("ROTATING AND TRANSLATING TO BOX")
+    print(x.shape, d.shape, t.shape, rot.shape)
     x = (x - center) @ np.linalg.inv(rot)
-    d = np.einsum('nij,nj->ni', np.linalg.inv(rot), d)
-    t = np.einsum('nik,nkl,njl->nij', np.linalg.inv(rot), t, np.linalg.inv(rot))
+    Rinv = np.linalg.inv(rot)
+    Rinv = np.broadcast_to(Rinv, (x.shape[0], 3, 3))
+    d = np.einsum('nij,nj->ni', Rinv, d)
+    t = np.einsum('nik,nkl,njl->nij', Rinv, t, Rinv)
     return x, d, t
 
 
@@ -261,8 +272,8 @@ def main():
     """
     File input section
     """
-    name = args.n
-    options = json.load(open(args.o))
+    name = args.name
+    options = json.load(open(args.options))
     outputpath = options["outputpath"]
     parameter_path = args.prm #Includes permanent charges, dipoles, and quadrupoles
     analyze_tinker_outfile = f"{outputpath}/{name}.out" #From energy evaluation in TINKER
@@ -280,8 +291,9 @@ def main():
     dimensions = calculator_object.dimensions
     step_size = calculator_object.step_size
     center = calculator_object.center
+    filter_idxs = None
     filter_idxs = calculator_object.filter_idxs
-
+    print(filter_idxs)
     """
     Calculation section
     """
@@ -292,7 +304,7 @@ def main():
     x, q, d, t, ind_dips = parse_coordinates(coordinate_path, analyze_tinker_outfile, induced_dipole_path, filter_idxs)
     print(x.shape, q.shape, d.shape, t.shape)
     print(x[:5], q[:5], d[:5], t[:5])
-    r = parse_rotation_matrix(analyze_tinker_outfile, n_atoms=len(x))
+    r = parse_rotation_matrix(analyze_tinker_outfile, n_atoms=len(x), filter_idxs=filter_idxs)
     print(len(r))
     print(r[:5])
     d, t = rotate_dipoles_quadrupoles(r, d, t)
@@ -335,7 +347,7 @@ def main():
     time_start = time.time()
     field = compute_field_on_grid_amoeba(local_mesh, x, q, d, t_flat)
     time_end = time.time()
-    print(f"Time for grid calculation: {time_end - time_start} seconds. Time per grid point: {(time_end - time_start) / (N**3)} seconds")
+    print(f"Time for grid calculation: {time_end - time_start} seconds. Time per grid point: {(time_end - time_start) / (local_mesh[0]*local_mesh[1]*local_mesh[2])} seconds")
     print(field.shape)
     meta_data = {
         "dimensions": dimensions,

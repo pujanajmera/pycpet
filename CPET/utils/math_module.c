@@ -411,16 +411,16 @@ void calc_field_base_amoeba(double E[3], double x_init[3], int n_charges, double
         r_dot_t_dot_r_divided_by_r_mag_sq = (R[0] * t_dot_r[0] + R[1] * t_dot_r[1] + R[2] * t_dot_r[2]) / r_mag_sq;
 
         // Print charge, dipole, and quadrupole contributions to the 0th term for debugging for the each charge present
-        printf("Distance for charge %d: %f\n", i, r_norm);
-        printf("Charge contribution to E[0]: %f\n", factor * r_mag_third * Q[i] * R[0]);
-        printf("Dipole contribution to E[0]: %f\n", factor * r_mag_fifth * ((3 * mu_dot_r) * R[0] - r_mag_sq * mu[i][0]));
-        printf("Quadrupole contribution to E[0]: %f\n", factor * r_mag_fifth * ((5 * r_dot_t_dot_r_divided_by_r_mag_sq) * R[0] - 2 * t_dot_r[0]));
-        printf("Charge contribution to E[1]: %f\n", factor * r_mag_third * Q[i] * R[1]);
-        printf("Dipole contribution to E[1]: %f\n", factor * r_mag_fifth * ((3 * mu_dot_r) * R[1] - r_mag_sq * mu[i][1]));
-        printf("Quadrupole contribution to E[1]: %f\n", factor * r_mag_fifth * ((5 * r_dot_t_dot_r_divided_by_r_mag_sq) * R[1] - 2 * t_dot_r[1]));
-        printf("Charge contribution to E[2]: %f\n", factor * r_mag_third * Q[i] * R[2]);
-        printf("Dipole contribution to E[2]: %f\n", factor * r_mag_fifth * ((3 * mu_dot_r) * R[2] - r_mag_sq * mu[i][2]));
-        printf("Quadrupole contribution to E[2]: %f\n", factor * r_mag_fifth * ((5 * r_dot_t_dot_r_divided_by_r_mag_sq) * R[2] - 2 * t_dot_r[2]));
+        // printf("Distance for charge %d: %f\n", i, r_norm);
+        // printf("Charge contribution to E[0]: %f\n", factor * r_mag_third * Q[i] * R[0]);
+        // printf("Dipole contribution to E[0]: %f\n", factor * r_mag_fifth * ((3 * mu_dot_r) * R[0] - r_mag_sq * mu[i][0]));
+        // printf("Quadrupole contribution to E[0]: %f\n", factor * r_mag_fifth * ((5 * r_dot_t_dot_r_divided_by_r_mag_sq) * R[0] - 2 * t_dot_r[0]));
+        // printf("Charge contribution to E[1]: %f\n", factor * r_mag_third * Q[i] * R[1]);
+        // printf("Dipole contribution to E[1]: %f\n", factor * r_mag_fifth * ((3 * mu_dot_r) * R[1] - r_mag_sq * mu[i][1]));
+        // printf("Quadrupole contribution to E[1]: %f\n", factor * r_mag_fifth * ((5 * r_dot_t_dot_r_divided_by_r_mag_sq) * R[1] - 2 * t_dot_r[1]));
+        // printf("Charge contribution to E[2]: %f\n", factor * r_mag_third * Q[i] * R[2]);
+        // printf("Dipole contribution to E[2]: %f\n", factor * r_mag_fifth * ((3 * mu_dot_r) * R[2] - r_mag_sq * mu[i][2]));
+        // printf("Quadrupole contribution to E[2]: %f\n", factor * r_mag_fifth * ((5 * r_dot_t_dot_r_divided_by_r_mag_sq) * R[2] - 2 * t_dot_r[2]));
 
         E_temp[i][0] = factor * (r_mag_third * Q[i] * R[0] + r_mag_fifth * ((3 * mu_dot_r + 5 * r_dot_t_dot_r_divided_by_r_mag_sq) * R[0] - r_mag_sq * mu[i][0] - 2 * t_dot_r[0]));
         E_temp[i][1] = factor * (r_mag_third * Q[i] * R[1] + r_mag_fifth * ((3 * mu_dot_r + 5 * r_dot_t_dot_r_divided_by_r_mag_sq) * R[1] - r_mag_sq * mu[i][1] - 2 * t_dot_r[1]));
