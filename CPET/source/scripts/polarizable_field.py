@@ -280,7 +280,7 @@ def main():
     coordinate_path = args.xyz #Includes connectivity information
     induced_dipole_path = args.uind #Includes induced dipoles
     path_to_pdb = args.pdb #Used for parsing and zeroing point charges as well as defining local molecule reference frame, but not for coordinates/charge/dipole/quadrupole values
-    field_output_path = os.path.join(options["outputpath"], coordinate_path.split("/")[-1].split(".")[0] + "_field.dat")
+    field_output_path = os.path.join(options["outputpath"], coordinate_path.split("/")[-1].split(".")[0] + "_efield.dat")
 
     """
     Pycpet initialization section, need grid, box dimension info, x indices, and rotation vectors
@@ -347,7 +347,7 @@ def main():
     time_start = time.time()
     field = compute_field_on_grid_amoeba(local_mesh, x, q, d, t_flat)
     time_end = time.time()
-    print(f"Time for grid calculation: {time_end - time_start} seconds. Time per grid point: {(time_end - time_start) / (local_mesh[0]*local_mesh[1]*local_mesh[2])} seconds")
+    print(f"Time for grid calculation: {time_end - time_start} seconds. Time per grid point: {(time_end - time_start) / (local_mesh.shape[0]*local_mesh.shape[1]*local_mesh.shape[2])} seconds")
     print(field.shape)
     meta_data = {
         "dimensions": dimensions,
