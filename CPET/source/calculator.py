@@ -1,10 +1,8 @@
 import numpy as np
 import time
 from multiprocessing import Pool
-import torch
 import logging
 from copy import deepcopy
-
 
 from CPET.utils.parallel import (
     task,
@@ -30,12 +28,6 @@ from CPET.utils.io import (
     filter_in_box,
     calculate_center,
     default_options_initializer,
-)
-from CPET.utils.gpu import (
-    propagate_topo_matrix_gpu,
-    compute_curv_and_dist_mat_gpu,
-    batched_filter_gpu,
-    generate_path_filter_gpu,
 )
 
 log = logging.getLogger(__name__)
@@ -802,7 +794,13 @@ class calculator:
         hist : np.ndarray
             The computed topology data
         """
-
+        import torch
+        from CPET.utils.gpu import (
+        propagate_topo_matrix_gpu,
+        compute_curv_and_dist_mat_gpu,
+        batched_filter_gpu,
+        generate_path_filter_gpu,
+        )
         print("... > Computing Topo in Batches on a GPU!")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")

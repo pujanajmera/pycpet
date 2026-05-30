@@ -1,14 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import networkx as nx
 import seaborn as sns
 import json
-import psutil
 import time
 import os
 
-from sklearn.cluster import AffinityPropagation, HDBSCAN
-from sklearn_extra.cluster import KMedoids
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.manifold import MDS
@@ -196,6 +192,7 @@ class cluster:
         Returns:
             cluster_results: dictionary with information about the clusters in best performing K-Medoids
         """
+        from sklearn_extra.cluster import KMedoids
         cluster_results = {}
         distance_matrix = self.distance_matrix
         distance_matrix = distance_matrix**2
@@ -308,6 +305,7 @@ class cluster:
         return cluster_results
 
     def affinity(self):
+        from sklearn.cluster import AffinityPropagation
         affinity = AffinityPropagation(
             affinity="precomputed", damping=0.5, max_iter=4000
         )
@@ -321,6 +319,7 @@ class cluster:
         )
 
     def hdbscan(self):
+        from sklearn.cluster import HDBSCAN
         performance_list = []
         # for percentile_threshold in [70,80,90,99,99.9,99.99,99.999,99.9999,100]:
         for percentile_threshold in [99.9999, 100]:

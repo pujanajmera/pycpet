@@ -1,21 +1,18 @@
 import numpy as np
-import torch
-import matplotlib.pyplot as plt
-import warnings
-import logging
-from sklearn.metrics import mean_squared_error
-from scipy.spatial.distance import pdist, squareform
-from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
-from scipy.stats import iqr
-import time
-from tqdm import tqdm
 import gc
 import sys
 import os
+import warnings
+import logging
+import time
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
+from scipy.spatial.distance import pdist, squareform
+from scipy.stats import iqr
 from kneed import KneeLocator
 import tensorly as tl
 from tensorly.decomposition import parafac
-
 import importlib.util, ctypes
 
 # Find name of c-shared library (system dependent!)
@@ -397,6 +394,12 @@ def calculate_electric_field_gpu_for_test(x_0, x, Q, device="cuda"):
     Returns
         E(array) - electric field at the point of shape (1,3)
     """
+    import torch
+    from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
+
+    print("Upon file cleanup, torch import and batch gpu calculation has been moved into " \
+    "CPET.utils.calculator calculate_electric_field_gpu_for_test. Adjust benchmarkings scripts accordingly")
+
     # Create matrix R
     if device == "cuda":
         if not torch.cuda.is_available():
