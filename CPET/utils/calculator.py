@@ -1,33 +1,34 @@
 import numpy as np
-import torch
-import pkg_resources
-import matplotlib
-import matplotlib.pyplot as plt
-import warnings
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics.pairwise import pairwise_distances
-from scipy.spatial.distance import pdist, squareform
-from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
-from scipy.stats import iqr
-import time
-import psutil
-from multiprocessing import Pool
-from numba import njit, prange
-import numba as nb
-from tqdm import tqdm
 import gc
 import sys
 import os
+import warnings
+import logging
+import time
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
+from scipy.spatial.distance import pdist, squareform
+from scipy.stats import iqr
+from kneed import KneeLocator
+import tensorly as tl
+from tensorly.decomposition import parafac
+import importlib.util, ctypes
 
-package_name = "pycpet"
-package = pkg_resources.get_distribution(package_name)
-package_path = package.location
-# import cupy as cp
+# Find name of c-shared library (system dependent!)
+spec = importlib.util.find_spec("CPET.utils.math_module")
+if spec is None or spec.origin is None:
+    raise ImportError(
+        "Could not find the c-shared library 'math_module'. Please ensure it is installed correctly."
+    )
+module_path = spec.origin
 
-from CPET.utils.fastmath import nb_subtract, power, nb_norm, nb_cross
+from CPET.utils.fastmath import nb_subtract, nb_norm, nb_cross
 from CPET.utils.c_ops import Math_ops
 
-Math = Math_ops(shared_loc=package_path + "/CPET/utils/math_module.so")
+Math = Math_ops(shared_loc=module_path)
+
+log = logging.getLogger(__name__)
 
 
 def propagate_topo(x_0, x, Q, step_size, debug=False):
@@ -42,9 +43,12 @@ def propagate_topo(x_0, x, Q, step_size, debug=False):
         x_0 - new position on streamline after propagation via electric field
     """
     # Compute field
+    epsilon = 1e-8
     E = calculate_electric_field_base(x_0, x, Q)
-    # if np.linalg.norm(E) > epsilon:
-    E = E / (np.linalg.norm(E))
+    if np.linalg.norm(E) > epsilon:
+        E = E / (np.linalg.norm(E))
+    else:
+        E = E / (np.linalg.norm(E) + epsilon)
     x_0 = x_0 + step_size * E
     return x_0
 
@@ -61,9 +65,12 @@ def propagate_topo_dev(x_0, x, Q, step_size, debug=False):
         x_0 - new position on streamline after propagation via electric field
     """
     # Compute field
+    epsilon = 1e-8
     E = calculate_electric_field_dev_c_shared(x_0, x, Q)
-    # if np.linalg.norm(E) > epsilon:
-    E = E / (np.linalg.norm(E))
+    if np.linalg.norm(E) > epsilon:
+        E = E / (np.linalg.norm(E))
+    else:
+        E = E / (np.linalg.norm(E) + epsilon)  # avoid division by zero
     x_0 = x_0 + step_size * E
     return x_0
 
@@ -188,7 +195,7 @@ def initialize_box_points_uniform(
         transformation_matrix(array) - matrix that contains the basis vectors for the box of shape (3,3)
     """
     # Convert lists to numpy arrays
-    print("... initializing box points uniformly")
+    print("Initializing box points uniformly...")
 
     x = x - center  # Translate to origin
     y = y - center  # Translate to origin
@@ -206,7 +213,7 @@ def initialize_box_points_uniform(
     transformation_matrix = np.column_stack(
         [x_unit, y_unit, z_unit]
     ).T  # Each column is a unit vector
-    print(N_cr)
+    log.debug(f"Original grid shape: {N_cr}")
     # construct a grid of points in the box - lengths are floats
     if inclusive:
         x_coords = np.linspace(-half_length, half_length, N_cr[0] + 1)
@@ -224,7 +231,7 @@ def initialize_box_points_uniform(
     x_mesh, y_mesh, z_mesh = np.meshgrid(x_coords, y_coords, z_coords, indexing="ij")
 
     local_coords = np.stack([x_mesh, y_mesh, z_mesh], axis=-1, dtype=dtype)
-    print(local_coords.shape)
+    log.debug(f"Final grid shape: {local_coords.shape}")
     if not seed == None:
         np.random.seed(seed)
 
@@ -241,28 +248,9 @@ def initialize_box_points_uniform(
     return local_coords, transformation_matrix
 
 
-def calculate_electric_field(x_0, x, Q):
-    """
-    Computes electric field at a point given positions of charges
-    Takes
-        x_0(array) - position to compute field at of shape (1,3)
-        x(array) - positions of charges of shape (N,3)
-        Q(array) - magnitude and sign of charges of shape (N,1)
-    Returns
-        E(array) - electric field at the point of shape (1,3)
-    """
-    # Create matrix R
-    R = nb_subtract(x_0, x)
-    R_sq = R**2
-    r_mag_sq = np.einsum("ij->i", R_sq).reshape(-1, 1)
-    r_mag_cube = np.power(r_mag_sq, 3 / 2)
-    E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
-    return E
-
-
 def calculate_electric_field_base(x_0, x, Q):
     """
-    Computes electric field at a point given positions of charges
+    Computes electric field at a point given positions of charges, basic version
     Takes
         x_0(array) - position to compute field at of shape (1,3)
         x(array) - positions of charges of shape (N,3)
@@ -271,33 +259,10 @@ def calculate_electric_field_base(x_0, x, Q):
         E(array) - electric field at the point of shape (1,3)
     """
     # Create matrix R
-    R = nb_subtract(x_0, x)
-    denom = np.linalg.norm(R, axis=1) ** 3
-    E_vec = R * (1 / denom).reshape(-1, 1) * Q * 14.3996451
-    E_vec = np.sum(E_vec, axis=0)
+    R = np.subtract(x_0, x)  # Shape (1, N, 3)
+    denom = np.linalg.norm(R) ** 3  # Shape (1, N)
+    E_vec = R * (1 / denom).reshape(-1, 1) * Q * 14.3996451  # Shape (1, N, 3)
     return E_vec
-
-
-def calculate_electric_field_dev_python(x_0, x, Q):
-    """
-    Computes electric field at a point given positions of charges
-    Takes
-        x_0(array) - position to compute field at of shape (1,3)
-        x(array) - positions of charges of shape (N,3)
-        Q(array) - magnitude and sign of charges of shape (N,1)
-    Returns
-        E(array) - electric field at the point of shape (1,3)
-    """
-    # Create matrix R
-    R = nb_subtract(x_0, x)
-    R_sq = R**2
-    r_mag_sq = np.einsum("ij->i", R_sq).reshape(-1, 1)
-    # print(R_sq.shape, r_mag_sq.shape)
-    r_mag_cube = np.power(r_mag_sq, 3 / 2)
-    recip_dim = 1 / r_mag_cube
-    # print(R.shape, recip_dim.shape, Q.shape)
-    E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451
-    return E
 
 
 def calculate_electric_field_dev_c_shared(x_0, x, Q):
@@ -328,20 +293,6 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q):
     return E
 
 
-def calculate_electric_field_c_shared_full(x_0, x, Q):
-    """
-    Computes electric field at a point given positions of charges
-    Takes
-        x_0(array) - position to compute field at of shape (1,3)
-        x(array) - positions of charges of shape (N,3)
-        Q(array) - magnitude and sign of charges of shape (N,1)
-    Returns
-        E(array) - electric field at the point of shape (1,3)
-    """
-    E = Math.calc_field_base(x_0=x_0, x=x, Q=Q)
-    return E
-
-
 def calculate_electric_field_c_shared_full_alt(x_0, x, Q):
     """
     Computes electric field at a point given positions of charges
@@ -352,13 +303,57 @@ def calculate_electric_field_c_shared_full_alt(x_0, x, Q):
     Returns
         E(array) - electric field at the point of shape (1,3)
     """
+    x_0 = x_0.astype(np.float32)
+    x = x.astype(np.float32)
+    Q = Q.astype(np.float32)
     E = Math.calc_field(x_0=x_0, x=x, Q=Q)
     return E
+
+
+def calculate_electric_field_c_shared_full_alt_polarizable(x_0, x, T):
+    """
+    Computes electric field at a point given positions of charges and polarizability
+    Takes
+        x_0(array) - position to compute field at of shape (1,3)
+        x(array) - positions of charges of shape (N,3)
+        T(array) - multipole terms of shape (N,3,3)
+    Returns
+        E(array) - electric field at the point of shape (1,3)
+    """
+    x_0 = x_0.astype(np.float32)
+    x = x.astype(np.float32)
+    T = T.astype(np.float32)
+    E = Math.calc_field_polarizable(x_0=x_0, x=x, T=T)
+    return E
+
+
+def calculate_esp_c_shared_full(x_0, x, Q):
+    """
+    Computes electrostatic potential at a point given positions of charges
+    Takes
+        x_0(array) - position to compute field at of shape (1,3)
+        x(array) - positions of charges of shape (N,3)
+        Q(array) - magnitude and sign of charges of shape (N,1)
+    Returns
+        ESP(float) - electrostatic potential at the point
+    """
+    ESP = Math.calc_esp_base(x_0=x_0, x=x, Q=Q)
+    return ESP
 
 
 def calculate_thread_c_shared(x_0, n_iter, x, Q, step_size, dimensions):
     result = Math.thread_operation(
         x_0=x_0, n_iter=n_iter, x=x, Q=Q, step_size=step_size, dimensions=dimensions
+    )
+    return result
+
+
+def calculate_thread_c_shared_dipole(x_0, n_iter, x, mu, step_size, dimensions):
+    """
+    IN DEVELOPMENT, FOR TESTING ONLY
+    """
+    result = Math.thread_operation_dipole(
+        x_0=x_0, n_iter=n_iter, x=x, mu=mu, step_size=step_size, dimensions=dimensions
     )
     return result
 
@@ -375,18 +370,14 @@ def calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q):
     """
     R_list = [nb_subtract(x_0, x) for x_0 in x_0_list]
     batch_size = len(R_list)
-    R_list = np.array(R_list, dtype="float32")
-    R_sq_list = np.array([R**2 for R in R_list], dtype="float32")
-    r_mag_sq_list = Math.einsum_ij_i_batch(R_sq_list)  # .reshape(-1, 1)
-    # print("rmag: {}".format(r_mag_sq_list))
-    # print("rmag len: {}".format(len(r_mag_sq_list)))
-    # print("rmag 1 size: {}".format(r_mag_sq_list[0].shape))
-    r_mag_cube_list = np.power(r_mag_sq_list, 3 / 2)
-    recip_r_mag_list = [1 / val for val in r_mag_cube_list]
+    R_list = np.array(R_list, dtype="float32")  # Shape (n, N, 3)
+    R_sq = np.array([R**2 for R in R_list], dtype="float32")  # Shape (n, N, 3)
+    r_mag_sq = Math.einsum_ij_i_batch(R_sq)  # .reshape(-1, 1)
+    r_mag_cube = np.power(r_mag_sq, 3 / 2)
+    recip_r_mag = 1 / r_mag_cube  # Shape (n, N)
     # print("recip r {}".format(recip_r_mag_list))
     E_list = (
-        Math.einsum_operation_batch(R_list, recip_r_mag_list, Q, batch_size)
-        * 14.3996451
+        Math.einsum_operation_batch(R_list, recip_r_mag, Q, batch_size) * 14.3996451
     )
     # print("passed einsum op")
     # print(E.shape)
@@ -405,10 +396,18 @@ def calculate_electric_field_gpu_for_test(x_0, x, Q, device="cuda"):
     Returns
         E(array) - electric field at the point of shape (1,3)
     """
+    import torch
+    from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
+
+    print(
+        "Upon file cleanup, torch import and batch gpu calculation has been moved into "
+        "CPET.utils.calculator calculate_electric_field_gpu_for_test. Adjust benchmarkings scripts accordingly"
+    )
+
     # Create matrix R
     if device == "cuda":
         if not torch.cuda.is_available():
-            print("CUDA is not available, using CPU instead")
+            raise RuntimeError("CUDA is not available, using CPU instead")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
         device = torch.device("cpu")
@@ -440,20 +439,12 @@ def compute_field_on_grid(grid_coords, x, Q):
         E(array): Electric field at each point in the meshgrid of shape (M, M, M, 3).
     """
     # Reshape meshgrid to a 2D array of shape (M*M*M, 3)
-    reshaped_meshgrid = grid_coords.reshape(-1, 3)
+    x_0 = grid_coords.reshape(-1, 3)
 
-    # Initialize an array to hold the electric field values
-    E = np.zeros_like(reshaped_meshgrid, dtype=float)
-
-    # Calculate the electric field at each point in the meshgrid
-    for i, x_0 in enumerate(reshaped_meshgrid):
-        E[i] = calculate_electric_field_dev_c_shared(x_0, x, Q)
-        if x_0[0] == 0 and x_0[1] == 0 and x_0[2] == 0:
-            print(f"Center field: {E[i]}")
-
-    point_field_concat = np.concatenate((reshaped_meshgrid, E), axis=1)
-
-    return point_field_concat.astype(np.half)
+    # Compute the field using loop c-shared library
+    E = Math.compute_looped_field(x_0, x, Q)
+    field_concat = np.concatenate((x_0, E), axis=1)
+    return field_concat
 
 
 def compute_ESP_on_grid(grid_coords, x, Q):
@@ -471,14 +462,13 @@ def compute_ESP_on_grid(grid_coords, x, Q):
     reshaped_meshgrid = grid_coords.reshape(-1, 3)
     # Initialize an array to hold the electric field values
     ESP = np.zeros((reshaped_meshgrid.shape[0], 1), dtype=float)
-    print(ESP.shape)
+    log.debug(f"ESP shape: {ESP.shape}")
 
     # Calculate the electric field at each point in the meshgrid
     for i, x_0 in enumerate(reshaped_meshgrid):
-        # Create matrix R
-        R = nb_subtract(x_0, x)
-        r_mag = np.sqrt(np.einsum("ij,ij->i", R, R)).reshape(-1, 1)  # Has shape (N,1)
-        ESP[i] = np.sum(Q / r_mag) * 14.3996451
+        ESP[i] = calculate_esp_c_shared_full(x_0, x, Q)
+        if x_0[0] == 0 and x_0[1] == 0 and x_0[2] == 0:
+            log.debug(f"Center esp: {ESP[i]}")
 
     point_ESP_concat = np.concatenate((reshaped_meshgrid, ESP), axis=1)
 
@@ -577,7 +567,7 @@ def inside_box_mask(points, dimensions):
     """
     half_length, half_width, half_height = dimensions
     cond_x = (points[:, 0] >= -half_length) & (points[:, 0] <= half_length)
-    cond_y = (points[:, 1] >= -half_width)  & (points[:, 1] <= half_width)
+    cond_y = (points[:, 1] >= -half_width) & (points[:, 1] <= half_width)
     cond_z = (points[:, 2] >= -half_height) & (points[:, 2] <= half_height)
     return cond_x & cond_y & cond_z
 
@@ -605,11 +595,11 @@ def Inside_Box(local_point, dimensions):
 
 def make_histograms(topo_files, plot=False):
     histograms = []
-    """
+
     # First pass: Calculate total number of data points
     len_list = np.zeros(len(topo_files), dtype=int)
     start_time = time.time()
-    #Use tqdm instead of original for loop
+    # Use tqdm instead of original for loop
     for idx, topo_file in tqdm(enumerate(topo_files), total=len(topo_files)):
         with open(topo_file) as topology_data:
             line_count = sum(1 for line in topology_data if not line.startswith("#"))
@@ -621,7 +611,9 @@ def make_histograms(topo_files, plot=False):
     # Initialize NumPy arrays with the total size
     dist_list = np.zeros(total_points)
     curv_list = np.zeros(total_points)
-    topo_data_indices = np.zeros(len(topo_files) + 1, dtype=int)  # To store start indices
+    topo_data_indices = np.zeros(
+        len(topo_files) + 1, dtype=int
+    )  # To store start indices
 
     # Second pass: Read data into NumPy arrays
     start_time = time.time()
@@ -641,11 +633,13 @@ def make_histograms(topo_files, plot=False):
                 point_idx += 1
 
         if distances.size != curvatures.size:
-            raise ValueError(f"Length of distances and curvatures do not match for {topo_file}")
+            raise ValueError(
+                f"Length of distances and curvatures do not match for {topo_file}"
+            )
 
         # Store data in the main arrays
-        dist_list[current_index:current_index+num_points] = distances
-        curv_list[current_index:current_index+num_points] = curvatures
+        dist_list[current_index : current_index + num_points] = distances
+        curv_list[current_index : current_index + num_points] = curvatures
 
         # Store the start index for this file's data
         topo_data_indices[idx] = current_index
@@ -675,8 +669,8 @@ def make_histograms(topo_files, plot=False):
     distance_binres = 2 * iqr(dist_list) / (len_dist_curv ** (1 / 3))
     curv_binres = 2 * iqr(curv_list) / (len_dist_curv ** (1 / 3))
 
-    #distance_binres = 0.02
-    #curv_binres = 0.02
+    # distance_binres = 0.02
+    # curv_binres = 0.02
 
     print(f"Distance bin resolution: {distance_binres}")
     print(f"Curvature bin resolution: {curv_binres}")
@@ -685,13 +679,6 @@ def make_histograms(topo_files, plot=False):
     print(f"Min distance: {min_distance}")
     print(f"Max curvature: {max_curvature}")
     print(f"Min curvature: {min_curvature}")
-    """
-    distance_binres = 0.032748
-    curv_binres = 0.014065
-    max_distance = 3.072607
-    min_distance = 0.01
-    max_curvature = 83.996368
-    min_curvature = 0.00057532
 
     # Calculate number of bins
     distance_nbins = int((max_distance - min_distance) / distance_binres)
@@ -712,14 +699,11 @@ def make_histograms(topo_files, plot=False):
                 curvatures.append(float(line[1]))
 
         # Compute the 2D histogram
-        a, b, c, q = plt.hist2d(
+        a, b, c = np.histogram2d(
             distances,
             curvatures,
-            bins=(distance_nbins, curvature_nbins),
+            bins=[distance_nbins, curvature_nbins],
             range=[[min_distance, max_distance], [min_curvature, max_curvature]],
-            norm=matplotlib.colors.LogNorm(),
-            density=True,
-            cmap="jet",
         )
         del distances
         del curvatures
@@ -727,8 +711,6 @@ def make_histograms(topo_files, plot=False):
         actual = a / NormConstant
 
         histograms.append(actual.flatten())
-        if plot:
-            plt.show()
     end_time = time.time()
     print(
         f"Time taken to parse topology files into histograms: {end_time - start_time:.2f} seconds"
@@ -761,7 +743,7 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
                     line = line.split(",")
                 else:
                     line = line.split()
-                #print(line)
+                # print(line)
                 distances.append(float(line[0]))
                 curvatures.append(float(line[1]))
         # print(max(distances),max(curvatures))
@@ -833,7 +815,6 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
             curvatures,
             bins=(distance_nbins, curvature_nbins),
             range=[[min_distance, max_distance], [min_curvature, max_curvature]],
-            norm=matplotlib.colors.LogNorm(),
             density=True,
             cmap="jet",
         )
@@ -876,6 +857,121 @@ def make_fields(field_files):
     return fields
 
 
+def make_single_4d_tensor(
+    field_file, uniques=None, N=[0, 0, 0], type="field", init=False
+):
+    with open(field_file, "r") as file:
+        lines = file.readlines()
+
+    # Skip the first 7 lines (header)
+    data_lines = lines[7:]
+
+    # Initialize lists to store the parsed data
+    x_coords, y_coords, z_coords = [], [], []
+    if type == "field":
+        ex, ey, ez = [], [], []
+    elif type == "esp":
+        e = []
+
+    # Loop through the remaining lines and extract the data
+    for line in data_lines:
+        cols = line.split()
+        # print(cols)
+        x_coords.append(float(cols[0]))
+        y_coords.append(float(cols[1]))
+        z_coords.append(float(cols[2]))
+        if type == "field":
+            ex.append(float(cols[3]))
+            ey.append(float(cols[4]))
+            ez.append(float(cols[5]))
+        elif type == "esp":
+            e.append(float(cols[3]))
+
+    # Convert lists to numpy arrays
+    x_coords = np.array(x_coords)
+    y_coords = np.array(y_coords)
+    z_coords = np.array(z_coords)
+
+    if type == "field":
+        ex = np.array(ex)
+        ey = np.array(ey)
+        ez = np.array(ez)
+    elif type == "esp":
+        e = np.array(e)
+
+    if init == False:
+        if N == [0, 0, 0]:
+            ValueError("Please provide the dimensions of the grid if init is false")
+        if type == "field":
+            tensor_4d = np.zeros((N[0], N[1], N[2], 3))
+        elif type == "esp":
+            tensor_4d = np.zeros((N[0], N[1], N[2], 1))
+        unique_x, unique_y, unique_z = uniques
+    else:
+        # Find unique values of X, Y, Z to determine grid dimensions
+        unique_x = np.unique(x_coords)
+        unique_y = np.unique(y_coords)
+        unique_z = np.unique(z_coords)
+        print(unique_x, unique_y, unique_z)
+
+        if N == [0, 0, 0]:
+            print(
+                "Init is true, ignoring N=[0,0,0] and writing from input field/esp file"
+            )
+        # Determine grid dimensions
+        Nx, Ny, Nz = len(unique_x), len(unique_y), len(unique_z)
+
+        # Initialize a 4D tensor of shape [Nx, Ny, Nz, 3] for (Ex, Ey, Ez)
+        if type == "field":
+            tensor_4d = np.zeros((Nx, Ny, Nz, 3))
+        elif type == "esp":
+            tensor_4d = np.zeros((Nx, Ny, Nz, 1))
+            print(tensor_4d.shape)
+
+    # Populate the tensor with the field data
+    for i in range(len(x_coords)):
+        ix = np.where(unique_x == x_coords[i])[0][0]
+        iy = np.where(unique_y == y_coords[i])[0][0]
+        iz = np.where(unique_z == z_coords[i])[0][0]
+
+        if type == "field":
+            tensor_4d[ix, iy, iz, 0] = ex[i]  # Ex
+            tensor_4d[ix, iy, iz, 1] = ey[i]  # Ey
+            tensor_4d[ix, iy, iz, 2] = ez[i]  # Ez
+        elif type == "esp":
+            tensor_4d[ix, iy, iz, 0] = e[i]  # ESP
+
+    if init == True:
+        return tensor_4d, [Nx, Ny, Nz], (unique_x, unique_y, unique_z)
+
+    return tensor_4d
+
+
+def make_5d_tensor(field_files, type="field"):
+    first_field = field_files[0]
+    if type == "field":
+        _, N, uniques = make_single_4d_tensor(first_field, init=True)
+        tensor_5d = np.zeros((len(field_files), N[0], N[1], N[2], 3))
+        for i, field_file in enumerate(field_files):
+            tensor_5d[i] = make_single_4d_tensor(
+                field_file, uniques=uniques, N=N, type="field"
+            )
+    elif type == "esp":
+        _, N, uniques = make_single_4d_tensor(first_field, type="esp", init=True)
+        tensor_5d = np.zeros((len(field_files), N[0], N[1], N[2], 1))
+        for i, field_file in enumerate(field_files):
+            print(i)
+            tensor_5d[i] = make_single_4d_tensor(
+                field_file, uniques=uniques, N=N, type="esp"
+            )
+    else:
+        ValueError(
+            "Please provide the correct type of tensor clustering method, either 'field' or 'esp'"
+        )
+
+    return tensor_5d
+
+
 def distance_numpy(hist1, hist2):
     a = (hist1 - hist2) ** 2
     b = hist1 + hist2
@@ -905,6 +1001,8 @@ def construct_distance_matrix_mem(hist_file_list):
 
 
 def construct_distance_matrix(histograms):
+    from sklearn.metrics.pairwise import pairwise_distances
+
     start_time = time.time()
     n = len(histograms)
     matrix = pairwise_distances(histograms, metric=distance_numpy, n_jobs=-1)
@@ -960,22 +1058,104 @@ def construct_distance_matrix_volume(fields):
     return matrix
 
 
+def construct_distance_matrix_tensor(cp_tensor):
+    factors = cp_tensor.factors
+    factors_dict = {f"factor_{idx}": factor for idx, factor in enumerate(factors)}
+    factor_matrix = factors[0]
+
+    # Plotting
+    # plot_rank_variation(factor_matrix)
+
+    dist_mat = squareform(pdist(factor_matrix, metric="euclidean"))
+    return dist_mat
+
+
+def reduce_tensor(tensor, rank):
+    # Perform CP decomposition
+    cp_tensor = parafac(tensor, rank=rank, init="random", tol=1e-6, random_state=42)
+
+    # Reconstruct the tensor from the CP decomposition
+    reconstructed_tensor = tl.cp_to_tensor(cp_tensor)
+
+    # Calculate the reconstruction error (mean squared error)
+    absolute_error = mean_squared_error(
+        tensor.flatten(), reconstructed_tensor.flatten()
+    )
+
+    # Calculate relative error (RMSE or another metric)
+    relative_error = absolute_error / np.mean(np.abs(tensor.flatten()))
+
+    return cp_tensor, relative_error
+
+
+def determine_rank(tensor_5d, threshold, max_rank, min_rank=1):
+    errors = []
+    ranks = list(range(min_rank, max_rank + 1))
+
+    # Loop over possible ranks and compute errors
+    for rank in ranks:
+        start_time = time.time()
+
+        _, error = reduce_tensor(tensor_5d, rank)
+        errors.append(error)
+        print(f"Rank {rank}, Reconstruction Error: {error}")
+
+        end_time = time.time()
+        print(
+            f"Time taken to do CP decomposition for rank {rank}: {end_time - start_time:.4f} seconds"
+        )
+
+    # Using elbow method
+    # Use kneed to find the elbow point
+    kneedle = KneeLocator(ranks, errors, curve="convex", direction="decreasing")
+    elbow_rank = kneedle.elbow
+    optimal_rank = 50  # Just some default value
+
+    # Check if the reconstruction error at the elbow rank is less than tensor_threshold
+    if errors[elbow_rank - 1] > threshold:
+        print(
+            f"Reconstruction error at elbow rank {elbow_rank} is {errors[elbow_rank - 1]}, which is > {threshold}"
+        )
+        print(f"Searching for the lowest rank with error < {threshold}...")
+
+        # Find the lowest rank where the reconstruction error is < tensor_threshold
+        for i, error in enumerate(errors):
+            if error < threshold:
+                optimal_rank = ranks[i]
+                print(
+                    f"Found optimal rank {optimal_rank} with reconstruction error {error}"
+                )
+                break
+    else:
+        optimal_rank = elbow_rank
+        print(f"Optimal Rank based on the elbow method (kneedle): {optimal_rank}")
+
+    return optimal_rank
+
+
 def report_inside_box(calculator_object):
     """
-    Reports atoms that are inside the box, not including anything 
-    that has been filtered (vectorized)
+    Reports atoms that are inside the box, not including anything
+    that has been filtered (vectorized). Trick to ignore atoms more than 1A outside of box circumsphere
+    (along largest side)
     """
-    mask = inside_box_mask(calculator_object.x, calculator_object.dimensions)
+    calc_obj_copy = (
+        calculator_object  # Copy the object to avoid modifying the original object
+    )
+    max_len_box = calc_obj_copy.dimensions.max()
+    outside_sphere = np.linalg.norm(calc_obj_copy.x - calc_obj_copy.center, axis=1) > (
+        max_len_box + 1
+    )  # 1A wiggle room
 
-    inside_indices = np.where(mask)[0]
-
-    for idx in inside_indices:
-        print(
-            "Atom record {}_{}_{}_{} found inside box".format(
-                calculator_object.atom_number[idx],
-                calculator_object.atom_type[idx],
-                calculator_object.resids[idx],
-                calculator_object.residue_number[idx],
+    for i in np.where(outside_sphere)[0]:
+        # Check to see if atom is in box
+        if Inside_Box(calc_obj_copy.x[i], calc_obj_copy.dimensions):
+            print(
+                "Atom record {}_{}_{}_{} found inside box".format(
+                    calculator_object.atom_number[i],
+                    calculator_object.atom_type[i],
+                    calculator_object.resids[i],
+                    calculator_object.residue_number[i],
+                )
             )
-        )
-        print("Corresponding protein: {}".format(calculator_object.path_to_pdb))
+            print("Corresponding protein: {}".format(calculator_object.path_to_pdb))

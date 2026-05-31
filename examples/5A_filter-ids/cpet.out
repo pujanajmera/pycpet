@@ -1,0 +1,7 @@
+Instantiating CPET, method: point_field
+['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+[{'C7': 378}, {'O9': 378}]
+centering atoms for center:  [('C7', 378), ('O9', 378)]
+pos considered for center:  [array([43.492, 31.142, 41.702], dtype=float32), array([44.566, 30.653, 41.775], dtype=float32)]
+No x specified, calculating in input file reference frame. Ignoring y...
+Not computing y since x is not specified

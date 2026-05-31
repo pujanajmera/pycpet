@@ -1,8 +1,7 @@
 import numpy as np
-from glob import glob
 import warnings
 import math
-# from chimerax.core.commands import run
+import logging
 
 """
 Overall script for all visualization functions and visualization-affiliates.
@@ -17,14 +16,79 @@ To-add:
 - High quality distance matrix plotting (?)
 """
 
+log = logging.getLogger(__name__)
 
-def visualize_field(path_to_pdb, path_to_efield, options, display=False):
+
+def visualize_esp(path_to_esp, outputpath, options):
+    """
+    Visualize electrostatic potential in proteins by creating a bild file
+    for Chimera/ChimeraX input
+    Takes:
+        path_to_pdb: Path to the PDB file of the protein
+        path_to_esp: Path to the corresponding ESP file
+        options: Options dictionary
+    """
+
+    if "visualization" in options.keys():
+        cutoff = (
+            options["visualization"]["cutoff"]
+            if "cutoff" in options["visualization"]
+            else 0
+        )
+        sparsify_factor = (
+            options["visualization"]["sparsify_factor"]
+            if "sparsify_factor" in options["visualization"]
+            else 1
+        )
+
+    else:
+        cutoff = 0
+        sparsify_factor = 1
+
+    max_p_esp = options["max_p_esp"] if "max_p_esp" in options else None
+    min_p_esp = options["min_p_esp"] if "min_p_esp" in options else None
+    max_n_esp = options["max_n_esp"] if "max_n_esp" in options else None
+    min_n_esp = options["min_n_esp"] if "min_n_esp" in options else None
+
+    name = path_to_esp.split("/")[-1].split(".")[0]
+
+    log.info(f"Generating bild file for field: {name}")
+
+    bild_path = outputpath + "/" + name
+
+    # Generate bild file
+    (
+        sample_density_array,
+        volume_box_array,
+        center_array,
+        basis_matrix_array,
+        esp_array,
+    ) = process_field_file(path_to_esp, type="esp")
+
+    esp_array = transform_esp(esp_array, center_array, basis_matrix_array)
+
+    esp_radii = generate_radii(esp_array.copy(), sample_density_array, volume_box_array)
+
+    # ESP is a scalar field, so no need to transform or generate vectors, represent as spheres
+    generate_bild_file_esp(
+        esp_radii,
+        esp_array,
+        cutoff,
+        max_p_esp,
+        min_p_esp,
+        max_n_esp,
+        min_n_esp,
+        bild_path,
+    )
+    return "Bild file saved for {}".format(name)
+
+
+def visualize_field(path_to_efield, outputpath, options):
     """
     Visualize electric fields in proteins by creating a bild file
     for Chimera/ChimeraX input, with optional display in ChimeraX
     Takes:
-        path_to_pdb: Path to the PDB file of the protein
-        path_to_field: Path to the corresponding field file
+        path_to_field: Path to the corresponding field/esp file
         options: Options dictionary
         display: Boolean to display the fields in ChimeraX
     """
@@ -32,15 +96,25 @@ def visualize_field(path_to_pdb, path_to_efield, options, display=False):
     # Extract key options
 
     if "visualization" in options.keys():
-        cutoff = options["visualization"]["cutoff"] if "cutoff" in options["visualization"] else 0
-        sparsify_factor = options["visualization"]["sparsify_factor"] if "sparsify_factor" in options["visualization"] else 1
+        cutoff = (
+            options["visualization"]["cutoff"]
+            if "cutoff" in options["visualization"]
+            else 0
+        )
+        sparsify_factor = (
+            options["visualization"]["sparsify_factor"]
+            if "sparsify_factor" in options["visualization"]
+            else 1
+        )
     else:
         cutoff = 0
         sparsify_factor = 1
 
-    name = path_to_pdb.split("/")[-1].split(".")[0]
+    name = path_to_efield.split("/")[-1].split(".")[0]
 
-    bild_path = options["outputpath"] + "/" + name
+    log.info(f"Generating bild file for field: {name}")
+
+    bild_path = outputpath + "/" + name
 
     # Generate bild file
     (
@@ -52,27 +126,24 @@ def visualize_field(path_to_pdb, path_to_efield, options, display=False):
     ) = process_field_file(path_to_efield)
     transformed_field_array = transform_field(
         field_array, center_array, basis_matrix_array
-        )
+    )
     tip_to_tail_vectors = generate_tip_tail_vectors(
         transformed_field_array.copy(), sample_density_array, volume_box_array
     )
     generate_bild_file(
-        tip_to_tail_vectors, transformed_field_array, cutoff, sparsify_factor, bild_path, path_to_efield
+        tip_to_tail_vectors,
+        transformed_field_array,
+        cutoff,
+        sparsify_factor,
+        bild_path,
+        path_to_efield,
     )
-
-    # Display in ChimeraX, still in development
-    """
-    if display:
-        run("open " + path_to_pdb)
-        run("open " + bild_path + ".bild")
-    """
-
     return "Bild file saved for {}".format(name)
 
 
-def process_field_file(file_path):
+def process_field_file(file_path, type="field"):
     """
-    This function processes all data from the field file
+    This function processes all data from the field/esp file
     Inputs:
         file_path: Path to the field file
     Outputs:
@@ -88,6 +159,7 @@ def process_field_file(file_path):
     center = []
     basis_matrix = []
     field = []
+    esp = []
 
     # Read the file
     reading_basis_matrix = False
@@ -123,48 +195,64 @@ def process_field_file(file_path):
                     reading_basis_matrix = False
             elif not line.startswith("#"):
                 try:
-                    field.append([float(x) for x in line.split()])
+                    if type == "field":
+                        field.append([float(x) for x in line.split()])
+                    elif type == "esp":
+                        esp.append([float(x) for x in line.split()])
                 except:
                     raise ValueError(
-                        f"Field line not formatted correctly; field list of length {len(field)}"
+                        f"Field/esp line not formatted correctly; field/esp list of length {len(field)}"
                     )
     if not sample_density:
         warnings.warn("Sample density not found, ignoring for checking")
-    if not field:
-        raise ValueError("No field data found at all, exiting...")
+    if not field and not esp:
+        raise ValueError("No field/esp data found at all, exiting...")
     if not center or not basis_matrix:
         warnings.warn(
             "Center or basis matrix not found, no transformation will be made"
         )
     if sample_density:
-        check_field(np.array(field), np.array(sample_density))
+        if type == "field":
+            check_field(np.array(field), np.array(sample_density), type)
+        elif type == "esp":
+            check_field(np.array(esp), np.array(sample_density), type)
     # print(np.array(basis_matrix))
-    return (
-        np.array(sample_density),
-        np.array(volume_box),
-        np.array(center),
-        np.array(basis_matrix),
-        np.array(field),
-    )
+    if type == "field":
+        return (
+            np.array(sample_density),
+            np.array(volume_box),
+            np.array(center),
+            np.array(basis_matrix),
+            np.array(field),
+        )
+    elif type == "esp":
+        return (
+            np.array(sample_density),
+            np.array(volume_box),
+            np.array(center),
+            np.array(basis_matrix),
+            np.array(esp),
+        )
 
 
-def check_field(field_array, sample_density_array):
+def check_field(elec_array, sample_density_array, type="field"):
     """
     This function checks if the field provided matches the sample density
     Inputs:
-        field_array: Field array
+        elec_array: Field/esp array
         sample_density_array: Sample density array
+        type: Type of field, either 'field' or 'esp'
     Outputs:
         None
     """
     # print(sample_density_array)
     # print(field_array.shape)
-    if field_array.shape[0] != np.product(sample_density_array, axis=0):
+    if elec_array.shape[0] != np.product(sample_density_array, axis=0):
         raise ValueError(
-            f"Field provided does not match sample density, field of shape {field_array.shape[0]} does not match expected sample amount of {np.product(sample_density_array, axis=0)}"
+            f"{type} provided does not match sample density, {type} of shape {elec_array.shape[0]} does not match expected sample amount of {np.product(sample_density_array, axis=0)}"
         )
     else:
-        print("Field matches sample density, check passed, continuing...")
+        print(f"{type} matches sample density, check passed, continuing...")
 
 
 def transform_field(field_array, center_array, basis_matrix_array):
@@ -190,6 +278,26 @@ def transform_field(field_array, center_array, basis_matrix_array):
     return transformed_field_array
 
 
+def transform_esp(esp_array, center_array, basis_matrix_array):
+    """
+    This function transforms the ESP array to the new basis and new center
+    Inputs:
+        esp_array: ESP array
+        center_array: Center array
+        basis_matrix_array: Basis matrix array
+    Outputs:
+        transformed_esp_array: Transformed ESP array
+    """
+    esp_coords = esp_array[:, 0:3]
+    # Need to transform and recenter field coords, but only transform field vecs
+    transformed_esp_coords = esp_coords @ basis_matrix_array.T
+    transformed_esp_coords = transformed_esp_coords + center_array
+    transformed_esp_array = np.concatenate(
+        (transformed_esp_coords, np.array(esp_array[:, 3]).reshape(-1, 1)), axis=1
+    )
+    return transformed_esp_array
+
+
 def generate_tip_tail_vectors(field_array, sample_density_array, volume_box_array):
     """
     This function generates the tip and tail vectors for the field
@@ -201,7 +309,7 @@ def generate_tip_tail_vectors(field_array, sample_density_array, volume_box_arra
         tip_to_tail_vectors: Tip to tail vectors
     """
 
-    max_vector_length = 0.9 * np.min(2*volume_box_array / sample_density_array)
+    max_vector_length = 0.9 * np.min(2 * volume_box_array / sample_density_array)
 
     """
     if sample_density_array!=[] and volume_box_array!=[]:
@@ -222,6 +330,30 @@ def generate_tip_tail_vectors(field_array, sample_density_array, volume_box_arra
     tip_to_tail_vectors = np.concatenate((tail_vecs, tip_vecs), axis=1)
 
     return tip_to_tail_vectors
+
+
+def generate_radii(esp_array, sample_density_array, volume_box_array):
+    """
+    This function generates the radii for the ESP field
+    Inputs:
+        esp_array: ESP array of shape (N,4) (x,y,z,esp)
+        sample_density_array: Sample density array
+        volume_box_array: Volume box array
+    Outputs:
+        radii: Radii for each point of the ESP field
+    """
+    print(sample_density_array, volume_box_array)
+
+    # Normalize esp_array (only esp values)
+    zero_min_esps = np.abs(esp_array[:, 3]) - np.min(esp_array[:, 3])
+    esps_norm = zero_min_esps / np.max(zero_min_esps)
+
+    # Generate radii based on grid and esp values
+    radii = (
+        0.5 * np.min(2 * volume_box_array / sample_density_array) * np.abs(esps_norm)
+    )
+
+    return radii
 
 
 def fac(num, f):
@@ -333,7 +465,7 @@ def scale_tip_to_tail_vectors(
     for i in range(len(tip_to_tail_vectors)):
 
         # use field mag as scaling factor
-        m = 5 * sparsify_factor * field_mags[i] * min_dim
+        m = sparsify_factor * field_mags[i] * min_dim
 
         xA = tip_to_tail_vectors[i][0]
         yA = tip_to_tail_vectors[i][1]
@@ -376,7 +508,6 @@ def generate_bild_file(
     Inputs:
         tip_to_tail_vectors: Tip to tail vectors
         transformed_field_array: Field array
-        chimera_type: Chimera type
         percentile: Percentile cutoff for sparsifying the field
         sparsify_factor: Sparsification factor for the field
     Outputs:
@@ -413,7 +544,12 @@ def generate_bild_file(
     # field_mags_max = 0.10
     # field_mags_min = 0.001
     field_mags_min = np.min(field_mags)
-    field_mags = (field_mags - field_mags_min) / field_mags_max
+
+    print("Max field magnitude: ", field_mags_max)
+    print("Min field magnitude: ", field_mags_min)
+
+    field_mags = (field_mags - field_mags_min) / (field_mags_max - field_mags_min)
+    # print(max(field_mags), min(field_mags)) #Debug, make sure min and max are 0 and 1
     percentile_cutoff = np.percentile(field_mags, percentile)
     r = sparsify_vec_field(
         (1 - field_mags), sparsify_factor, nx, ny, nz, dim1, dim2, dim3
@@ -446,7 +582,7 @@ def generate_bild_file(
 
     with open(f"{output}.bild", "w") as bild:
         bild.write(".transparency 0.25\n")
-        # for i in range(tip_to_tail_vectors.shape[0]):
+
         for i in range(len(tip_to_tail_vectors)):
             if field_mags[i] > percentile_cutoff:
                 bild.write(f".color {r[i]} {g[i]} {b[i][0]}\n")
@@ -454,3 +590,85 @@ def generate_bild_file(
                     f".arrow {tip_to_tail_vectors[i, 0]} {tip_to_tail_vectors[i, 1]} {tip_to_tail_vectors[i, 2]} {tip_to_tail_vectors[i, 3]} {tip_to_tail_vectors[i, 4]} {tip_to_tail_vectors[i, 5]} 0.01 {0.04*field_mags[i]*sparsify_factor*2.5*min(dim1,dim2,dim3)} 0.001\n"
                 )
     bild.close()
+
+
+def generate_bild_file_esp(
+    radii, esp_array, percentile, max_p_esp, min_p_esp, max_n_esp, min_n_esp, output
+):
+    """
+    This function generates the BILD file for the ESP field
+    Inputs:
+        radii: Radii for the ESP field
+        esp_array: ESP array
+        percentile: Percentile cutoff for sparsifying the field
+        sparsify_factor: Sparsification factor for the field
+    Outputs:
+        None
+    """
+
+    esp_array_mags = np.abs(esp_array[:, 3])
+    percentile_cutoff = np.percentile(esp_array_mags, percentile)
+
+    """
+    Make red positive and blue negative.
+    For positive esp values, values range from (0,0,0) to (1,0,0)
+    For negative esp values, values range from (0,0,0) to (0,0,1)
+    (0,0,0) is for esp values of 0
+    (1,0,0) is for the most positive esp value
+    (0,0,1) is for the most negative esp value
+    """
+
+    # Max p esp is highest magnitude positive esp, min p esp is lowest magnitude positive esp
+    # Max n esp is highest magnitude negative esp, min n esp is lowest magnitude negative esp
+
+    max_p_esp = max_p_esp
+    min_p_esp = min_p_esp
+    max_n_esp = max_n_esp
+    min_n_esp = min_n_esp
+    esp_temp_positive = esp_array[esp_array[:, 3] > 0]
+    esp_temp_negative = esp_array[esp_array[:, 3] < 0]
+    if max_p_esp == None:
+        # Make max_p_esp None if esp_temp_positive is empty
+        max_p_esp = (
+            np.max(esp_temp_positive[:, 3]) if len(esp_temp_positive) > 0 else None
+        )
+    if min_p_esp == None:
+        min_p_esp = (
+            np.min(esp_temp_positive[:, 3]) if len(esp_temp_positive) > 0 else None
+        )
+    if max_n_esp == None:
+        max_n_esp = (
+            np.max(esp_temp_negative[:, 3]) if len(esp_temp_negative) > 0 else None
+        )
+    if min_n_esp == None:
+        min_n_esp = (
+            np.min(esp_temp_negative[:, 3]) if len(esp_temp_negative) > 0 else None
+        )
+
+    print(f"Max P ESP: {max_p_esp}, Min P ESP: {min_p_esp}")
+    print(f"Max N ESP: {max_n_esp}, Min N ESP: {min_n_esp}")
+
+    r = np.ones((len(esp_array), 1))
+    g = np.ones((len(esp_array), 1))
+    b = np.ones((len(esp_array), 1))
+
+    for i in range(len(esp_array)):
+        if esp_array[i, 3] > 0:
+            g[i] = 1 - (esp_array[i, 3] - min_p_esp) / (max_p_esp - min_p_esp)
+            b[i] = 1 - (esp_array[i, 3] - min_p_esp) / (max_p_esp - min_p_esp)
+        elif esp_array[i, 3] < 0:
+            g[i] = 1 - (esp_array[i, 3] - max_n_esp) / (min_n_esp - max_n_esp)
+            r[i] = 1 - (esp_array[i, 3] - max_n_esp) / (min_n_esp - max_n_esp)
+        else:
+            r[i] = 1
+            g[i] = 1
+            b[i] = 1
+
+    with open(f"{output}.bild", "w") as bild:
+        bild.write(".transparency 0.25\n")
+        for i in range(len(esp_array)):
+            if esp_array_mags[i] > percentile_cutoff:
+                bild.write(f".color {r[i][0]} {g[i][0]} {b[i][0]}\n")
+                bild.write(
+                    f".sphere {esp_array[i, 0]} {esp_array[i, 1]} {esp_array[i, 2]} {radii[i]}\n"
+                )

@@ -1,0 +1,55 @@
+
+========================================================================
+CPET: Computing and Analyzing Electric Fields in Proteins
+Developed by: Pujan Ajmera, Santiago Vargas, Matthew Hennerfarth, and Anastassia Alexandrova
+Maintainer: pujanajmera1@g.ucla.edu
+GitHub: https://github.com/pujanajmera/pycpet
+License: MIT — please see repository for full license text
+For citation: 10.1021/acs.jctc.5c00138
+========================================================================
+Mandatory citation if you use this code: 
+- 10.1021/acs.jctc.5c00138
+Preferred citations: 
+If you are using the tensor decomposition method, please also cite: 
+- 10.1021/jacs.5c11931
+If you are using the distribution of streamlines method, please also cite: 
+- 10.1021/acscatal.0c02795
+If you are using PCA to decompose electric fields, please also cite: 
+- 10.1021/jacs.4c03914
+09:15:28 INFO [CPET.source.scripts.cpet] ... > Starting cpet.py
+09:15:28 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+09:15:28 INFO [CPET.utils.io] centering atoms for x: [('O9', 378)]
+09:15:28 INFO [CPET.utils.io] centering atoms for y: [('N8', 378)]
+09:15:28 INFO [CPET.source.calculator] No atom spec filtering specified, using all atoms
+09:15:28 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+09:15:28 INFO [CPET.source.calculator] Rotating coordinates
+09:15:28 INFO [CPET.source.calculator] Center: [44.029    30.8975   41.738503]
+09:15:28 INFO [CPET.source.calculator] x vector point: [44.566 30.653 41.775]
+09:15:28 INFO [CPET.source.calculator] y vector point: [42.334 30.684 42.232]
+09:15:28 INFO [CPET.source.CPET] protein file: 1_alcdehydro_run1
+09:15:29 INFO [CPET.utils.io] centering atoms for center: [('C7', 378), ('O9', 378)]
+09:15:29 INFO [CPET.utils.io] centering atoms for x: [('O9', 378)]
+09:15:29 INFO [CPET.utils.io] centering atoms for y: [('N8', 378)]
+09:15:29 INFO [CPET.source.calculator] No atom spec filtering specified, using all atoms
+09:15:29 INFO [CPET.source.calculator] filtering by radius: 40 Ang
+09:15:29 INFO [CPET.source.calculator] Rotating coordinates
+09:15:29 INFO [CPET.source.calculator] Center: [44.163498 30.2825   42.077   ]
+09:15:29 INFO [CPET.source.calculator] x vector point: [44.682 29.973 42.155]
+09:15:29 INFO [CPET.source.calculator] y vector point: [42.562 30.483 42.848]
+09:15:29 INFO [CPET.source.CPET] protein file: 2_alcdehydro_run1
+Instantiating CPET, method: volume
+(76923, 3)
+(76923, 1)
+(76923,)
+(76923,)
+radius filter leaves: 27385
+Initializing box points uniformly...
+... > Initialized Calculator!
+(76923, 3)
+(76923, 1)
+(76923,)
+(76923,)
+radius filter leaves: 27218
+Initializing box points uniformly...
+... > Initialized Calculator!
+No more files to process!

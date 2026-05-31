@@ -1,0 +1,69 @@
+Starting cpet.py!
+Instantiating CPET, method: point_field
+HEHEHE
+['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+[{'C7': 378}, {'O9': 378}]
+centering atoms for center:  [('C7', 378), ('O9', 378)]
+pos considered for center:  [array([43.492, 31.142, 41.702], dtype=float32), array([44.566, 30.653, 41.775], dtype=float32)]
+[{'O9': 378}]
+centering atoms for x:  [('O9', 378)]
+pos considered for center:  [array([44.566, 30.653, 41.775], dtype=float32)]
+[{'N8': 378}]
+centering atoms for y:  [('N8', 378)]
+pos considered for center:  [array([42.334, 30.684, 42.232], dtype=float32)]
+filtering by radius: 40 Ang
+(76901, 3)
+(76901, 1)
+(76901,)
+(76901,)
+radius filter leaves: 27363
+... initializing box points uniformly
+[0, 0, 0]
+(0, 0, 0, 3)
+Rotating coordinates
+... > Initialized Calculator!
+protein file: 1_alcdehydro_run1
+... > Computing Point Field (Vector)!
+Number of charges: 27363
+point: [44.029    30.8975   41.738503]
+x shape: (27363, 3)
+Q shape: (27363, 1)
+First few lines of x: [[-15.206111  -20.70864    23.37838  ]
+ [-15.950881  -20.693731   24.060678 ]
+ [-15.103842  -21.701342   23.228645 ]
+ [-14.3437195 -20.323849   23.736088 ]
+ [-15.601106  -20.005947   22.121132 ]]
+0.0007424354553222656
+['Z' 'Z' 'Z' ... 'Z' 'Z' 'Z']
+[{'C7': 378}, {'O9': 378}]
+centering atoms for center:  [('C7', 378), ('O9', 378)]
+pos considered for center:  [array([43.645, 30.592, 41.999], dtype=float32), array([44.682, 29.973, 42.155], dtype=float32)]
+[{'O9': 378}]
+centering atoms for x:  [('O9', 378)]
+pos considered for center:  [array([44.682, 29.973, 42.155], dtype=float32)]
+[{'N8': 378}]
+centering atoms for y:  [('N8', 378)]
+pos considered for center:  [array([42.562, 30.483, 42.848], dtype=float32)]
+filtering by radius: 40 Ang
+(76901, 3)
+(76901, 1)
+(76901,)
+(76901,)
+radius filter leaves: 27196
+... initializing box points uniformly
+[0, 0, 0]
+(0, 0, 0, 3)
+Rotating coordinates
+... > Initialized Calculator!
+protein file: 2_alcdehydro_run1
+... > Computing Point Field (Vector)!
+Number of charges: 27196
+point: [44.163498 30.2825   42.077   ]
+x shape: (27196, 3)
+Q shape: (27196, 1)
+First few lines of x: [[-16.79507  -28.256788  11.848408]
+ [-17.025942 -29.050837  11.269577]
+ [-15.801604 -28.225895  12.028816]
+ [-17.259317 -28.366577  12.738708]
+ [-17.264555 -27.00057   11.220984]]
+0.0003457069396972656

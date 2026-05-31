@@ -1,0 +1,9 @@
+{
+        "CPET_method": "visualize_field",
+        "inputpath": "./input_fields",
+	"visualization":{
+		"cutoff": 0,
+		"sparsify_factor": 2
+	},
+	"_comment": "WARNING: keeping filter_res_radius will overwrite filter_radius and filter_resname"
+}

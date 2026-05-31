@@ -1,0 +1,7 @@
+/jet/home/ajmera/.conda/envs/CPET_ENV/bin/cpet.py:4: DeprecationWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html
+  __import__('pkg_resources').require('pycpet==0.0.1')
+protein file: 1_alcdehydro_run1
+Already done for protein: 1_alcdehydro_run1, skipping...
+protein file: 2_alcdehydro_run1
+Already done for protein: 2_alcdehydro_run1, skipping...
+No more files to process!

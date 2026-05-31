@@ -1,0 +1,7 @@
+# Oriented point electric fields
+
+This example characterizes the topology of the 3-D electric field surrounding the midpoint of a C=O bond in a CXF residue, in a mutated alcohol dehydrogenase. Here, the field axes are oriented along the C=O bond as the x axis, with a nearby nitrogen as the y-axis. The options files has dimensions '0.5,0.5,0.5', indicating 0.5Å in the +-x, +-y, and +-z directions. Electric field output from two frames (as pdbs) is in the directory "outdir", each as its own file with transformation matrix and field information. The parameters 'step_size' and 'n_samples' in the options file control the step size (in Angstroms) and the number of streamlines computed, respectively.
+
+Run this example by simply "cpet.py >& cpet.out" or "cpet.py -o options/options.json >& cpet.out"
+
+The output ".top" files have a simple list of streamline information, with the euclidean distance of the endpoints on the left, and the mean curvature of the endpoints on the right. These two columns, upon binning, make a histogram that represents the streamline distribution. The PyCPET code by default runs 4 processes for streamline calculations, you can control this by including the 'concur_slip' keyword in your options file.

@@ -1,5 +1,30 @@
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
+from glob import glob
+import logging
+
+log = logging.getLogger(__name__)
+
+
+def get_input_files(inputpath, filetype):
+    """
+    Check if the pdb/pqr folder contains any pdb/pqr files
+    Parameters:
+        pdb_folder (str): Path to the folder containing pdb/pqr
+        filetype (str): Type of input files ('pdb' or 'pqr')
+    Returns:
+        files_input (list): List of pdb/pqr files in the folder
+    """
+    if filetype not in ["pdb", "pqr"]:
+        raise ValueError("filetype must be 'pdb' or 'pqr'")
+    files_input = glob(inputpath + f"/*.{filetype}")
+    if len(files_input) == 0:
+        raise ValueError("No pdb files found in the input directory")
+    if len(files_input) == 1:
+        log.warning("Only one pdb file found in the input directory")
+    return files_input
+
 
 def write_field_to_file(grid_points, field_points, filename):
     """
@@ -22,7 +47,7 @@ def write_field_to_file(grid_points, field_points, filename):
         np.savetxt(f, data, fmt=format_str)
 
 
-def save_numpy_as_dat(meta_data, field, name):
+def save_numpy_as_dat(meta_data, volume, name):
     """
     Saves np array in original format from cpet output
     Takes:
@@ -37,7 +62,12 @@ def save_numpy_as_dat(meta_data, field, name):
     center = meta_data["center"]
 
     first_line = "#Sample Density: {} {} {}; Volume: Box: {} {} {}\n".format(
-        num_steps_list[0], num_steps_list[1], num_steps_list[2], dimensions[0], dimensions[1], dimensions[2]
+        num_steps_list[0],
+        num_steps_list[1],
+        num_steps_list[2],
+        dimensions[0],
+        dimensions[1],
+        dimensions[2],
     )
     second_line = "#Frame 0\n"
     third_line = "#Center: {} {} {}\n".format(center[0], center[1], center[2])
@@ -64,10 +94,9 @@ def save_numpy_as_dat(meta_data, field, name):
     field = np.concatenate((transformed_field_coords, transformed_field_vecs), axis=1)
     """
 
-    # write as
     np.savetxt(
         name,
-        field,
+        volume,
         fmt="%.3f",
     )
 
@@ -115,8 +144,8 @@ def read_mat(file, meta_data=False, verbose=False):
         "bounds_y": [-y_size, y_size + step_size_y],
         "bounds_z": [-z_size, z_size + step_size_z],
     }
-    # print(lines[0].split())
-    # print(meta_dict)
+    print(lines[0].split())
+    print(meta_dict)
     if verbose:
         print(meta_dict)
 
@@ -155,6 +184,19 @@ def read_mat(file, meta_data=False, verbose=False):
         return mat
 
 
+def pull_mats_from_MD_folder(root_dir):
+    x = []
+    target_files = []
+    target_files = glob(root_dir + "/*.dat")
+
+    for i in tqdm(target_files):
+        x.append(read_mat(i))
+
+    x = np.array(x)
+
+    return x
+
+
 def default_options_initializer(options):
     """
     Initializes default options for CPET after checking if they are present in the options dictionary
@@ -163,71 +205,65 @@ def default_options_initializer(options):
     Returns
         options(dict) - dictionary of options with default values
     """
+    # Directories:
+    if "inputpath" not in options.keys():
+        options["inputpath"] = "./inpdir"
+    if "outputpath" not in options.keys():
+        options["outputpath"] = "./outdir"
+    if "inputfiletype" not in options.keys():
+        options["inputfiletype"] = "pdb"  # Default to pdb with charges
 
-    if "concur_slip" not in options.keys():
-        options["concur_slip"] = 4
-
-    if "dtype" not in options.keys():
-        options["dtype"] = "float32"
-
-    if "GPU_batch_freq" not in options.keys():
-        options["GPU_batch_freq"] = 100
-
-    if "step_size" not in options.keys():
-        options["step_size"] = 0.1
-
-    if "n_samples" not in options.keys():
-        options["n_samples"] = 10000
-
+    # Developer Options:
     if "profile" not in options.keys():
         options["profile"] = False
+
+    # Debugging Options:
+    if "write_transformed_pdb" not in options.keys():
+        options["write_transformed_pdb"] = False
+
+    # Box options (all 3D calcs):
+    if "dimensions" not in options.keys():
+        options["dimensions"] = None
+    if "step_size" not in options.keys():  # Both for topology/box
+        options["step_size"] = None
+    if "initializer" not in options.keys():
+        options["initializer"] = "uniform"
+    if "box_shift" not in options.keys():
+        options["box_shift"] = [0, 0, 0]
+
+    # Filtering Options:
+    if "filter_intersect" not in options.keys():
+        options["filter_intersect"] = False
+
+    # Topology Options:
+    if "concur_slip" not in options.keys():
+        options["concur_slip"] = 4
+    if "dtype" not in options.keys():
+        options["dtype"] = "float32"
+    if "GPU_batch_freq" not in options.keys():
+        options["GPU_batch_freq"] = 100
+    if "n_samples" not in options.keys():
+        options["n_samples"] = None
 
     return options
 
 
-def initialize_box_points(center, x, y, dimensions, n_samples, step_size):
+def check_valid_options(options):
     """
-    Initializes random points in box centered at the origin
+    Checks if options are valid and raises errors if not
     Takes
-        center(array) - center of box of shape (1,3)
-        x(array) - point to create x axis from center of shape (1,3)
-        y(array) - point to create x axis from center of shape (1,3)
-        dimensions(array) - L, W, H of box of shape (1,3)
-        n_samples(int) - number of samples to compute
-        step_size(float) - step_size of box
+        options(dict) - dictionary of options
     Returns
-        random_points_local(array) - array of random starting points in the box of shape (n_samples,3)
-        random_max_samples(array) - array of maximum sample number for each streamline of shape (n_samples, 1)
-        transformation_matrix(array) - matrix that contains the basis vectors for the box of shape (3,3)
+        None, but raises errors if options are invalid
     """
-    # Convert lists to numpy arrays
-    x = x - center  # Translate to origin
-    y = y - center  # Translate to origin
-    half_length, half_width, half_height = dimensions
-    # Normalize the vectors
-    x_unit = x / np.linalg.norm(x)
-    y_unit = y / np.linalg.norm(y)
-    # Calculate the z unit vector by taking the cross product of x and y
-    z_unit = np.cross(x_unit, y_unit)
-    z_unit = z_unit / np.linalg.norm(z_unit)
-    # Recalculate the y unit vector
-    y_unit = np.cross(z_unit, x_unit)
-    y_unit = y_unit / np.linalg.norm(y_unit)
-    # Generate random samples in the local coordinate system of the box
-    random_x = np.random.uniform(-half_length, half_length, n_samples)
-    random_y = np.random.uniform(-half_width, half_width, n_samples)
-    random_z = np.random.uniform(-half_height, half_height, n_samples)
-    # Each row in random_points_local corresponds to x, y, and z coordinates of a point in the box's coordinate system
-    random_points_local = np.column_stack([random_x, random_y, random_z])
-    # Convert these points back to the global coordinate system
-    transformation_matrix = np.column_stack(
-        [x_unit, y_unit, z_unit]
-    ).T  # Each column is a unit vector
-    max_distance = 2 * np.linalg.norm(
-        np.array(dimensions)
-    )  # Define maximum sample limit as 2 times the diagonal
-    random_max_samples = np.random.randint(1, max_distance / step_size, n_samples)
-    return random_points_local, random_max_samples, transformation_matrix
+    if options["inputfiletype"] not in ["pdb", "pqr"]:
+        raise ValueError("inputfiletype must be 'pdb' or 'pqr'")
+    if options["initializer"] not in ["uniform", "random"]:
+        raise ValueError("initializer must be 'uniform' or 'random'")
+    # Ensure that x and y vectors are not redundant, if both exist
+    if "x" in options.keys() and "y" in options.keys():
+        if options["x"] == options["y"]:
+            raise ValueError("x and y points used for vectors cannot be the same")
 
 
 def filter_radius(x, Q, center, radius=2.0):
@@ -244,14 +280,14 @@ def filter_radius(x, Q, center, radius=2.0):
     return x_filtered, Q_filtered
 
 
-def filter_radius_whole_residue(x, Q, resids, resnums, center, radius=2.0):
+def filter_radius_whole_residue(x, Q, ID, center, radius=2.0):
     """
     Filters out entire residues that have any points that fall outside of the radius
     Takes
         x(array) - coordinates of charges of shape (N,3)
         Q(array) - magnitude and sign of charges of shape (N,1)
-        resids(array) - residue ids/names of shape (N,)
-        resnums(array) - residue numbers of shape (N,)
+        ID(list) - identity information of shape (N,), where each value is a tuple of
+            the form (atom_number, atom_type, resid, resnum, chain). Chain is optional.
         center(array) - center of box of shape (1,3)
         radius(float) - radius to filter
     """
@@ -260,6 +296,11 @@ def filter_radius_whole_residue(x, Q, resids, resnums, center, radius=2.0):
     resid_current = None
     resnum_current = None
     true_res_dict = {}
+
+    # Need to extract resids and resnums from ID
+    resids = np.array([id[2] for id in ID])
+    resnums = np.array([id[3] for id in ID])
+
     print(x_recentered.shape)
     print(Q.shape)
     print(resids.shape)
@@ -291,179 +332,121 @@ def filter_radius_whole_residue(x, Q, resids, resnums, center, radius=2.0):
     ]
     x_filtered = np.delete(x, indices_to_filter_out, axis=0)
     Q_filtered = np.delete(Q, indices_to_filter_out, axis=0)
+    ID_filtered = np.delete(ID, indices_to_filter_out, axis=0)
     print("radius filter leaves: {}".format(len(Q_filtered)))
-    # print(np.linalg.norm(x_filtered, axis=1))
-    return x_filtered, Q_filtered
+    print(np.linalg.norm(x_filtered, axis=1))
+    return x_filtered, Q_filtered, ID_filtered
 
 
-def filter_IDs(x, Q, ID, filter_dict):
+def filter_atomspec(x, Q, ID, filter_dict, intersect):
     """
-    General filter to remove anything in the filter list based on
-    identity information solely. Includes currently:
-    - Atom Number (self.atom_number in calculator object)
-    - Atom Name (self.atom_type in calculator object)
-    - Residue Name (self.resid in calculator object)
-    - Residue Number (self.resnum in calculator object)
-    - Chain (self.chain in calculator object, if available)
+    General filter to remove any specification based on input
+    filter list, either by the overlap of the lists or the union
+    of the lists
 
-    Takes:
-        x(array) - coordinates of charges of shape (N,3)
-        Q(array) - magnitude and sign of charges of shape (N,1)
-        ID(list) - identity information of shape (N,), where each value is a tuple of 
-        the form (atom_number, atom_type, atom_resid, atom_resnum, atom_chain)
-        filter_dict(dict) - dictionary of identity information to filter out
-    Returns:
-        x_filtered(array) - filtered coordinates of charges of shape (N,3)
-        Q_filtered(array) - filtered magnitude and sign of charges of shape (N,1)
-        ID_filtered(array) - filtered identity information of shape (N,)
+    Parameters
+    ----------
+    x : array
+        Coordinates of charges of shape (N,3)
+    Q : array
+        Magnitude and sign of charges of shape (N,1)
+    ID : list
+        Identity information of shape (N,), where each value is a tuple of
+        the form (atom_number, atom_type, resid, resnum, chain). Chain is optional.
+    filter_dict : dict
+        Dictionary of identity information to filter out
+    intersect : bool
+        If True, filter out only if all conditions in filter_dict are met (intersection)
+
+    Returns
+    -------
+    x_filtered : array
+        Filtered coordinates of charges of shape (N,3)
+    Q_filtered : array
+        Filtered magnitude and sign of charges of shape (N,1)
+    ID_filtered : list
+        Filtered identity information of shape (N,)
     """
-
-    # ------------------------------------
-    # 1) Convert ID into a pandas DataFrame
-    # ------------------------------------
-    # We'll assume ID is a list of tuples, each (atom_number, atom_type, resid, resnum, chain).
-    # Let's create a DataFrame with 5 named columns:
-    df_id = pd.DataFrame(ID, columns=['atom_number', 'atom_type', 'resid', 'resnum', 'chain'])
-    #print(df_id)
-    N = len(df_id)
-    if len(x) != N or len(Q) != N:
-        raise ValueError("x, Q, and ID must have the same length.")
-
-    # ------------------------------------
-    # 2) Check filter_dict list lengths
-    # ------------------------------------
-    filter_lengths = [len(lst) for lst in filter_dict.values()]
-    print("Shape of filter array: {}".format(filter_lengths))
-    if filter_lengths:  # if filter_dict is not empty
-        if len(set(filter_lengths)) != 1:
-            # mismatch in lengths
-            msg = "ERROR: Not all filter lists in filter_dict have the same length.\n"
-            for key, val in filter_dict.items():
-                msg += f" - {key}: length {len(val)}\n"
-            raise ValueError(msg)
-        num_filters = filter_lengths[0]
+    filter_idx = []
+    atom_attributes_list = ["atom_number", "atom_type", "resid", "resnum", "chain"]
+    atom_attributes_considered = []
+    for key in filter_dict.keys():
+        if key not in atom_attributes_list:
+            raise ValueError(
+                f"Key {key} not recognized. Must be one of {atom_attributes_list}"
+            )
+        atom_attributes_considered.append(key)
+    log.info(f"Filtering by attributes: {atom_attributes_considered}")
+    if not intersect:  # Default behavior, union of filters
+        log.info("Filtering by union of filters (default)")
+        for i in atom_attributes_considered:
+            filter_vals = filter_dict[i]
+            for j in range(len(ID)):
+                if ID[j][atom_attributes_list.index(i)] in filter_vals:
+                    filter_idx.append(j)
+        filter_idx = list(set(filter_idx))  # Remove duplicates
     else:
-        # If filter_dict is empty, then there are no filters => we keep everything
-        print("No filters in filter_dict. Keeping all data.")
-        return x, Q, ID
-
-    # ------------------------------------
-    # 3) Build a mask of which rows match ANY filter
-    #    We'll call it "any_filter_mask"
-    # ------------------------------------
-    any_filter_mask = np.zeros(N, dtype=bool)  # start with all False
-
-    # We'll iterate over each filter index f_idx in [0, num_filters-1],
-    # and build a "local_mask" for each filter. Then we'll combine them.
-    for f_idx in range(num_filters):
-        local_mask = np.ones(N, dtype=bool)  # start True, narrow it down
-
-        # For each key in filter_dict, see if there's a constraint
-        for key, val_list in filter_dict.items():
-            filter_val = val_list[f_idx]
-            # If filter_val != "", we need to check it
-            if filter_val != "":
-                # Convert both sides to string if needed (since some data might be numeric)
-                # We compare row-by-row in a vectorized way:
-                local_mask &= (df_id[key].astype(str) == str(filter_val))
-
-        # local_mask is now True for rows that match this filter, and False otherwise
-        # Combine it with our global any_filter_mask via logical OR
-        any_filter_mask |= local_mask
-
-    # ------------------------------------
-    # 4) any_filter_mask == True means the row matched at least one filter
-    #    => we want to remove it. So let's invert it for "keep_mask".
-    # ------------------------------------
-    keep_mask = ~any_filter_mask  # True where row did NOT match any filter
-
-    # ------------------------------------
-    # 5) Filter x, Q, and ID using keep_mask
-    # ------------------------------------
-    # If x, Q, ID are lists, we can do list comprehensions;
-    # If they're NumPy arrays, we can just slice them with keep_mask.
-    # Example if x, Q are lists:
-    x_filtered  = [val for val, keep in zip(x, keep_mask) if keep]
-    Q_filtered  = [val for val, keep in zip(Q, keep_mask) if keep]
-    # For ID, we can slice df_id or the original ID
-    ID_filtered = [ID[i] for i, keep in enumerate(keep_mask) if keep]
-    print("Length before filtering: {}".format(len(x), len(Q), len(ID)))
-    print("Length after filtering: {}".format(len(x_filtered), len(Q_filtered), len(ID_filtered)))
-    return np.array(x_filtered), np.array(Q_filtered), np.array(ID_filtered)
+        log.info("Filtering by an ordered intersection of filters")
+        attr_len = []
+        for i in atom_attributes_considered:
+            attr_len.append(len(filter_dict[i]))
+        if len(set(attr_len)) != 1:
+            raise ValueError(
+                "All filter lists must be the same length when using intersection filtering"
+            )
+        for i in range(attr_len[0]):
+            filter_vals = {
+                key: filter_dict[key][i] for key in atom_attributes_considered
+            }
+            for j in range(len(ID)):
+                match = True
+                for key in filter_vals:
+                    val = filter_vals[key]
+                    id_val = ID[j][atom_attributes_list.index(key)]
+                    if val != "*" and val != "" and id_val != val:
+                        match = False
+                        break
+                if match:
+                    filter_idx.append(j)
+        filter_idx = list(set(filter_idx))  # Remove duplicates
+    log.debug(f"Length before filtering: {len(x)}, {len(Q)}, {len(ID)}")
+    x_filtered = np.delete(x, filter_idx, axis=0)
+    Q_filtered = np.delete(Q, filter_idx, axis=0)
+    ID_filtered = np.delete(ID, filter_idx, axis=0)
+    if len(x_filtered) != len(Q_filtered) or len(x_filtered) != len(ID_filtered):
+        raise ValueError("Unexpected: filtered arrays have different lengths")
+    log.info(f"Number of atoms filtered out: {len(filter_idx)}")
+    return x_filtered, Q_filtered, ID_filtered
 
 
-def filter_residue(x, Q, resnums, resids, atom_number, atom_type, filter_list):
-    # Filter out points that are inside the box
-    x = x
-    filter_inds = []
-    for resid in resids:
-        if resid in filter_list:
-            filter_inds.append(False)
-        else:
-            filter_inds.append(True)
-    x_filtered = x[filter_inds]
-    Q_filtered = Q[filter_inds]
-    resnums_filtered = resnums[filter_inds]
-    resids_filtered = resids[filter_inds]
-    atom_number_filtered = atom_number[filter_inds]
-    atom_type_filtered = atom_type[filter_inds]
+def filter_in_box(x, Q, ID, center, dimensions):
+    """
+    Filter to remove charges inside of a box defined by center and dimensions
 
-    return (
-        x_filtered,
-        Q_filtered,
-        resnums_filtered,
-        resids_filtered,
-        atom_number_filtered,
-        atom_type_filtered,
-    )
+    Parameters
+    ----------
+    x : array
+        Coordinates of charges of shape (N,3)
+    Q : array
+        Magnitude and sign of charges of shape (N,1)
+    ID : list
+        Identity information of shape (N,), where each value is a tuple of
+        the form (atom_number, atom_type, resid, resnum, chain). Chain is optional.
+    filter_dict : dict
+        Dictionary of identity information to filter out
+    intersect : bool
+        If True, filter out only if all conditions in filter_dict are met (intersection)
 
-
-def filter_resnum(x, Q, resnums, resids, filter_list):
-    # Filter out points that are inside the box
-    x = x
-    filter_inds = []
-    for resnum in resnums:
-        if resnum in filter_list:
-            filter_inds.append(False)
-        else:
-            filter_inds.append(True)
-    x_filtered = x[filter_inds]
-    Q_filtered = Q[filter_inds]
-    resnums_filtered = resnums[filter_inds]
-    resids_filtered = resids[filter_inds]
-
-    return x_filtered, Q_filtered, resnums_filtered, resids_filtered
-
-
-def filter_resnum_andname(x, Q, resnums, resnames, atom_number, atom_type, filter_list):
-    # Filter out points that are part of select resnum and resname
-    x = x
-    filter_inds = []
-    for i in range(len(resnums)):
-        if {str(resnums[i]): resnames[i]} in filter_list:
-            filter_inds.append(False)
-        else:
-            filter_inds.append(True)
-    x_filtered = x[filter_inds]
-    Q_filtered = Q[filter_inds]
-    resnums_filtered = resnums[filter_inds]
-    resnames_filtered = resnames[filter_inds]
-    atom_number_filtered = atom_number[filter_inds]
-    atom_type_filtered = atom_type[filter_inds]
-
-    return (
-        x_filtered,
-        Q_filtered,
-        resnums_filtered,
-        resnames_filtered,
-        atom_number_filtered,
-        atom_type_filtered,
-    )
-
-
-def filter_in_box(x, Q, center, dimensions):
+    Returns
+    -------
+    x_filtered : array
+        Filtered coordinates of charges of shape (N,3)
+    Q_filtered : array
+        Filtered magnitude and sign of charges of shape (N,1)
+    ID_filtered : list
+        Filtered identity information of shape (N,)
+    """
     x_recentered = x - center
-    print("Filtering Charges in Sampling Box")
     # Filter out points that are inside the box
     limits = {
         "x": [-dimensions[0], dimensions[0]],
@@ -487,20 +470,9 @@ def filter_in_box(x, Q, center, dimensions):
     # only keep points that are outside the box
     x_filtered = x[~mask]
     Q_filtered = Q[~mask]
+    ID_filtered = ID[~mask]
     # print("masked points: {}".format(len(mask)))
-    return x_filtered, Q_filtered
-
-
-def filter_atom_num(x, Q, atom_num_list, filter_list):
-    # Filter out points that are inside the box
-    x_filtered = []
-    Q_filtered = []
-    for i in range(len(x)):
-        if atom_num_list[i] not in filter_list:
-            x_filtered.append(x[i])
-            Q_filtered.append(Q[i])
-
-    return x_filtered, Q_filtered
+    return x_filtered, Q_filtered, ID_filtered
 
 
 def parse_pqr(path_to_pqr):
@@ -592,10 +564,10 @@ def parse_pqr(path_to_pqr):
     return (
         np.array(x),
         np.array(Q).reshape(-1, 1),
-        ret_atom_num,
-        res_name,
-        res_num,
-        atom_type,
+        np.array(ret_atom_num),
+        np.array(res_name),
+        np.array(res_num),
+        np.array(atom_type),
     )
 
 
@@ -662,6 +634,52 @@ def parse_pdb(pdb_file_path, get_charges=False, float32=True):
         np.array(atom_type),
         np.array(chains),
     )
+
+
+def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="center"):
+    if "chains" in options[seltype].keys():
+        if type(options[seltype]["chains"]) != list:
+            raise ValueError("chains must be a list")
+        if len(options[seltype]["chains"]) != len(options[seltype]["atoms"]):
+            raise ValueError("chains must be the same length as atoms")
+        centering_atoms = [
+            (k, v, chain)
+            for atom_dict, chain in zip(
+                options[seltype]["atoms"], options[seltype]["chains"]
+            )
+            for k, v in atom_dict.items()
+        ]
+        log.debug(f"len(chains): {len(chains)}")
+        log.debug(f"len(atom_type): {len(atom_type)}")
+        log.debug(f"len(residue_number): {len(residue_number)}")
+        log.debug(f"len(x): {len(x)}")
+        pos_considered = [
+            pos
+            for atom_res in centering_atoms
+            for idx, pos in enumerate(x)
+            if (
+                atom_type[idx],
+                residue_number[idx],
+                chains[idx],
+            )
+            == atom_res
+        ]
+    else:
+        log.debug(options[seltype]["atoms"])
+        centering_atoms = [
+            (k, v)
+            for atom_dict in options[seltype]["atoms"]
+            for k, v in atom_dict.items()
+        ]
+        log.info(f"centering atoms for {seltype}: {centering_atoms}")
+        atom_set = set(centering_atoms)
+        pos_considered = [
+            pos
+            for (atype, rnum), pos in zip(zip(atom_type, residue_number), x)
+            if (atype, rnum) in atom_set
+        ]
+    log.debug(f"pos considered for {seltype}: {pos_considered}")
+    return pos_considered
 
 
 def calculate_center(coordinates, method):

@@ -1,13 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import networkx as nx
 import seaborn as sns
 import json
-import psutil
 import time
+import os
 
-from sklearn.cluster import AffinityPropagation, HDBSCAN
-from sklearn_extra.cluster import KMedoids
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.manifold import MDS
@@ -18,9 +15,13 @@ from CPET.utils.calculator import (
     make_histograms,
     make_histograms_mem,
     make_fields,
+    make_5d_tensor,
     construct_distance_matrix,
     construct_distance_matrix_mem,
     construct_distance_matrix_volume,
+    construct_distance_matrix_tensor,
+    determine_rank,
+    reduce_tensor,
 )
 
 
@@ -47,7 +48,7 @@ class cluster:
         self.outputpath = options["outputpath"]
 
         # Cluster Specific Options
-        if not options["cluster_method"]:
+        if "cluster_method" not in options.keys():
             print("No cluster method specified, defaulting to K-Medoids")
             self.cluster_method = "kmeds"
         else:
@@ -65,11 +66,11 @@ class cluster:
             options["defined_n_clusters"] if "defined_n_clusters" in options else None
         )
         self.tensor_threshold = (
-            options["tensor_threshold"] if "tensor_threshold" in options else 0.05
+            options["tensor_threshold"] if "tensor_threshold" in options else 0.001
         )
-        self.rank = (
-            options["rank"] if "rank" in options else None
-        )
+        self.rank = options["rank"] if "rank" in options else None
+        self.max_rank = options["max_rank"] if "max_rank" in options else 30
+        self.min_rank = options["min_rank"] if "min_rank" in options else 1
         # Make sure the provided value for n_clusters and rank is an integer, not a string
         assert self.defined_n_clusters == None or isinstance(
             self.defined_n_clusters, int
@@ -79,10 +80,10 @@ class cluster:
         ), "Rank must be an integer"
 
         method_dict = {
-            "cluster": ["topo_file_list.txt","top"],
-            "cluster_volume": ["field_file_list.txt","_efield.dat"],
-            "cluster_volume_tensor": ["field_file_list.txt","_efield.dat"], ##DEV
-            "cluster_volume_esp_tensor": ["esp_file_list.txt","_esp.dat"], ##DEV
+            "cluster": ["topo_file_list.txt", "top"],
+            "cluster_volume": ["field_file_list.txt", "_efield.dat"],
+            "cluster_volume_tensor": ["field_file_list.txt", "_efield.dat"],
+            "cluster_volume_esp_tensor": ["esp_file_list.txt", "_esp.dat"],
         }
         list_file = method_dict[options["CPET_method"]][0]
         if self.cluster_reload:
@@ -93,27 +94,34 @@ class cluster:
                     self.file_list.append(line.strip())
             print(
                 "{} files found for clustering method {} from input".format(
-                    len(self.file_list),
-                    options["CPET_method"]
+                    len(self.file_list), options["CPET_method"]
                 )
             )
-            self.distance_matrix = np.load(
-                self.outputpath + "/distance_matrix.dat.npy"
-            )
+            self.distance_matrix = np.load(self.outputpath + "/distance_matrix.dat.npy")
         else:
             self.file_list = []
-            for file in glob(self.inputpath + f"/*.{method_dict[options['CPET_method']][1]}"):
+            print(method_dict[options["CPET_method"]][1])
+            for file in glob(
+                self.inputpath + f"/*{method_dict[options['CPET_method']][1]}"
+            ):
                 self.file_list.append(file)
+            if len(self.file_list) == 0:
+                print(
+                    "No files found for clustering method {}".format(
+                        options["CPET_method"]
+                    )
+                )
+                exit()
             self.file_list.sort()
+            print(len(self.file_list))
             topo_file_name = self.outputpath + f"/{list_file}"
             with open(topo_file_name, "w") as file_list:
                 for i in self.file_list:
                     file_list.write(f"{i} \n")
             print(
                 "{} files found for clustering method {}".format(
-                    len(self.file_list),
-                    options["CPET_method"]
-                    )
+                    len(self.file_list), options["CPET_method"]
+                )
             )
             if options["CPET_method"] == "cluster":
                 self.hists = make_histograms(self.file_list)
@@ -125,16 +133,38 @@ class cluster:
                 self.distance_matrix = construct_distance_matrix_volume(self.fields)
             elif options["CPET_method"] == "cluster_volume_tensor":
                 self.full_tensor = make_5d_tensor(self.file_list)
+                np.save(self.outputpath + "/5d_tensor.npy", self.full_tensor)
                 if self.rank == None:
-                    self.rank = determine_rank(self.full_tensor, self.tensor_threshold) #Time-limiting step (and probably memory)
-                self.reduced_tensor = reduce_tensor(self.full_tensor, self.rank)
-                self.distance_matrix = construct_distance_matrix_tensor(self.reduced_tensor)
+                    self.rank = determine_rank(
+                        self.full_tensor, self.tensor_threshold, self.max_rank
+                    )  # Time-limiting step (and probably memory)
+                self.reduced_tensor, _ = reduce_tensor(self.full_tensor, self.rank)
+                self.distance_matrix = construct_distance_matrix_tensor(
+                    self.reduced_tensor
+                )
             elif options["CPET_method"] == "cluster_volume_esp_tensor":
-                self.full_tensor = make_5d_tensor(self.file_list) #Try to use same fxn as above, to be efficient
+                # Skip 5d tensor if already made
+                if os.path.exists(self.outputpath + "/5d_tensor.npy"):
+                    print("5d tensor already found in output directory, skipping")
+                    self.full_tensor = np.load(self.outputpath + "/5d_tensor.npy")
+                else:
+                    self.full_tensor = make_5d_tensor(
+                        self.file_list, type="esp"
+                    )  # Try to use same fxn as above, to be efficient
+                np.save(self.outputpath + "/5d_tensor.npy", self.full_tensor)
                 if self.rank == None:
-                    self.rank = determine_rank(self.full_tensor, self.tensor_threshold)
-                self.reduced_tensor = reduce_tensor(self.full_tensor, self.rank)
-                self.distance_matrix = construct_distance_matrix_tensor(self.reduced_tensor)
+                    self.rank = determine_rank(
+                        self.full_tensor,
+                        self.tensor_threshold,
+                        self.max_rank,
+                        self.min_rank,
+                    )  # Time-limiting step (and probably memory)
+                self.reduced_tensor, self.reconstruction_error = reduce_tensor(
+                    self.full_tensor, self.rank
+                )
+                self.distance_matrix = construct_distance_matrix_tensor(
+                    self.reduced_tensor
+                )
             np.save(self.outputpath + "/distance_matrix.dat", self.distance_matrix)
 
     def Cluster(self):
@@ -156,13 +186,14 @@ class cluster:
         with open(self.outputpath + "/compressed_dictionary.json", "w") as outfile:
             json.dump(compressed_dictionary, outfile, cls=NpEncoder)
 
-
     def kmeds(self):
         """
         Method to run K-Medoids clustering, optimized via knee-locator
         Returns:
             cluster_results: dictionary with information about the clusters in best performing K-Medoids
         """
+        from sklearn_extra.cluster import KMedoids
+
         cluster_results = {}
         distance_matrix = self.distance_matrix
         distance_matrix = distance_matrix**2
@@ -274,8 +305,9 @@ class cluster:
 
         return cluster_results
 
-
     def affinity(self):
+        from sklearn.cluster import AffinityPropagation
+
         affinity = AffinityPropagation(
             affinity="precomputed", damping=0.5, max_iter=4000
         )
@@ -288,8 +320,9 @@ class cluster:
             self.cluster_results.cluster_centers_indices
         )
 
-
     def hdbscan(self):
+        from sklearn.cluster import HDBSCAN
+
         performance_list = []
         # for percentile_threshold in [70,80,90,99,99.9,99.99,99.999,99.9999,100]:
         for percentile_threshold in [99.9999, 100]:
@@ -354,7 +387,6 @@ class cluster:
         print(
             f"Best performance with {best_performance[4]}% cutoff and silhouette score of {best_silhouette}"
         )
-
 
     def cluster_analyze(self):
         """
