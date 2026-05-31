@@ -20,22 +20,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # ---------- macOS OpenMP ----------
+      - name: Install libomp (macOS only)
+        if: runner.os == 'macOS'
+        run: brew install libomp
+
+      # ---------- build wheels ----------
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.18.1
         with:
           output-dir: dist
         env:
           CIBW_SKIP: "pp* *musllinux* *-win32 *win_amd64"
+
+          CIBW_BEFORE_BUILD_MACOS: brew install libomp
+
           CIBW_ENVIRONMENT_MACOS: >
             CFLAGS="-O3 -march=native -funroll-loops -ffast-math -fPIC"
-            LDFLAGS=""
+            CPPFLAGS="-I/opt/homebrew/opt/libomp/include"
+            LDFLAGS="-L/opt/homebrew/opt/libomp/lib"
+            CC=clang
+            CXX=clang++
 
+      # ---------- build sdist (Linux only) ----------
       - name: Build sdist (Linux only)
         if: runner.os == 'Linux'
         run: |
           python -m pip install build
           python -m build --sdist --outdir dist
 
+      # ---------- validate tag ----------
       - name: Validate tag version format
         run: |
           TAG=${GITHUB_REF#refs/tags/v}
@@ -44,6 +63,7 @@ jobs:
             exit 1
           fi
 
+      # ---------- upload artifacts ----------
       - uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.os }}
@@ -52,7 +72,6 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
-    environment: release
 
     steps:
       - uses: actions/download-artifact@v4
@@ -60,12 +79,14 @@ jobs:
           path: dist
           merge-multiple: true
 
+      # ---------- PyPI publish ----------
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
           skip-existing: true
 
+      # ---------- GitHub Release ----------
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
