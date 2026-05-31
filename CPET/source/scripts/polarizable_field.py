@@ -13,11 +13,13 @@ This script is for polarizable force field calculations of electric field.
 Current status: Skeleton
 """
 
+
 def parse_coordinates():
     """
     Parses the coordinate and parameter files to extract the coordinates, charges, dipoles, and quadrupoles
     """
     return 0, 0, 0, 0
+
 
 def parse_topology():
     """
@@ -25,7 +27,8 @@ def parse_topology():
     """
     return 0
 
-def rotate_dipoles_quadrupoles(r,d,t):
+
+def rotate_dipoles_quadrupoles(r, d, t):
     """
     Rotates dipoles and quadrupoles to align with the field
     Takes:
@@ -36,10 +39,11 @@ def rotate_dipoles_quadrupoles(r,d,t):
         d: rotated dipole moments
         t: rotated quadrupole moments
     """
-    d = np.einsum('nij,nj->ni', r, d)
-    t = np.einsum('nij,njk->nik', r, t)
+    d = np.einsum("nij,nj->ni", r, d)
+    t = np.einsum("nij,njk->nik", r, t)
 
     return d, t
+
 
 def rotate_to_box_reference(x, d, t):
     """
@@ -48,11 +52,13 @@ def rotate_to_box_reference(x, d, t):
 
     return x, d, t
 
+
 def compute_volume_field():
     """
     Computes volume field in same format as typical cpet methods
     """
     return 0
+
 
 def save_field(field, output_path):
     """
@@ -60,10 +66,13 @@ def save_field(field, output_path):
     """
     return 0
 
+
 def main():
-    parameter_path = "path/to/parameters" #Includes permanent charges, dipoles, and quadrupoles
-    coordinate_path = "path/to/coordinates" #Includes connectivity information
-    dipole_path = "path/to/dipoles" #Includes induced dipoles
+    parameter_path = (
+        "path/to/parameters"  # Includes permanent charges, dipoles, and quadrupoles
+    )
+    coordinate_path = "path/to/coordinates"  # Includes connectivity information
+    dipole_path = "path/to/dipoles"  # Includes induced dipoles
 
     x, q, d, t = parse_coordinates(coordinate_path, parameter_path)
     r = parse_topology(coordinate_path, parameter_path)
@@ -73,6 +82,7 @@ def main():
     save_field(field, "path/to/output")
 
     return 0
+
 
 if __name__ == "__main__":
     main()

@@ -309,6 +309,7 @@ def calculate_electric_field_c_shared_full_alt(x_0, x, Q):
     E = Math.calc_field(x_0=x_0, x=x, Q=Q)
     return E
 
+
 def calculate_electric_field_c_shared_full_alt_polarizable(x_0, x, T):
     """
     Computes electric field at a point given positions of charges and polarizability
@@ -324,6 +325,7 @@ def calculate_electric_field_c_shared_full_alt_polarizable(x_0, x, T):
     T = T.astype(np.float32)
     E = Math.calc_field_polarizable(x_0=x_0, x=x, T=T)
     return E
+
 
 def calculate_esp_c_shared_full(x_0, x, Q):
     """
@@ -397,8 +399,10 @@ def calculate_electric_field_gpu_for_test(x_0, x, Q, device="cuda"):
     import torch
     from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
 
-    print("Upon file cleanup, torch import and batch gpu calculation has been moved into " \
-    "CPET.utils.calculator calculate_electric_field_gpu_for_test. Adjust benchmarkings scripts accordingly")
+    print(
+        "Upon file cleanup, torch import and batch gpu calculation has been moved into "
+        "CPET.utils.calculator calculate_electric_field_gpu_for_test. Adjust benchmarkings scripts accordingly"
+    )
 
     # Create matrix R
     if device == "cuda":

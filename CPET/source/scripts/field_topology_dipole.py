@@ -6,6 +6,7 @@ from glob import glob
 from random import choice
 import logging
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Compute electric field topology from a set of input dipoles"
@@ -104,7 +105,7 @@ def main():
         seed = None
         grid_density = 2 * dimensions / (num_per_dim + 1)
         print("grid_density: ", grid_density)
-    
+
         (
             random_start_points,
             random_max_samples,
@@ -123,14 +124,14 @@ def main():
         )
         random_start_points = random_start_points.reshape(-1, 3)
         n_samples = len(random_start_points)
-    
+
         dipole_positions = dipoles[:, 1:4]
         dipole_positions = (dipole_positions - center) @ np.linalg.inv(
             transformation_matrix
         )
         dipole_moments = dipoles[:, 4:7]  # Already in atomic units
         dipole_moments = dipole_moments @ np.linalg.inv(transformation_matrix)
-    
+
         # Create an instance without __init__
         topo_calc_dip = calculator.__new__(calculator)
         topo_calc_dip.n_samples = n_samples
@@ -142,15 +143,15 @@ def main():
         topo_calc_dip.random_start_points = random_start_points
         topo_calc_dip.random_max_samples = random_max_samples
         topo_calc_dip.concur_slip = args.threads
-        topo_calc_dip.center = center 
+        topo_calc_dip.center = center
         logging.basicConfig(level=logging.DEBUG)
-        topo_calc_dip.log = logging.getLogger(__name__) 
+        topo_calc_dip.log = logging.getLogger(__name__)
         # Convert to float32
         topo_calc_dip.x = topo_calc_dip.x.astype(np.float32)
         topo_calc_dip.mu = topo_calc_dip.mu.astype(np.float32)
-    
+
         hist = topo_calc_dip.compute_topo_complete_c_shared_dipole()
-    
+
         # Save hist based on the dipole file name in working directory
         filename = file.split("/")[-1].split(".")[0]
         np.savetxt("{}.top".format(filename), hist)

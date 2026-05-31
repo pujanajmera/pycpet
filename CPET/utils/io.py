@@ -260,10 +260,11 @@ def check_valid_options(options):
         raise ValueError("inputfiletype must be 'pdb' or 'pqr'")
     if options["initializer"] not in ["uniform", "random"]:
         raise ValueError("initializer must be 'uniform' or 'random'")
-    #Ensure that x and y vectors are not redundant, if both exist
+    # Ensure that x and y vectors are not redundant, if both exist
     if "x" in options.keys() and "y" in options.keys():
         if options["x"] == options["y"]:
             raise ValueError("x and y points used for vectors cannot be the same")
+
 
 def filter_radius(x, Q, center, radius=2.0):
     # Filter out points that are inside the box

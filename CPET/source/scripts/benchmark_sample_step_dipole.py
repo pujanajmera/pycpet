@@ -3,12 +3,17 @@ import numpy as np
 from glob import glob
 from random import choice
 from CPET.source.calculator import calculator
-from CPET.utils.calculator import make_histograms, construct_distance_matrix, initialize_box_points_uniform
+from CPET.utils.calculator import (
+    make_histograms,
+    construct_distance_matrix,
+    initialize_box_points_uniform,
+)
 from CPET.source.benchmark import gen_param_dist_mat
 import argparse
 import matplotlib.pyplot as plt
 from CPET.source.CPET import CPET
 import logging
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -83,9 +88,7 @@ def main():
             for i in range(3):
                 for file in files_input:
                     files_done = [
-                        x
-                        for x in os.listdir("./")
-                        if x.split(".")[-1] == "top"
+                        x for x in os.listdir("./") if x.split(".")[-1] == "top"
                     ]
                     dipoles = np.loadtxt(file, skiprows=1, dtype=np.float32)
                     if dipoles.shape[1] != 7:
@@ -101,7 +104,7 @@ def main():
                     seed = None
                     grid_density = 2 * dimensions / (num_per_dim + 1)
                     print("grid_density: ", grid_density)
-                
+
                     (
                         random_start_points,
                         random_max_samples,
@@ -120,14 +123,16 @@ def main():
                     )
                     random_start_points = random_start_points.reshape(-1, 3)
                     n_samples = len(random_start_points)
-                
+
                     dipole_positions = dipoles[:, 1:4]
                     dipole_positions = (dipole_positions - center) @ np.linalg.inv(
                         transformation_matrix
                     )
                     dipole_moments = dipoles[:, 4:7]  # Already in atomic units
-                    dipole_moments = dipole_moments @ np.linalg.inv(transformation_matrix)
-                
+                    dipole_moments = dipole_moments @ np.linalg.inv(
+                        transformation_matrix
+                    )
+
                     # Create an instance without __init__
                     topo_calc_dip = calculator.__new__(calculator)
                     topo_calc_dip.n_samples = n_samples
@@ -139,15 +144,15 @@ def main():
                     topo_calc_dip.random_start_points = random_start_points
                     topo_calc_dip.random_max_samples = random_max_samples
                     topo_calc_dip.concur_slip = args.threads
-                    topo_calc_dip.center = center 
+                    topo_calc_dip.center = center
                     logging.basicConfig(level=logging.DEBUG)
-                    topo_calc_dip.log = logging.getLogger(__name__) 
+                    topo_calc_dip.log = logging.getLogger(__name__)
                     # Convert to float32
                     topo_calc_dip.x = topo_calc_dip.x.astype(np.float32)
                     topo_calc_dip.mu = topo_calc_dip.mu.astype(np.float32)
-                
+
                     hist = topo_calc_dip.compute_topo_complete_c_shared_dipole()
-                
+
                     # Save hist based on the dipole file name in working directory
                     dipole = file.split("/")[-1].split(".")[0]
                     outstring = "{}_{}_{}_{}.top".format(
@@ -176,4 +181,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

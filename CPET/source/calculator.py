@@ -257,7 +257,7 @@ class calculator:
         ) and hasattr(self, "y_vec_pt"):
             N_cr = 2 * self.dimensions / self.step_size
             N_cr = [int(N_cr[0]), int(N_cr[1]), int(N_cr[2])]
-            (self.mesh, self.transformation_matrix) = initialize_box_points_uniform(
+            self.mesh, self.transformation_matrix = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,
@@ -322,7 +322,11 @@ class calculator:
             or options["CPET_method"] == "point_mag"
             or options["CPET_method"] == "box_check"
         ) and hasattr(self, "y_vec_pt"):
-            (_, _, self.transformation_matrix,) = initialize_box_points_uniform(
+            (
+                _,
+                _,
+                self.transformation_matrix,
+            ) = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,
@@ -458,7 +462,7 @@ class calculator:
         print(f"{end_time - start_time}")
         return point_field
 
-#WIP
+    # WIP
     def compute_point_field_polarizable(self):
         """Compute the electric field at a point defined by the center and multipole moments T at positions x.
 
@@ -796,11 +800,12 @@ class calculator:
         """
         import torch
         from CPET.utils.gpu import (
-        propagate_topo_matrix_gpu,
-        compute_curv_and_dist_mat_gpu,
-        batched_filter_gpu,
-        generate_path_filter_gpu,
+            propagate_topo_matrix_gpu,
+            compute_curv_and_dist_mat_gpu,
+            batched_filter_gpu,
+            generate_path_filter_gpu,
         )
+
         print("... > Computing Topo in Batches on a GPU!")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")

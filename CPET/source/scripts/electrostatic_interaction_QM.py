@@ -176,14 +176,22 @@ def main():
                 res_breakdown_dict[resn]["count"] += 1
             else:
                 # First case, make sure that the previous residue is the same as the current, if it is present in the breakdown. If not, this indicates duplicate residue numbering...
-                if resn == residue_number[i - 1].split("_")[0]:  # Continuing the residue
+                if (
+                    resn == residue_number[i - 1].split("_")[0]
+                ):  # Continuing the residue
                     res_breakdown_dict[resn]["x"].append(x[i])
                     res_breakdown_dict[resn]["q"].append(q[i])
                     res_breakdown_dict[resn]["count"] += 1
                 # Second case, if residue number is the same as a previous residue but not the immediate previous one, this indicates duplicate residue numbering in the PDB file
                 else:
                     # Duplicate residue, modify the dictionary key to include a suffix that depends on number of previous instances
-                    suffix_to_add = len([key for key in res_breakdown_dict.keys() if key.split("_")[0] == resn])
+                    suffix_to_add = len(
+                        [
+                            key
+                            for key in res_breakdown_dict.keys()
+                            if key.split("_")[0] == resn
+                        ]
+                    )
                     new_resn = f"{resn}_{suffix_to_add}"
                     res_breakdown_dict[new_resn] = {
                         "E_elec": 0.0,
