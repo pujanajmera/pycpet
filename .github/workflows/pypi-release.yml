@@ -47,6 +47,9 @@ jobs:
 
       - name: Build wheels (cibuildwheel)
         env:
+
+          MACOSX_DEPLOYMENT_TARGET: "15.0"
+
           CIBW_SKIP: "pp*"
           
           # Ensure OpenMP is available in both environments
