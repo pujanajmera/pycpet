@@ -6,8 +6,8 @@ on:
       - "v*.*.*"   # ONLY strict X.Y.Z
 
 permissions:
-  contents: write   # needed for GitHub release
-  id-token: write   # needed for PyPI trusted publishing
+  contents: write
+  id-token: write
 
 jobs:
   build:
@@ -20,11 +20,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ---------- macOS OpenMP ----------
-      - name: Install libomp (macOS only)
-        if: runner.os == 'macOS'
-        run: brew install libomp
-
       # ---------- build wheels ----------
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.18.1
@@ -34,8 +29,8 @@ jobs:
           CIBW_SKIP: "pp* *musllinux* *-win32 *win_amd64"
 
           CIBW_ENVIRONMENT_MACOS: >
-            CFLAGS="-O3 -march=native -funroll-loops -ffast-math -fPIC -I/opt/homebrew/opt/libomp/include -Xpreprocessor -fopenmp"
-            LDFLAGS="-L/opt/homebrew/opt/libomp/lib -lomp"
+            CFLAGS="-O3 -march=native -funroll-loops -ffast-math -fPIC"
+            LDFLAGS=""
 
       # ---------- build sdist (only once) ----------
       - name: Build sdist (Linux only)
@@ -44,7 +39,7 @@ jobs:
           python -m pip install build
           python -m build --sdist --outdir dist
 
-      # ---------- enforce strict version (fail early if needed) ----------
+      # ---------- enforce strict version ----------
       - name: Validate tag version format
         run: |
           TAG=${GITHUB_REF#refs/tags/v}
@@ -56,7 +51,7 @@ jobs:
       # ---------- upload artifacts ----------
       - uses: actions/upload-artifact@v4
         with:
-          name: dist-${{ runner.os }}
+          name: dist-${{ matrix.os }}
           path: dist/*
 
   publish:
