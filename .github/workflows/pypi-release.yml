@@ -1,79 +1,48 @@
-name: Release (PyPI + GitHub)
+name: build
 
 on:
   push:
     tags:
       - "v*"
-
-permissions:
-  contents: write
-  id-token: write
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-wheels:
+    runs-on: macos-13
+
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-
-    runs-on: ${{ matrix.os }}
+        python-version: ["3.9"]
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install system deps (OpenMP fix)
+        run: |
+          brew install libomp
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel cibuildwheel
+
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.18.1
-        with:
-          output-dir: dist
         env:
-          CIBW_SKIP: "pp* *musllinux* *-win32 *win_amd64"
-
+          CIBW_ARCHS_MACOS: "arm64"
           CIBW_ENVIRONMENT_MACOS: >
-            CFLAGS="-O3 -march=native -funroll-loops -ffast-math -fPIC"
-            LDFLAGS=""
-
-      - name: Build sdist (Linux only)
-        if: runner.os == 'Linux'
+            CC=clang
+            CXX=clang++
+            CFLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include"
+            LDFLAGS="-L/opt/homebrew/opt/libomp/lib -lomp"
         run: |
-          python -m pip install build
-          python -m build --sdist --outdir dist
+          python -m cibuildwheel --output-dir wheelhouse
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
         with:
-          name: dist-${{ matrix.os }}
-          path: dist/*
-
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: dist
-          merge-multiple: true
-
-      - name: Check if stable release
-        id: check
-        run: |
-          TAG=${GITHUB_REF#refs/tags/}
-
-          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "stable=true" >> $GITHUB_OUTPUT
-          else
-            echo "stable=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Publish to PyPI (ONLY stable)
-        if: steps.check.outputs.stable == 'true'
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist
-          skip-existing: true
-
-      - name: Create GitHub Release (ALL tags)
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          files: dist/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: wheels
+          path: wheelhouse/*
