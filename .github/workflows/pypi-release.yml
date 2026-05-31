@@ -48,6 +48,7 @@ jobs:
 
           # macOS
           CIBW_ENVIRONMENT_MACOS: >
+            MACOSX_DEPLOYMENT_TARGET=15.0
             CC=clang
             CXX=clang++
             CPPFLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include"
