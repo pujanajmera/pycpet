@@ -3,7 +3,7 @@ name: Release (PyPI + GitHub)
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"   # ONLY strict X.Y.Z
+      - "v*.*.*"   # ONLY strict X.Y.Z
 
 permissions:
   contents: write   # needed for GitHub release
