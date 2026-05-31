@@ -83,9 +83,7 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: dist
-          skip-existing: true
-
+                password: ${{ secrets.PYPI_API_TOKEN }}
       # ---------- GitHub Release ----------
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
