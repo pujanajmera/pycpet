@@ -3,12 +3,12 @@
 
 <br/><br/>
 [![DOI:10.1021/acs.jctc.5c00138](https://img.shields.io/badge/DOI-10.1021%2Facs.jctc.5c00138%5D-blue
-)](https://doi.org/10.1021/acs.jctc.5c00138) 
-</div>
-
+)](https://doi.org/10.1021/acs.jctc.5c00138)
 [![PyPI version](https://img.shields.io/pypi/v/pycpet.svg)](https://pypi.org/project/pycpet/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/pycpet.svg)](https://pypi.org/project/pycpet/)
 [![Documentation Status](https://readthedocs.org/projects/pycpet/badge/?version=latest)](https://pycpet.readthedocs.io/en/latest/)
+
+</div>
 
 # *PyCPET*
 
