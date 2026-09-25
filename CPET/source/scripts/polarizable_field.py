@@ -225,10 +225,9 @@ def rotate_and_translate_to_box_reference(x, d, t, center, rot):
     print("ROTATING AND TRANSLATING TO BOX")
     print(x.shape, d.shape, t.shape, rot.shape)
     x = (x - center) @ np.linalg.inv(rot)
-    Rinv = np.linalg.inv(rot)
-    Rinv = np.broadcast_to(Rinv, (x.shape[0], 3, 3))
-    d = np.einsum('nij,nj->ni', Rinv, d)
-    t = np.einsum('nik,nkl,njl->nij', Rinv, t, Rinv)
+    rot = np.broadcast_to(rot, (x.shape[0], 3, 3))
+    d = np.einsum('nij,nj->ni', rot, d)
+    t = np.einsum('nik,nkl,njl->nij', rot, t, rot)
     return x, d, t
 
 
