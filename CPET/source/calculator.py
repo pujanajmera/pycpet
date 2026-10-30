@@ -290,7 +290,7 @@ class calculator:
                 if num_per_dim ** 3 < self.n_samples:
                     num_per_dim += 1
                 self.n_samples = num_per_dim ** 3
-                # print("num_per_dim: ", num_per_dim)
+                self.log.debug(f"Grid points per dimension: {num_per_dim}")
                 grid_density = 2 * self.dimensions / (num_per_dim + 1)
                 self.log.info(f"Grid_density: {grid_density}")
                 seed = None
@@ -408,7 +408,7 @@ class calculator:
             if self.dimensions is not None:
                 self.dimensions = self.dimensions.astype(np.float32)
 
-        print("... > Initialized Calculator!")
+        self.log.info("Initialized calculator")
 
     def compute_point_mag(self):
         """Compute the electric field magnitude at a point defined by the center and the charges Q at positions x.
@@ -418,12 +418,11 @@ class calculator:
         point_mag : np.ndarray
             The computed electric field magnitude at the point
         """
-        print("... > Computing Point Field (Magnitude)!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("point: {}".format(self.center))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
-        print("First few lines of x: {}".format(self.x[:5]))
+        self.log.info("Computing point field (magnitude)")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
         start_time = time.time()
         # Since x and Q are already rotated and translated, need to supply 0 vector as center
         point_mag = np.norm(
@@ -432,7 +431,7 @@ class calculator:
             )
         )
         end_time = time.time()
-        print(f"{end_time - start_time:.2f}")
+        self.log.debug(f"Time taken: {end_time - start_time:.2f} seconds")
         return point_mag
 
     def compute_point_field(self):
@@ -443,19 +442,18 @@ class calculator:
         point_field : np.ndarray
             The computed electric field at the point
         """
-        print("... > Computing Point Field (Vector)!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("point: {}".format(self.center))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
-        print("First few lines of x: {}".format(self.x[:5]))
+        self.log.info("Computing point field (vector)")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
         start_time = time.time()
         # Since x and Q are already rotated and translated, need to supply 0 vector as center
         point_field = calculate_electric_field_c_shared_full_alt(
             np.array([0, 0, 0]), self.x, self.Q
         )
         end_time = time.time()
-        print(f"{end_time - start_time}")
+        self.log.debug(f"Time taken: {end_time - start_time:.2f} seconds")
         return point_field
 
     # WIP
@@ -467,19 +465,18 @@ class calculator:
         point_field : np.ndarray
             The computed electric field at the point
         """
-        print("... > Computing Point Field (Vector)!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("point: {}".format(self.center))
-        print("x shape: {}".format(self.x.shape))
-        print("T shape: {}".format(self.T.shape))
-        print("First few lines of x: {}".format(self.x[:5]))
+        self.log.info("Computing point field (vector)")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Multipole array shape: {self.T.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
         start_time = time.time()
         # Since x and T are already rotated and translated, need to supply 0 vector as center
         point_field = calculate_electric_field_c_shared_full_alt_polarizable(
             np.array([0, 0, 0]), self.x, self.T
         )
         end_time = time.time()
-        print(f"{end_time - start_time}")
+        self.log.debug(f"Time taken: {end_time - start_time:.2f} seconds")
         return point_field
 
     def compute_box(self):
@@ -492,13 +489,13 @@ class calculator:
         mesh.shape : tuple
             The shape of the mesh grid
         """
-        print("... > Computing Box Field!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("mesh shape: {}".format(self.mesh.shape))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
-        print("First few lines of x: {}".format(self.x[:5]))
-        print("Transformation matrix: {}".format(self.transformation_matrix))
+        self.log.info("Computing box field")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.info(f"Mesh shape: {self.mesh.shape}")
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         field_box = compute_field_on_grid(self.mesh, self.x, self.Q)
         return field_box, self.mesh.shape
 
@@ -512,7 +509,7 @@ class calculator:
         mesh.shape : tuple
             The shape of the mesh grid
         """
-        print("... > Computing Box ESP!")
+        self.log.info("Computing box ESP")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info("mesh shape: {}".format(self.mesh.shape))
         self.log.debug("x shape: {}".format(self.x.shape))
@@ -534,20 +531,20 @@ class calculator:
         mesh.shape : tuple
             The shape of the mesh grid
         """
-        print("... > Computing Box Field!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("mesh shape: {}".format(self.mesh.shape))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
-        print("First few lines of x: {}".format(self.x[:5]))
-        print("Transformation matrix: {}".format(self.transformation_matrix))
+        self.log.info("Computing box field")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.info(f"Mesh shape: {self.mesh.shape}")
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         field_box = compute_field_on_grid_qm(self.mesh, self.x, self.Q, self.moldenpath)
         if self.qmmm == True:  # Add qmmm charges
             field_box += compute_field_on_grid(self.mesh, self.x, self.Q)
         return field_box, self.mesh.shape
 
     def compute_topo_base(self):
-        print("... > Computing Topo!")
+        self.log.info("Computing topology")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
@@ -564,7 +561,7 @@ class calculator:
                 for i, n_iter in zip(self.random_start_points, self.random_max_samples)
             ]
             result = pool.starmap(task_base, args)
-            # print(raw)
+            self.log.debug("Raw pool results: %s", result)
             hist = []
             for result in result.get():
                 hist.append(result)
@@ -577,7 +574,7 @@ class calculator:
         return hist
 
     def compute_topo(self):
-        print("... > Computing Topo!")
+        self.log.info("Computing topology")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
@@ -612,7 +609,7 @@ class calculator:
         return hist
 
     def compute_topo_single(self):
-        print("... > Computing Topo(baseline)!")
+        self.log.info("Computing topology (baseline)")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
@@ -634,7 +631,7 @@ class calculator:
             init_points_list.append(init_points)
             final_points_list.append(final_points)
             endtype_list.append(endtype)
-            # print(dist, curve)
+            self.log.debug("Streamline distance: %s, curvature: %s", dist, curve)
         hist = np.column_stack((dist_list, curve_list))
         end_time = time.time()
         self.hist = hist
@@ -665,7 +662,7 @@ class calculator:
         return hist
 
     def compute_topo_complete_c_shared(self):
-        print("... > Computing Topo!")
+        self.log.info("Computing topology")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
@@ -707,7 +704,7 @@ class calculator:
         """
         IN DEVELOPMENT, FOR TESTING ONLY
         """
-        print("... > Computing Topo from Dipoles!")
+        self.log.info("Computing topology from dipoles")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of dipoles: {len(self.mu)}")
         self.log.info(f"Step size: {self.step_size}")
@@ -741,7 +738,7 @@ class calculator:
         return hist
 
     def compute_topo_batched(self):
-        print("... > Computing Topo in Batches!")
+        self.log.info("Computing topology in batches")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
@@ -798,7 +795,7 @@ class calculator:
             generate_path_filter_gpu,
         )
 
-        print("... > Computing Topo in Batches on a GPU!")
+        self.log.info("Computing topology in batches on a GPU")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
@@ -880,9 +877,9 @@ class calculator:
                 GPU_batch_freq=self.GPU_batch_freq,
                 dtype_str=self.dtype,
             )
-            print(dumped_values.shape[1])
+            self.log.debug(f"Dumped streamlines so far: {dumped_values.shape[1]}")
             if dumped_values.shape[1] >= self.n_samples:
-                print("Finished streamlines early, breaking!")
+                self.log.info("All streamlines finished early, stopping propagation")
                 break
         self.log.info(
             f"Checking dumped values ({dumped_values.shape[1]}) vs number of samples ({self.n_samples})"
@@ -922,7 +919,12 @@ class calculator:
                 GPU_batch_freq=remainder,
                 dtype_str=self.dtype,
             )
-            # print(path_matrix_torch_new, dumped_values, path_filter)
+            self.log.debug(
+                "Remainder path matrix: %s, dumped values: %s, path filter: %s",
+                path_matrix_torch_new,
+                dumped_values,
+                path_filter,
+            )
         else:
             del path_matrix_torch
 
@@ -948,6 +950,10 @@ class calculator:
                 .reshape(dumped_values.shape[1], -1),
                 fmt="%.6f",
             )
+        # Logged here because TorchScript functions cannot call the logger
+        self.log.debug(
+            "Curvature inputs: x_init %s, x_0 %s", dumped_values[0], dumped_values[3]
+        )
         distances, curvatures = compute_curv_and_dist_mat_gpu(
             dumped_values[0, :, :],
             dumped_values[1, :, :],
