@@ -147,7 +147,7 @@ class calculator:
         if not hasattr(self, "chains"):
             self.chains = [None] * len(self.x)
         if hasattr(self, "chains"):
-            self.log.debug(self.chains)
+            self.log.debug(f"Chains: {self.chains}")
 
         # Define center, x, and y axes
         if type(options["center"]) == list:
@@ -167,7 +167,7 @@ class calculator:
             raise ValueError("center must be a list or dict")
         if "x" not in options.keys():
             self.log.info(
-                "No x specified, calculating in input file reference frame. Ignoring y..."
+                "No x vector specified, using the input file reference frame and ignoring y"
             )
             compute_y = False
         elif type(options["x"]) == list:
@@ -188,7 +188,7 @@ class calculator:
         else:
             raise ValueError("x must be a list or dict")
         if compute_y == False:
-            self.log.info("Not computing y since x is not specified")
+            self.log.debug("Not computing y vector since no x vector is specified")
         elif type(options["y"]) == list:
             self.y_vec_pt = np.array(options["y"])
         elif type(options["y"]) == dict:
@@ -237,9 +237,9 @@ class calculator:
 
         # Radius-based filtering, added from previous, residue-inclusive filtering
         if "filter_radius" in options.keys():
-            self.log.info(f"filtering by radius: {options['filter_radius']} Ang")
+            self.log.info(f"Filtering by radius: {options['filter_radius']} Angstrom")
             r = np.linalg.norm(self.x, axis=1)  # Distance from origin
-            self.log.debug(f"r {r}")
+            self.log.debug(f"Distances from origin before radius filter: {r}")
             self.x, self.Q, self.ID = filter_radius_whole_residue(
                 x=self.x,
                 Q=self.Q,
@@ -248,7 +248,7 @@ class calculator:
                 radius=float(options["filter_radius"]),
             )
             r = np.linalg.norm(self.x, axis=1)
-            self.log.debug(f"New r {r}")
+            self.log.debug(f"Distances from origin after radius filter: {r}")
 
         assert "CPET_method" in options.keys(), "CPET_method must be specified"
 
@@ -292,7 +292,7 @@ class calculator:
                 self.n_samples = num_per_dim ** 3
                 self.log.debug(f"Grid points per dimension: {num_per_dim}")
                 grid_density = 2 * self.dimensions / (num_per_dim + 1)
-                self.log.info(f"Grid_density: {grid_density}")
+                self.log.info(f"Grid density: {grid_density}")
                 seed = None
                 if self.max_streamline_init == "fixed_rand":
                     seed = 42
@@ -338,7 +338,7 @@ class calculator:
             self.log.info("Rotating coordinates")
             self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
         else:
-            self.log.info("Not rotating coordinates since no y-vector is provided")
+            self.log.info("Not rotating coordinates since no y vector is provided")
             self.x = self.x - self.center
 
         # Box filtering, must be done after coordinates are rotated
@@ -367,9 +367,9 @@ class calculator:
             self.x = self.x - np.array(self.box_shift)
 
         if self.write_transformed_pdb == True:
-            self.log.info("Writing transformed pdb file, ignoring chains")
+            self.log.info("Writing transformed PDB file, ignoring chains")
             if self.strip_filter == True:
-                self.log.info("Stripping filtered residues for transformed pdb file")
+                self.log.info("Stripping filtered residues for transformed PDB file")
                 self.x_copy = deepcopy(self.x)
                 self.residue_number_copy = deepcopy(self.residue_number)
                 self.resids_copy = deepcopy(self.resids)
@@ -398,8 +398,8 @@ class calculator:
 
         self.log.info(f"Center: {self.center}")
         if hasattr(self, "y_vec_pt"):
-            self.log.info(f"x vector point: {self.x_vec_pt}")
-            self.log.info(f"y vector point: {self.y_vec_pt}")
+            self.log.info(f"X vector point: {self.x_vec_pt}")
+            self.log.info(f"Y vector point: {self.y_vec_pt}")
 
         if self.dtype == "float32":
             self.x = self.x.astype(np.float32)
@@ -511,12 +511,11 @@ class calculator:
         """
         self.log.info("Computing box ESP")
         self.log.info(f"Number of charges: {len(self.Q)}")
-        self.log.info("mesh shape: {}".format(self.mesh.shape))
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.info(f"Mesh shape: {self.mesh.shape}")
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         esp_box = compute_ESP_on_grid(self.mesh, self.x, self.Q)
         return esp_box, self.mesh.shape
 
@@ -548,13 +547,12 @@ class calculator:
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         start_time = time.time()
-        self.log.debug("Starting pooling")
+        self.log.debug("Starting worker pool")
         with Pool(self.concur_slip) as pool:
             args = [
                 (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
@@ -569,7 +567,7 @@ class calculator:
         self.hist = hist
 
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.Q)} charges: {end_time - start_time:.2f} seconds"
         )
         return hist
 
@@ -578,13 +576,12 @@ class calculator:
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         start_time = time.time()
-        self.log.debug("Starting pooling")
+        self.log.debug("Starting worker pool")
         with Pool(self.concur_slip) as pool:
             args = [
                 (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
@@ -604,7 +601,7 @@ class calculator:
         self.hist = hist
 
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.Q)} charges: {end_time - start_time:.2f} seconds"
         )
         return hist
 
@@ -613,11 +610,10 @@ class calculator:
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         start_time = time.time()
         dist_list, curve_list, init_points_list, final_points_list = [], [], [], []
         endtype_list = []
@@ -638,11 +634,11 @@ class calculator:
         init_points_list = np.array(init_points_list)  # Shape (N, 3, 3)
         final_points_list = np.array(final_points_list)  # Shape (N, 3, 3)
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.Q)} charges: {end_time - start_time:.2f} seconds"
         )
         # If debug mode, save more information:
-        if self.log.logger.isEnabledFor(logging.DEBUG):
-            self.log.debug("Dumping topology information in debug mode")
+        if self.log.isEnabledFor(logging.DEBUG):
+            self.log.debug("Writing streamline data to text files (debug mode)")
             np.savetxt(
                 "topology_base.txt", hist, fmt="%.6f",
             )
@@ -667,13 +663,12 @@ class calculator:
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
         self.log.info(f"Start point shape: {self.random_start_points.shape}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         start_time = time.time()
-        self.log.debug("Starting pooling")
+        self.log.debug("Starting worker pool")
         self.log.debug(f"Random start points: {self.random_start_points}")
         self.log.debug(f"Random max samples: {self.random_max_samples}")
         with Pool(self.concur_slip) as pool:
@@ -696,7 +691,7 @@ class calculator:
         self.hist = hist
 
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.Q)} charges: {end_time - start_time:.2f} seconds"
         )
         return hist
 
@@ -709,11 +704,10 @@ class calculator:
         self.log.info(f"Number of dipoles: {len(self.mu)}")
         self.log.info(f"Step size: {self.step_size}")
         self.log.info(f"Start point shape: {self.random_start_points.shape}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("mu shape: {}".format(self.mu.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Dipole array shape: {self.mu.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         start_time = time.time()
         with Pool(self.concur_slip) as pool:
             args = [
@@ -733,7 +727,7 @@ class calculator:
         self.hist = hist
 
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N_dipoles = {len(self.mu)}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.mu)} dipoles: {end_time - start_time:.2f} seconds"
         )
         return hist
 
@@ -742,13 +736,12 @@ class calculator:
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         start_time = time.time()
-        self.log.info(f"num batches: {len(self.random_start_points_batched)}")
+        self.log.info(f"Number of batches: {len(self.random_start_points_batched)}")
         self.log.debug(
             f"Random start points (batched): {self.random_start_points_batched}"
         )
@@ -775,7 +768,7 @@ class calculator:
         # self.hist = hist
 
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.Q)} charges: {end_time - start_time:.2f} seconds"
         )
         return hist
 
@@ -799,11 +792,10 @@ class calculator:
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
 
         Q_gpu = torch.tensor(self.Q, dtype=torch.float32).cuda()
         Q_gpu = Q_gpu.unsqueeze(0)
@@ -840,8 +832,8 @@ class calculator:
             path_filter = path_filter_temp
 
         path_filter = torch.tensor(path_filter, dtype=torch.bool).cuda()
-        self.log.debug(f"path_matrix_torch.shape: {path_matrix_torch.shape}")
-        self.log.debug(f"path_filter.shape: {path_filter.shape}")
+        self.log.debug(f"Path matrix shape: {path_matrix_torch.shape}")
+        self.log.debug(f"Path filter shape: {path_filter.shape}")
         self.log.debug(f"Number of steps (M + 2): {M + 2}")
 
         dumped_values = torch.tensor(np.empty((6, 0, 3)), dtype=torch.float32).cuda()
@@ -861,7 +853,7 @@ class calculator:
                 if i == 0 and j == 0:
                     init_points = path_matrix_torch[0:3, ...]
 
-            self.log.debug("Filtering!")
+            self.log.debug("Filtering streamlines")
             (
                 path_matrix_torch,
                 dumped_values,
@@ -882,13 +874,13 @@ class calculator:
                 self.log.info("All streamlines finished early, stopping propagation")
                 break
         self.log.info(
-            f"Checking dumped values ({dumped_values.shape[1]}) vs number of samples ({self.n_samples})"
+            f"Dumped {dumped_values.shape[1]} of {self.n_samples} streamlines"
         )
         if (
             dumped_values.shape[1] < self.n_samples
         ):  # Still some samples remaining in the remainder
-            self.log.info("Streamlines remaining")
-            self.log.debug(f" Remainder: {remainder}")
+            self.log.info("Some streamlines remain, propagating the remainder")
+            self.log.debug(f"Remainder steps: {remainder}")
             self.log.debug(f"Path matrix shape: {path_matrix_torch.shape}")
             path_matrix_torch_new = torch.zeros(
                 (remainder + 2, path_matrix_torch.shape[1], 3), dtype=torch.float32,
@@ -930,8 +922,8 @@ class calculator:
 
         self.log.debug(f"Dumped values shape: {dumped_values.shape}")
 
-        if self.log.logger.isEnabledFor(logging.DEBUG):
-            self.log.debug("Dumping topology information in debug mode")
+        if self.log.isEnabledFor(logging.DEBUG):
+            self.log.debug("Writing streamline data to text files (debug mode)")
             np.savetxt(
                 "dumped_values_init.txt",
                 dumped_values[0:3]
@@ -964,7 +956,7 @@ class calculator:
         )
         end_time = time.time()
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N~{self.Q.shape}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.Q)} charges: {end_time - start_time:.2f} seconds"
         )
         topology = np.column_stack((distances.cpu().numpy(), curvatures.cpu().numpy()))
         self.log.info(f"Topology shape: {topology.shape}")
