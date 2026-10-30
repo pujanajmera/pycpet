@@ -39,7 +39,7 @@ def get_input_files(inputpath, filetype):
     if len(files_input) == 0:
         raise ValueError("No pdb files found in the input directory")
     if len(files_input) == 1:
-        log.warning("Only one pdb file found in the input directory")
+        log.warning(f"Only one {filetype.upper()} file found in the input directory")
     return files_input
 
 
@@ -159,10 +159,10 @@ def read_mat(file, meta_data=False, verbose=False):
         "bounds_y": [-y_size, y_size + step_size_y],
         "bounds_z": [-z_size, z_size + step_size_z],
     }
-    print(lines[0].split())
-    print(meta_dict)
+    log.debug("Header line: %s", lines[0].split())
+    log.debug("Metadata: %s", meta_dict)
     if verbose:
-        print(meta_dict)
+        log.info("Metadata: %s", meta_dict)
 
     if meta_data:
         return meta_dict
@@ -172,11 +172,10 @@ def read_mat(file, meta_data=False, verbose=False):
         steps_y = 2 * int(lines[0].split()[3]) + 1
         steps_z = 2 * int(lines[0].split()[4]) + 1
         mat = np.zeros((steps_x, steps_y, steps_z, 3))
-        # print(mat.shape)
+        log.debug("Field matrix shape: %s", mat.shape)
 
         for ind, i in enumerate(lines[7:]):
             line_split = i.split()
-            # print(i)
             mat[
                 int(ind / (steps_z * steps_y)),
                 int(ind / steps_z % steps_y),
@@ -293,13 +292,12 @@ def filter_radius(x, Q, center, radius=2.0):
     # Filter out points that are inside the box
     x_recentered = x - center
     r = np.linalg.norm(x_recentered, axis=1)
-    # print("radius filtering {}".format(radius))
+    log.info("Filtering atoms within %s Angstrom of the center", radius)
     mask = r < radius
     # remove masked points
     x_filtered = x[mask]
     Q_filtered = Q[mask]
-    print("radius filter leaves: {}".format(len(Q_filtered)))
-    # print(np.linalg.norm(x_filtered, axis=1))
+    log.debug("Radius filter leaves %s atoms", len(Q_filtered))
     return x_filtered, Q_filtered
 
 
@@ -324,10 +322,13 @@ def filter_radius_whole_residue(x, Q, ID, center, radius=2.0):
     resids = np.array([id[2] for id in ID])
     resnums = np.array([id[3] for id in ID])
 
-    print(x_recentered.shape)
-    print(Q.shape)
-    print(resids.shape)
-    print(resnums.shape)
+    log.debug(
+        "Array shapes (x_recentered, Q, resids, resnums): %s, %s, %s, %s",
+        x_recentered.shape,
+        Q.shape,
+        resids.shape,
+        resnums.shape,
+    )
     j = 0
     # Generate dictionary of indices. Accounts for residues that have the same resnum but different resid, as those aren't adjacent
     for i in range(len(resids)):
@@ -356,8 +357,7 @@ def filter_radius_whole_residue(x, Q, ID, center, radius=2.0):
     x_filtered = np.delete(x, indices_to_filter_out, axis=0)
     Q_filtered = np.delete(Q, indices_to_filter_out, axis=0)
     ID_filtered = np.delete(ID, indices_to_filter_out, axis=0)
-    print("radius filter leaves: {}".format(len(Q_filtered)))
-    print(np.linalg.norm(x_filtered, axis=1))
+    log.debug("Radius filter leaves %s atoms", len(Q_filtered))
     return x_filtered, Q_filtered, ID_filtered
 
 
@@ -432,13 +432,13 @@ def filter_atomspec(x, Q, ID, filter_dict, intersect):
                 if match:
                     filter_idx.append(j)
         filter_idx = list(set(filter_idx))  # Remove duplicates
-    log.debug(f"Length before filtering: {len(x)}, {len(Q)}, {len(ID)}")
+    log.debug(f"Lengths before filtering (x, Q, ID): {len(x)}, {len(Q)}, {len(ID)}")
     x_filtered = np.delete(x, filter_idx, axis=0)
     Q_filtered = np.delete(Q, filter_idx, axis=0)
     ID_filtered = np.delete(ID, filter_idx, axis=0)
     if len(x_filtered) != len(Q_filtered) or len(x_filtered) != len(ID_filtered):
         raise ValueError("Unexpected: filtered arrays have different lengths")
-    log.info(f"Number of atoms filtered out: {len(filter_idx)}")
+    log.debug(f"Attribute filter removes {len(filter_idx)} atoms")
     return x_filtered, Q_filtered, ID_filtered
 
 
@@ -476,8 +476,8 @@ def filter_in_box(x, Q, ID, center, dimensions):
         "y": [-dimensions[1], dimensions[1]],
         "z": [-dimensions[2], dimensions[2]],
     }
-    # print("box dimensions: {}".format(limits))
-    # print(x.shape)
+    log.debug("Box dimensions: %s", limits)
+    log.debug("Coordinate array shape: %s", x.shape)
     mask_x = (x_recentered[:, 0] > limits["x"][0]) & (
         x_recentered[:, 0] < limits["x"][1]
     )
@@ -494,7 +494,7 @@ def filter_in_box(x, Q, ID, center, dimensions):
     x_filtered = x[~mask]
     Q_filtered = Q[~mask]
     ID_filtered = ID[~mask]
-    # print("masked points: {}".format(len(mask)))
+    log.debug("Box filter removes %s atoms", np.sum(mask))
     return x_filtered, Q_filtered, ID_filtered
 
 
@@ -556,14 +556,13 @@ def parse_pqr(path_to_pqr):
             ]
 
             if shift == -1:
-                print("----------------------")
-                print("coords: ", coords)
+                log.debug("Parsed coordinates: %s", coords)
 
             coords = [_.strip() for _ in coords]
             charge = line[54 + shift : 61 + shift]
 
             if shift == -1:
-                print("charge: ", [charge])
+                log.debug("Parsed charge: %s", [charge])
 
             charge = charge.strip()
 
@@ -572,8 +571,8 @@ def parse_pqr(path_to_pqr):
                 temp = [float(_) for _ in coords]
 
             except:
-                print(
-                    f"Charge or coordinates is not a useable number. Check pqr file formatting for the following line: {line}"
+                log.error(
+                    f"Charge or coordinates are not usable numbers. Check PQR file formatting for line: {line}"
                 )
 
             assert temp != [], "charge incorrectly parsed"
@@ -672,10 +671,9 @@ def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="c
             )
             for k, v in atom_dict.items()
         ]
-        log.debug(f"len(chains): {len(chains)}")
-        log.debug(f"len(atom_type): {len(atom_type)}")
-        log.debug(f"len(residue_number): {len(residue_number)}")
-        log.debug(f"len(x): {len(x)}")
+        log.debug(
+            f"Array lengths (chains, atom_type, residue_number, x): {len(chains)}, {len(atom_type)}, {len(residue_number)}, {len(x)}"
+        )
         pos_considered = [
             pos
             for atom_res in centering_atoms
@@ -683,20 +681,20 @@ def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="c
             if (atom_type[idx], residue_number[idx], chains[idx],) == atom_res
         ]
     else:
-        log.debug(options[seltype]["atoms"])
+        log.debug(f"Atoms specified for {seltype}: {options[seltype]['atoms']}")
         centering_atoms = [
             (k, v)
             for atom_dict in options[seltype]["atoms"]
             for k, v in atom_dict.items()
         ]
-        log.info(f"centering atoms for {seltype}: {centering_atoms}")
+        log.info(f"Atoms used for {seltype}: {centering_atoms}")
         atom_set = set(centering_atoms)
         pos_considered = [
             pos
             for (atype, rnum), pos in zip(zip(atom_type, residue_number), x)
             if (atype, rnum) in atom_set
         ]
-    log.debug(f"pos considered for {seltype}: {pos_considered}")
+    log.debug(f"Positions considered for {seltype}: {pos_considered}")
     return pos_considered
 
 
