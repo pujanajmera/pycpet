@@ -4,11 +4,8 @@ import numpy.ctypeslib as npct
 
 
 class Math_ops:
-    def __init__(self, shared_loc=None):
-        if shared_loc is None:
-            self.math = ctypes.CDLL("./math_module.so")
-        else:
-            self.math = ctypes.CDLL(shared_loc)
+    def __init__(self, shared_loc):
+        self.math = ctypes.CDLL(shared_loc)
 
         # creates pointers to array data types
         self.array_1d_int = npct.ndpointer(dtype=np.int32, ndim=1, flags="C")
