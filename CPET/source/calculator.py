@@ -287,9 +287,9 @@ class calculator:
                 )
             elif options["initializer"] == "uniform":
                 num_per_dim = round(self.n_samples ** (1 / 3))
-                if num_per_dim**3 < self.n_samples:
+                if num_per_dim ** 3 < self.n_samples:
                     num_per_dim += 1
-                self.n_samples = num_per_dim**3
+                self.n_samples = num_per_dim ** 3
                 # print("num_per_dim: ", num_per_dim)
                 grid_density = 2 * self.dimensions / (num_per_dim + 1)
                 self.log.info(f"Grid_density: {grid_density}")
@@ -322,11 +322,7 @@ class calculator:
             or options["CPET_method"] == "point_mag"
             or options["CPET_method"] == "box_check"
         ) and hasattr(self, "y_vec_pt"):
-            (
-                _,
-                _,
-                self.transformation_matrix,
-            ) = initialize_box_points_uniform(
+            (_, _, self.transformation_matrix,) = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,
@@ -651,9 +647,7 @@ class calculator:
         if self.log.logger.isEnabledFor(logging.DEBUG):
             self.log.debug("Dumping topology information in debug mode")
             np.savetxt(
-                "topology_base.txt",
-                hist,
-                fmt="%.6f",
+                "topology_base.txt", hist, fmt="%.6f",
             )
             np.savetxt(
                 "dumped_values_init_base.txt",
@@ -666,9 +660,7 @@ class calculator:
                 fmt="%.6f",
             )
             np.savetxt(
-                "endtype_base.txt",
-                endtype_list,
-                fmt="%s",
+                "endtype_base.txt", endtype_list, fmt="%s",
             )
         return hist
 
@@ -835,11 +827,7 @@ class calculator:
         ).cuda()
         path_matrix_torch[0] = torch.tensor(self.random_start_points)
         path_matrix_torch = propagate_topo_matrix_gpu(
-            path_matrix_torch,
-            torch.tensor([0]).cuda(),
-            x_gpu,
-            Q_gpu,
-            step_size_gpu,
+            path_matrix_torch, torch.tensor([0]).cuda(), x_gpu, Q_gpu, step_size_gpu,
         )
         # Using random_max_samples-1 to convert from max samples to indices
         path_filter = generate_path_filter_gpu(
@@ -906,8 +894,7 @@ class calculator:
             self.log.debug(f" Remainder: {remainder}")
             self.log.debug(f"Path matrix shape: {path_matrix_torch.shape}")
             path_matrix_torch_new = torch.zeros(
-                (remainder + 2, path_matrix_torch.shape[1], 3),
-                dtype=torch.float32,
+                (remainder + 2, path_matrix_torch.shape[1], 3), dtype=torch.float32,
             ).cuda()
             path_matrix_torch_new[0:2, ...] = path_matrix_torch[-2:, ...]
             del path_matrix_torch

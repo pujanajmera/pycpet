@@ -4,8 +4,7 @@ import argparse
 import json
 import numpy as np
 from tqdm import tqdm
-from pyscf import gto, tools
-from pathlib import Path
+from pyscf import tools
 
 
 def E_elec_qmmm(mol, x, q, dm, verbose, track=False):
@@ -107,12 +106,12 @@ def main():
     res = args.res
     verbose = args.verbose
     options = json.load(open(args.options, "r"))
-    options["dtype"] = (
-        "float64"  # Ensure that the dtype is set to float64 for consistency
-    )
-    options["CPET_method"] = (
-        "point_field"  # Preventative to ensure that time isn't wasted on creating other attributes
-    )
+    options[
+        "dtype"
+    ] = "float64"  # Ensure that the dtype is set to float64 for consistency
+    options[
+        "CPET_method"
+    ] = "point_field"  # Preventative to ensure that time isn't wasted on creating other attributes
     options["center"] = [0, 0, 0]
     calculator_object = calculator(
         options, args.pdb

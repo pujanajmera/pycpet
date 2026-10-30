@@ -1,6 +1,5 @@
 from CPET.utils.calculator import (
     make_5d_tensor,
-    construct_distance_matrix_tensor,
     determine_rank,
     reduce_tensor,
 )
@@ -27,7 +26,7 @@ def kmeds(distance_matrix, defined_n_clusters=None):
     """
     cluster_results = {}
     distance_matrix = distance_matrix
-    distance_matrix = distance_matrix**2
+    distance_matrix = distance_matrix ** 2
     inertia_list = []
     if not defined_n_clusters:
         for i in range(50):

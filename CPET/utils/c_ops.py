@@ -1,5 +1,4 @@
 import numpy as np
-from subprocess import Popen, PIPE
 import ctypes
 import numpy.ctypeslib as npct
 
@@ -184,11 +183,7 @@ class Math_ops:
         self.math.dot.restype = None
 
         self.math.dot(
-            res,
-            A.astype("double"),
-            B.astype("double"),
-            len(A),
-            len(B),
+            res, A.astype("double"), B.astype("double"), len(A), len(B),
         )
         return res
 

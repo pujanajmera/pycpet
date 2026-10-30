@@ -1,7 +1,6 @@
 import os
 import numpy as np
 from glob import glob
-from random import choice
 from CPET.source.calculator import calculator
 from CPET.utils.calculator import (
     make_histograms,
@@ -11,7 +10,6 @@ from CPET.utils.calculator import (
 from CPET.source.benchmark import gen_param_dist_mat
 import argparse
 import matplotlib.pyplot as plt
-from CPET.source.CPET import CPET
 import logging
 
 
@@ -98,9 +96,9 @@ def main():
 
                     max_steps = round(2 * np.linalg.norm(dimensions) / step_size)
                     num_per_dim = round(n_samples ** (1 / 3))
-                    if num_per_dim**3 < n_samples:
+                    if num_per_dim ** 3 < n_samples:
                         num_per_dim += 1
-                    n_samples = num_per_dim**3
+                    n_samples = num_per_dim ** 3
                     seed = None
                     grid_density = 2 * dimensions / (num_per_dim + 1)
                     print("grid_density: ", grid_density)

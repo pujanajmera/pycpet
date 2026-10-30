@@ -3,8 +3,6 @@ from CPET.source.calculator import calculator
 import warnings
 
 warnings.filterwarnings(action="ignore")
-from scipy.stats import chisquare
-from scipy.stats import entropy
 import matplotlib.pyplot as plt
 import matplotlib
 

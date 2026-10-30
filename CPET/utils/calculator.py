@@ -13,7 +13,7 @@ from scipy.stats import iqr
 from kneed import KneeLocator
 import tensorly as tl
 from tensorly.decomposition import parafac
-import importlib.util, ctypes
+import importlib.util
 
 # Find name of c-shared library (system dependent!)
 spec = importlib.util.find_spec("CPET.utils.math_module")
@@ -282,7 +282,7 @@ def calculate_electric_field_dev_c_shared(x_0, x, Q):
 
     R = nb_subtract(x_0, x)  # right
 
-    R_sq = R**2  # right
+    R_sq = R ** 2  # right
     R_sq = R_sq.astype(np.float32)
     r_mag_sq = Math.einsum_ij_i(R_sq).reshape(-1, 1)
     r_mag_cube = np.power(r_mag_sq, -3 / 2)
@@ -371,7 +371,7 @@ def calculate_electric_field_dev_c_shared_batch(x_0_list, x, Q):
     R_list = [nb_subtract(x_0, x) for x_0 in x_0_list]
     batch_size = len(R_list)
     R_list = np.array(R_list, dtype="float32")  # Shape (n, N, 3)
-    R_sq = np.array([R**2 for R in R_list], dtype="float32")  # Shape (n, N, 3)
+    R_sq = np.array([R ** 2 for R in R_list], dtype="float32")  # Shape (n, N, 3)
     r_mag_sq = Math.einsum_ij_i_batch(R_sq)  # .reshape(-1, 1)
     r_mag_cube = np.power(r_mag_sq, 3 / 2)
     recip_r_mag = 1 / r_mag_cube  # Shape (n, N)
@@ -491,7 +491,7 @@ def calculate_field_at_point(x, Q, x_0=np.array([0, 0, 0])):
 
     # Create matrix R
     R = nb_subtract(x_0, x)
-    R_sq = R**2
+    R_sq = R ** 2
     r_mag_sq = np.einsum("ij->i", R_sq).reshape(-1, 1)
     r_mag_cube = np.power(r_mag_sq, 3 / 2)
     E = np.einsum("ij,ij,ij->j", R, 1 / r_mag_cube, Q) * 14.3996451

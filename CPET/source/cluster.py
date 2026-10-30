@@ -1,23 +1,17 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 import json
-import time
 import os
 
-from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.manifold import MDS
 from kneed import KneeLocator
-from mpl_toolkits.mplot3d import Axes3D
 from glob import glob
 from CPET.utils.calculator import (
     make_histograms,
-    make_histograms_mem,
     make_fields,
     make_5d_tensor,
     construct_distance_matrix,
-    construct_distance_matrix_mem,
     construct_distance_matrix_volume,
     construct_distance_matrix_tensor,
     determine_rank,
@@ -196,7 +190,7 @@ class cluster:
 
         cluster_results = {}
         distance_matrix = self.distance_matrix
-        distance_matrix = distance_matrix**2
+        distance_matrix = distance_matrix ** 2
         inertia_list = []
         if not self.defined_n_clusters:
             for i in range(50):
@@ -467,9 +461,12 @@ class cluster:
             projection = mds.fit_transform(
                 self.distance_matrix
             )  # Directly feed the distance matrix
-            color_palette = sns.color_palette("deep", 12)
+            color_palette = plt.get_cmap("tab20").colors
             cluster_colors = [
-                color_palette[label] for label in self.cluster_results["labels"]
+                (0.5, 0.5, 0.5)
+                if label == -1
+                else color_palette[int(label) % len(color_palette)]
+                for label in self.cluster_results["labels"]
             ]
 
             # Define different perspectives

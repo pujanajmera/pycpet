@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 from tqdm import tqdm
 from glob import glob
 import logging
@@ -95,9 +94,7 @@ def save_numpy_as_dat(meta_data, volume, name):
     """
 
     np.savetxt(
-        name,
-        volume,
-        fmt="%.3f",
+        name, volume, fmt="%.3f",
     )
 
     # open file and write header
@@ -657,12 +654,7 @@ def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="c
             pos
             for atom_res in centering_atoms
             for idx, pos in enumerate(x)
-            if (
-                atom_type[idx],
-                residue_number[idx],
-                chains[idx],
-            )
-            == atom_res
+            if (atom_type[idx], residue_number[idx], chains[idx],) == atom_res
         ]
     else:
         log.debug(options[seltype]["atoms"])
