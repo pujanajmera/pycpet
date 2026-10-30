@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 def check_tensor(x, name="Tensor"):
     if torch.isnan(x).any() or torch.isinf(x).any():
-        log.warning(f"{name} contains NaN or Inf")
+        log.warning(f"NaN or Inf found in {name}")
         return True
     return False
 
@@ -267,7 +267,7 @@ def filter_and_dump_gpu(
         dumped_values = torch.cat((dumped_values, new_data.unsqueeze(1)), dim=1)
         log.debug("Final point from dumped_values: %s", dumped_values[:, -1, :])
     log.debug(
-        f"Now have {dumped_values.shape[1]} number of dumped streamlines after filtering."
+        f"Dumped streamlines after filtering: {dumped_values.shape[1]}"
     )
     return dumped_values, ignore_indices
 
@@ -301,7 +301,7 @@ def batched_filter_gpu(
         path_filt(array) - new path filter of shape of shape (L-F1)
         init_points_new(array) - new initial points of shape (3,L-F1,3)
     """
-    log.debug("Filtering...")
+    log.debug("Filtering streamlines")
     inside_box_mat = Inside_Box_gpu(path_matrix, dimensions)  # Shape (M,L)
     first_false = first_false_index_gpu(inside_box_mat)  # Shape (L,)
     outside_box_filter = generate_path_filter_gpu(

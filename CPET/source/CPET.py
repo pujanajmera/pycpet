@@ -54,7 +54,7 @@ class CPET:
         self.inputfiletype = self.options["inputfiletype"]
         if not os.path.exists(self.outputpath):
             self.log.warning(
-                "Output directory does not exist in current directory, creating: \n{}".format(
+                "Output directory does not exist, creating: {}".format(
                     self.outputpath
                 )
             )
@@ -110,7 +110,7 @@ class CPET:
             if len(files_input) != 0:
                 file = choice(files_input)
             else:
-                self.log.info("No more files to process!")
+                self.log.info("No more files to process")
                 break
             files_input.remove(file)
             protein = file.split("/")[-1].split(".")[0]
@@ -122,7 +122,7 @@ class CPET:
                 np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
             else:
                 self.log.info(
-                    "Already done for protein: {}, skipping...".format(protein)
+                    "Output already exists for protein {}, skipping".format(protein)
                 )
 
     def run_volume(self):
@@ -134,11 +134,11 @@ class CPET:
             if len(files_input) != 0:
                 file = choice(files_input)
             else:
-                self.log.info("No more files to process!")
+                self.log.info("No more files to process")
                 break
             protein = file.split("/")[-1].split(".")[0]
             files_input.remove(file)
-            self.log.info("protein file: {}".format(protein))
+            self.log.info("Protein file: {}".format(protein))
             files_done = [
                 x for x in os.listdir(self.outputpath) if x.endswith("_efield.dat")
             ]
@@ -165,7 +165,7 @@ class CPET:
                 )
             else:
                 self.log.info(
-                    "Already done for protein: {}, skipping...".format(protein)
+                    "Output already exists for protein {}, skipping".format(protein)
                 )
 
     def run_point(self):
@@ -181,7 +181,7 @@ class CPET:
             for file in files_input:
                 self.calculator = calculator(self.options, path_to_pdb=file)
                 protein = file.split("/")[-1].split(".")[0]
-                self.log.info("protein file: {}".format(protein))
+                self.log.info("Protein file: {}".format(protein))
                 point_field_or_mag = getattr(self.calculator, runtype)()
                 # Save the point field or magnitude to the output file
                 f.write("{}:{}\n".format(protein, point_field_or_mag))
@@ -193,11 +193,11 @@ class CPET:
             if len(files_input) != 0:
                 file = choice(files_input)
             else:
-                self.log.info("No more files to process!")
+                self.log.info("No more files to process")
                 break
             protein = file.split("/")[-1].split(".")[0]
             files_input.remove(file)
-            self.log.info("protein file: {}".format(protein))
+            self.log.info("Protein file: {}".format(protein))
             files_done = [
                 x for x in os.listdir(self.outputpath) if x.endswith("_esp.dat")
             ]
@@ -205,7 +205,7 @@ class CPET:
             if protein + "_esp.dat" not in files_done:
                 self.calculator = calculator(self.options, path_to_pdb=file)
                 esp_box, mesh_shape = self.calculator.compute_box_ESP()
-                self.log.info(esp_box.shape)
+                self.log.debug(f"ESP box shape: {esp_box.shape}")
                 meta_data = {
                     "dimensions": self.calculator.dimensions,
                     "step_size": [
@@ -224,7 +224,7 @@ class CPET:
                 )
             else:
                 self.log.info(
-                    "Already done for protein: {}, skipping...".format(protein)
+                    "Output already exists for protein {}, skipping".format(protein)
                 )
 
     def run_box_check(self):
@@ -240,13 +240,13 @@ class CPET:
             self.options["filter_in_box"] = False
             self.calculator = calculator(self.options, path_to_pdb=file)
             protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
-            self.log.info("protein file: {}".format(protein))
+            self.log.info("Protein file: {}".format(protein))
             report_inside_box(self.calculator)
-        self.log.info("No more files to process!")
+        self.log.info("No more files to process")
 
     def run_cluster(self):
         """Run clustering (for a variety of types of field/esp data)"""
-        self.log.info("Running the cluster analysis. Method type: {}".format(self.m))
+        self.log.info("Running cluster analysis, method: {}".format(self.m))
         self.cluster = cluster(self.options)
         self.cluster.Cluster()
 
@@ -286,7 +286,7 @@ class CPET:
                 )
             if "outputpath_list" not in self.options:
                 self.log.warning(
-                    "No outputpath_list provided. Using default outputpath_list based on inputpath_list"
+                    "No outputpath_list provided, using defaults based on inputpath_list"
                 )
                 # Add 'pca_out' to the end of each input path
                 self.options["outputpath_list"] = [

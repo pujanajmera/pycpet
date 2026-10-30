@@ -50,7 +50,7 @@ def split_and_filter(
         mat = np.multiply(x_log1p, x_sign)
 
     if unlog1:
-        log.debug("invert log operation")
+        log.debug("Inverting log1p transform")
         x_sign = np.sign(mat)
         # getting absolute value of every element
         x_abs = np.abs(mat)

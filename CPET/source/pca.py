@@ -108,10 +108,9 @@ class pca_pycpet:
 
         if self.verbose:
             log.info(
-                "individual explained vars: \n"
-                + str(self.pca_obj.explained_variance_ratio_)
+                f"Individual explained variance ratios: {self.pca_obj.explained_variance_ratio_}"
             )
-            log.info("cumulative explained vars ratio: \n" + str(cum_explained_var))
+            log.info(f"Cumulative explained variance ratios: {cum_explained_var}")
 
         if self.save_pca_tf:
             self.save_pca()
