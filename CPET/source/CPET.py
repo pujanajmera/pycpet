@@ -86,7 +86,7 @@ class CPET:
         elif self.m == "pca" or self.m == "pca_compare":
             self.run_pca()
         else:
-            ValueError(
+            raise ValueError(
                 "Method {} not recognized. Please check the options file or the command line arguments.".format(
                     self.m
                 )

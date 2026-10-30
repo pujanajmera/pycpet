@@ -7,8 +7,8 @@ import logging
 Overall script for all visualization functions and visualization-affiliates.
 
 Current functions:
-- visualize_fields: Visualize electric fields in proteins by creating a bild file
-for Chimera/ChimeraX input
+- visualize_field / visualize_esp: Visualize electric fields or electrostatic
+potentials in proteins by creating a bild file for Chimera/ChimeraX input
 
 To-add:
 - Time-dependent animations

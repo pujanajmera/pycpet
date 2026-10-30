@@ -5,6 +5,24 @@ import logging
 
 log = logging.getLogger(__name__)
 
+VALID_CPET_METHODS = [
+    "topo",
+    "topo_GPU",
+    "volume",
+    "volume_ESP",
+    "point_field",
+    "point_mag",
+    "cluster",
+    "cluster_volume",
+    "cluster_volume_tensor",
+    "cluster_volume_esp_tensor",
+    "box_check",
+    "visualize_field",
+    "visualize_esp",
+    "pca",
+    "pca_compare",
+]
+
 
 def get_input_files(inputpath, filetype):
     """
@@ -253,6 +271,14 @@ def check_valid_options(options):
     Returns
         None, but raises errors if options are invalid
     """
+    if "CPET_method" not in options.keys():
+        raise ValueError("CPET_method must be specified in the options")
+    if options["CPET_method"] not in VALID_CPET_METHODS:
+        raise ValueError(
+            "CPET_method '{}' not recognized. Valid methods are: {}".format(
+                options["CPET_method"], ", ".join(VALID_CPET_METHODS)
+            )
+        )
     if options["inputfiletype"] not in ["pdb", "pqr"]:
         raise ValueError("inputfiletype must be 'pdb' or 'pqr'")
     if options["initializer"] not in ["uniform", "random"]:

@@ -55,8 +55,8 @@ These are the following available features, and their corresponding options file
 - Computing 3-D distribution of streamlines: 'topo' (CPU, default) and 'topo_GPU' (GPU)
 - Clustering by distribution of streamlines: 'cluster'
 - Clustering by 3-D electric field (tensor decomp): 'cluster_volume_tensor'
-- Clustering by 3-D electrostatic potential: 'cluster_volume_ESP_tensor' **IN BETA**
-- Visualizing 3-D fields: 'visualize_fields'
+- Clustering by 3-D electrostatic potential: 'cluster_volume_esp_tensor' **IN BETA**
+- Visualizing 3-D fields and electrostatic potentials: 'visualize_field' and 'visualize_esp'
 - PCA on 3-D fields, for a single set of data: 'pca' **IN BETA**
 - PCA on 3-D fields, for a full comparative analysis between multiple sets of field data (e.g. variants): 'pca_compare' **IN BETA**
 - Finding if any atoms are intruding the field volume: 'box_check'
