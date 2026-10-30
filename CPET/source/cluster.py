@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 import os
+import logging
 
 from sklearn.metrics import silhouette_score
 from sklearn.manifold import MDS
@@ -17,6 +18,8 @@ from CPET.utils.calculator import (
     determine_rank,
     reduce_tensor,
 )
+
+log = logging.getLogger(__name__)
 
 
 class NpEncoder(json.JSONEncoder):
@@ -43,7 +46,7 @@ class cluster:
 
         # Cluster Specific Options
         if "cluster_method" not in options.keys():
-            print("No cluster method specified, defaulting to K-Medoids")
+            log.info("No cluster method specified, defaulting to K-Medoids")
             self.cluster_method = "kmeds"
         else:
             self.cluster_method = options["cluster_method"]
@@ -81,12 +84,12 @@ class cluster:
         }
         list_file = method_dict[options["CPET_method"]][0]
         if self.cluster_reload:
-            print("Loading distance matrix and topo file list from files!")
+            log.info("Loading distance matrix and topo file list from files!")
             self.file_list = []
             with open(self.outputpath + f"/{list_file}", "r") as file_list:
                 for line in file_list:
                     self.file_list.append(line.strip())
-            print(
+            log.info(
                 "{} files found for clustering method {} from input".format(
                     len(self.file_list), options["CPET_method"]
                 )
@@ -94,25 +97,26 @@ class cluster:
             self.distance_matrix = np.load(self.outputpath + "/distance_matrix.dat.npy")
         else:
             self.file_list = []
-            print(method_dict[options["CPET_method"]][1])
+            log.debug(
+                f"Looking for files ending in: {method_dict[options['CPET_method']][1]}"
+            )
             for file in glob(
                 self.inputpath + f"/*{method_dict[options['CPET_method']][1]}"
             ):
                 self.file_list.append(file)
             if len(self.file_list) == 0:
-                print(
+                log.error(
                     "No files found for clustering method {}".format(
                         options["CPET_method"]
                     )
                 )
                 exit()
             self.file_list.sort()
-            print(len(self.file_list))
             topo_file_name = self.outputpath + f"/{list_file}"
             with open(topo_file_name, "w") as file_list:
                 for i in self.file_list:
                     file_list.write(f"{i} \n")
-            print(
+            log.info(
                 "{} files found for clustering method {}".format(
                     len(self.file_list), options["CPET_method"]
                 )
@@ -139,7 +143,7 @@ class cluster:
             elif options["CPET_method"] == "cluster_volume_esp_tensor":
                 # Skip 5d tensor if already made
                 if os.path.exists(self.outputpath + "/5d_tensor.npy"):
-                    print("5d tensor already found in output directory, skipping")
+                    log.info("5d tensor already found in output directory, skipping")
                     self.full_tensor = np.load(self.outputpath + "/5d_tensor.npy")
                 else:
                     self.full_tensor = make_5d_tensor(
@@ -172,7 +176,7 @@ class cluster:
         elif self.cluster_method == "hdbscan":
             self.cluster_results = self.hdbscan()
         else:
-            print("Invalid cluster method specified, defaulting to K-Medoids")
+            log.warning("Invalid cluster method specified, defaulting to K-Medoids")
             self.cluster_method = "kmeds"
             self.cluster_results = self.kmeds()
         compressed_dictionary = self.cluster_analyze()
@@ -204,7 +208,7 @@ class cluster:
                 kmeds.fit(distance_matrix)
                 labels = list(kmeds.labels_)
                 inertia_list.append(kmeds.inertia_)
-                print(i + 1, kmeds.inertia_)
+                log.info(f"{i + 1} clusters, inertia: {kmeds.inertia_}")
             # Use second-derivate based elbow locating with 1-15 clusters
             kn = KneeLocator(
                 [
@@ -264,7 +268,7 @@ class cluster:
                 direction="decreasing",
             )
 
-            print(
+            log.info(
                 f"Using {kn.elbow} number of clusters with Partitioning around Medoids (PAM), derived from elbow method"
             )
             cluster_results["n_clusters"] = int(kn.elbow)
@@ -278,7 +282,7 @@ class cluster:
 
             kmeds.fit(distance_matrix)
         else:
-            print(
+            log.info(
                 f"Using {self.defined_n_clusters} number of clusters with Partitioning around Medoids (PAM)"
             )
             kmeds = KMedoids(
@@ -345,7 +349,7 @@ class cluster:
             performance_list.append(
                 [count_dict, score, clustering, threshold, percentile_threshold]
             )
-            print(percentile_threshold, score)
+            log.info(f"Percentile threshold {percentile_threshold}: silhouette score {score}")
             # filter out too noisy convergences
         performance_list_filtered = [
             i for i in performance_list if (i[0].get(-1, float("inf")) <= 250)
@@ -354,7 +358,7 @@ class cluster:
         if not silhouettes == []:
             best_silhouette = max(silhouettes)
         else:
-            print(
+            log.warning(
                 "Significant noisy data (>5%) found here; take these results with a grain of salt"
             )
             performance_list_filtered = performance_list
@@ -378,7 +382,7 @@ class cluster:
         if not n_clusters_ == len(best_performance[2].medoids_):
             cluster_centers_indices = [""] + cluster_centers_indices
 
-        print(
+        log.info(
             f"Best performance with {best_performance[4]}% cutoff and silhouette score of {best_silhouette}"
         )
 
@@ -438,18 +442,18 @@ class cluster:
             )
         )
         # print percentage of each cluster
-        print("Percentage of each cluster: ")
+        log.info("Percentage of each cluster: ")
         for key in compressed_dictionary.keys():
             if type(key) == int:
-                print(
+                log.info(
                     f"Cluster {key}: {compressed_dictionary[key]['percentage']}% of total"
                 )
             else:
                 if key.isnumeric():
-                    print(
+                    log.info(
                         f"Cluster {key}: {compressed_dictionary[key]['percentage']}% of total"
                     )
-        print(f"Silhouette Score: {self.cluster_results['silhouette_score']}")
+        log.info(f"Silhouette Score: {self.cluster_results['silhouette_score']}")
         # compressed_dictionary["boundary_inds"] = self.cluster_results["bounary_list_inds"]
         compressed_dictionary["silhouette"] = self.cluster_results["silhouette_score"]
         compressed_dictionary["n_clusters"] = self.cluster_results["n_clusters"]
@@ -498,5 +502,5 @@ class cluster:
                 plt.title(f"View from elevation {elev}°, azimuth {azim}°")
                 plt.show()
         if self.plot_dwell_times == True:
-            print(0)
+            log.warning("plot_dwell_times is not implemented yet, skipping")
         return compressed_dictionary

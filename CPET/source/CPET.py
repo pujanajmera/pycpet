@@ -48,7 +48,7 @@ class CPET:
         check_valid_options(self.options)
         self.log = log
         self.m = self.options["CPET_method"]
-        print("Instantiating CPET, method: {}".format(self.m))
+        self.log.info("Instantiating CPET, method: {}".format(self.m))
         self.inputpath = self.options["inputpath"]
         self.outputpath = self.options["outputpath"]
         self.inputfiletype = self.options["inputfiletype"]
@@ -110,7 +110,7 @@ class CPET:
             if len(files_input) != 0:
                 file = choice(files_input)
             else:
-                print("No more files to process!")
+                self.log.info("No more files to process!")
                 break
             files_input.remove(file)
             protein = file.split("/")[-1].split(".")[0]
@@ -134,7 +134,7 @@ class CPET:
             if len(files_input) != 0:
                 file = choice(files_input)
             else:
-                print("No more files to process!")
+                self.log.info("No more files to process!")
                 break
             protein = file.split("/")[-1].split(".")[0]
             files_input.remove(file)
@@ -193,7 +193,7 @@ class CPET:
             if len(files_input) != 0:
                 file = choice(files_input)
             else:
-                print("No more files to process!")
+                self.log.info("No more files to process!")
                 break
             protein = file.split("/")[-1].split(".")[0]
             files_input.remove(file)
@@ -242,7 +242,7 @@ class CPET:
             protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
             self.log.info("protein file: {}".format(protein))
             report_inside_box(self.calculator)
-        print("No more files to process!")
+        self.log.info("No more files to process!")
 
     def run_cluster(self):
         """Run clustering (for a variety of types of field/esp data)"""
@@ -252,8 +252,8 @@ class CPET:
 
     def run_visualize_efield(self):
         """Visualize the electric field/electrostatic potential file for Chimera/ChimeraX"""
-        print(
-            "... > Visualizing the electric field or electrostatic potential for use in Chimera/ChimeraX"
+        self.log.info(
+            "Visualizing the electric field or electrostatic potential for use in Chimera/ChimeraX"
         )
         if self.m == "visualize_field":
             files_input = glob(self.inputpath + "/*_efield.dat")
