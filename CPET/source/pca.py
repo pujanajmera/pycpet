@@ -3,11 +3,14 @@ import pickle as pkl
 import json
 from glob import glob
 import warnings
+import logging
 import matplotlib.pyplot as plt
 
 from sklearn.decomposition import PCA
 
 from CPET.utils.io import save_numpy_as_dat, read_mat
+
+log = logging.getLogger(__name__)
 
 
 class pca_pycpet:
@@ -104,11 +107,11 @@ class pca_pycpet:
         self.cum_explained_var = cum_explained_var
 
         if self.verbose:
-            print(
+            log.info(
                 "individual explained vars: \n"
                 + str(self.pca_obj.explained_variance_ratio_)
             )
-            print("cumulative explained vars ratio: \n" + str(cum_explained_var))
+            log.info("cumulative explained vars ratio: \n" + str(cum_explained_var))
 
         if self.save_pca_tf:
             self.save_pca()

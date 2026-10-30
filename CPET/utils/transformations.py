@@ -1,4 +1,8 @@
+import logging
+
 import numpy as np
+
+log = logging.getLogger(__name__)
 
 
 def get_transformation(center, x, y):
@@ -46,7 +50,7 @@ def split_and_filter(
         mat = np.multiply(x_log1p, x_sign)
 
     if unlog1:
-        print("invert log operation")
+        log.debug("invert log operation")
         x_sign = np.sign(mat)
         # getting absolute value of every element
         x_abs = np.abs(mat)

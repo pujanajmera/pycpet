@@ -1,4 +1,5 @@
 import torch
+import logging
 from typing import Tuple
 
 """
@@ -11,10 +12,12 @@ F: Number of dumped values during filtering
 P(_K): function-to-function placeholder parameter
 """
 
+log = logging.getLogger(__name__)
+
 
 def check_tensor(x, name="Tensor"):
     if torch.isnan(x).any() or torch.isinf(x).any():
-        print(f"{name} contains NaN or Inf")
+        log.warning(f"{name} contains NaN or Inf")
         return True
     return False
 
@@ -38,8 +41,6 @@ def calculate_electric_field_torch_batch_gpu(
 
     for start in range(0, N, 100):
         end = min(start + 100, N)
-        # print(x_0[start:end].unsqueeze(1).shape)
-        # print(x.unsqueeze(0).shape)
         R = x_0[start:end].unsqueeze(1) - x.unsqueeze(0)
         r_mag_cube = torch.norm(R, dim=-1, keepdim=True).pow(-3)
         # E[start:end] = torch.einsum("ijk,ijk,ijk->ik", R, 1/r_mag_cube, Q) * 14.3996451
@@ -76,6 +77,10 @@ def propagate_topo_matrix_gpu(
     else:
         dtype = torch.float64
     """
+    # Logged here because TorchScript functions cannot call the logger
+    log.debug(
+        "Field inputs: x_0 shape %s, x shape %s", path_matrix_prior.shape, x.shape
+    )
     E = calculate_electric_field_torch_batch_gpu(path_matrix_prior, x, Q)
     path_matrix[i + 1] = path_matrix_prior + step_size * E / torch.norm(
         E, dim=-1, keepdim=True
@@ -122,8 +127,6 @@ def compute_curv_and_dist_mat_gpu(
     )
     curv_final = curv_mat_gpu(x_0_plus - x_0, x_0_plus_plus - 2 * x_0_plus + x_0)
     curv_mean = (curv_init + curv_final) / 2
-    # print(x_init)
-    # print(x_0)
     dist = torch.norm(x_init - x_0, dim=-1)
     return dist, curv_mean
 
@@ -262,8 +265,8 @@ def filter_and_dump_gpu(
             dim=0,
         )
         dumped_values = torch.cat((dumped_values, new_data.unsqueeze(1)), dim=1)
-        # print(f"Final {filtertype} point from dumped_values: {dumped_values[:, -1, :]}")
-    print(
+        log.debug("Final point from dumped_values: %s", dumped_values[:, -1, :])
+    log.debug(
         f"Now have {dumped_values.shape[1]} number of dumped streamlines after filtering."
     )
     return dumped_values, ignore_indices
@@ -298,7 +301,7 @@ def batched_filter_gpu(
         path_filt(array) - new path filter of shape of shape (L-F1)
         init_points_new(array) - new initial points of shape (3,L-F1,3)
     """
-    print("Filtering...")
+    log.debug("Filtering...")
     inside_box_mat = Inside_Box_gpu(path_matrix, dimensions)  # Shape (M,L)
     first_false = first_false_index_gpu(inside_box_mat)  # Shape (L,)
     outside_box_filter = generate_path_filter_gpu(
@@ -379,7 +382,7 @@ def batched_filter_gpu(
     path_mat = t_delete(path_matrix, new_filter_indices)
     path_filt = t_delete(path_filter, new_filter_indices)
     init_points_new = t_delete(init_points, new_filter_indices)
-    # print("4.", path_mat.shape)
+    log.debug("Path matrix shape after filtering: %s", path_mat.shape)
     if dtype_str == "float32":
         dtype = torch.float32
     else:
@@ -388,7 +391,7 @@ def batched_filter_gpu(
         GPU_batch_freq, path_mat.shape[1], 3, device=path_mat.device, dtype=dtype
     )
     path_mat_new[0:2, ...] = path_mat[-2:, ...]
-    print(f"Number of streamlines filtered: {len(new_filter_indices)}")
+    log.debug(f"Number of streamlines filtered: {len(new_filter_indices)}")
 
     # return torch.tensor(path_mat).cuda(), torch.tensor(dumped_values).cuda(), torch.tensor(path_filt).cuda()
     return path_mat_new, dumped_values, path_filt, init_points_new
