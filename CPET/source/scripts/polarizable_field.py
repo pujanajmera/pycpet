@@ -1,5 +1,4 @@
-from CPET.source.CPET import CPET
-from CPET.utils import intro_citation
+from CPET.utils import intro_citation  # noqa: F401 - prints citation banner on import
 
 import numpy as np
 

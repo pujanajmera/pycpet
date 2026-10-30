@@ -1,12 +1,10 @@
 import pytest
 import numpy as np
-import pandas as pd
 
 # Import all the filter functions
 from CPET.utils.io import (
     filter_radius,
     filter_radius_whole_residue,
-    filter_atomspec,
     filter_in_box,
 )
 
@@ -58,13 +56,7 @@ class TestFilter:
         atom_types = synthetic_data["atom_type"]
 
         ID = [
-            (
-                atom_numbers[i],
-                atom_types[i],
-                resids[i],
-                resnums[i],
-                chains[i],
-            )
+            (atom_numbers[i], atom_types[i], resids[i], resnums[i], chains[i],)
             for i in range(len(x))
         ]
 
@@ -132,7 +124,6 @@ class TestFilter:
         Test filter_IDs, which uses a DataFrame and a dictionary of
         potential ID-based filters.
         """
-        from collections import namedtuple
 
         # Build the ID list as (atom_number, atom_type, resid, resnum, chain)
         # We'll just use chain='A' for simplicity.

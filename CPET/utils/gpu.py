@@ -1,7 +1,5 @@
-import time
 import torch
 from typing import Tuple
-from torch.profiler import profile
 
 """
 Universal variable notation for GPU streamline computation:
@@ -336,10 +334,7 @@ def batched_filter_gpu(
         if index in path_indices and index in box_indices:
 
             stopping_points.append(
-                min(
-                    path_stopping_points[index],
-                    box_stopping_points[index],
-                )
+                min(path_stopping_points[index], box_stopping_points[index],)
             )
 
             # Slower version for testing:

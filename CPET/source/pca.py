@@ -1,6 +1,5 @@
 import numpy as np
 import pickle as pkl
-import os
 import json
 from glob import glob
 import warnings
@@ -77,9 +76,7 @@ class pca_pycpet:
         self.data = np.array(self.data)
         self.meta_data = read_mat(file, meta_data=True)
 
-    def fit_and_transform(
-        self,
-    ):
+    def fit_and_transform(self,):
         mat_transform = self.data.reshape(
             self.data.shape[0],
             self.data.shape[1]

@@ -99,9 +99,9 @@ def main():
 
         max_steps = round(2 * np.linalg.norm(dimensions) / step_size)
         num_per_dim = round(n_samples ** (1 / 3))
-        if num_per_dim**3 < n_samples:
+        if num_per_dim ** 3 < n_samples:
             num_per_dim += 1
-        n_samples = num_per_dim**3
+        n_samples = num_per_dim ** 3
         seed = None
         grid_density = 2 * dimensions / (num_per_dim + 1)
         print("grid_density: ", grid_density)

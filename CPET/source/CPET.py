@@ -15,7 +15,6 @@ from glob import glob
 from random import choice
 import os
 import numpy as np
-import warnings
 import logging
 
 log = logging.getLogger(__name__)
@@ -271,9 +270,7 @@ class CPET:
                 )
             elif self.m == "visualize_esp":
                 visualize.visualize_esp(
-                    path_to_esp=file,
-                    outputpath=self.outputpath,
-                    options=self.options,
+                    path_to_esp=file, outputpath=self.outputpath, options=self.options,
                 )
 
     def run_pca(self):

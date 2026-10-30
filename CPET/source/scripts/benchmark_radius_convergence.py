@@ -9,7 +9,6 @@ import json
 import argparse
 from random import choice
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 from glob import glob
@@ -119,17 +118,44 @@ def main():
         # Ensure the matrix is symmetric
         averaged_distances = (averaged_distances + averaged_distances.T) / 2
 
-        # (Optional) Plot the distance matrix
-        # First, close any open plots
-        plt.close()
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(averaged_distances, cmap="Greens_r", annot=True, linewidths=0.1)
-        plt.title("Averaged Distance Matrix")
-        plt.show()
-        plt.imsave(
-            f"averaged_distance_matrix_{file.split('/')[-1].split('.')[0]}.png",
-            averaged_distances,
+        # Plot the averaged distance matrix using Matplotlib
+        fig, ax = plt.subplots(figsize=(10, 8))
+
+        matrix = averaged_distances.to_numpy()
+
+        im = ax.imshow(matrix, cmap="Greens_r", aspect="auto")
+
+        # Axis labels
+        ax.set_xticks(
+            range(len(averaged_distances.columns)),
+            labels=averaged_distances.columns,
+            rotation=90,
         )
+        ax.set_yticks(
+            range(len(averaged_distances.index)), labels=averaged_distances.index,
+        )
+
+        # Annotate cells with their values
+        for (i, j), value in np.ndenumerate(matrix):
+            ax.text(
+                j, i, f"{value:.2g}", ha="center", va="center", fontsize=8,
+            )
+
+        # Add grid lines between cells
+        ax.set_xticks(np.arange(-0.5, matrix.shape[1], 1), minor=True)
+        ax.set_yticks(np.arange(-0.5, matrix.shape[0], 1), minor=True)
+        ax.grid(which="minor", color="white", linewidth=0.1)
+        ax.tick_params(which="minor", bottom=False, left=False)
+
+        fig.colorbar(im, ax=ax)
+        ax.set_title("Averaged Distance Matrix")
+
+        # Save the entire annotated figure
+        output_name = f"averaged_distance_matrix_{os.path.splitext(os.path.basename(file))[0]}.png"
+
+        fig.tight_layout()
+        fig.savefig(output_name, dpi=200, bbox_inches="tight")
+        plt.close(fig)
 
 
 main()

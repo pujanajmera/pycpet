@@ -100,7 +100,7 @@ jobs:
 
     # ONLY publish stable versions like v0.0.8
     # DO NOT publish prereleases like v0.0.8a
-    
+
 
     runs-on: ubuntu-latest
 
@@ -153,4 +153,4 @@ jobs:
         with:
           files: final_dist/*
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, 'a') }}
+          prerelease: ${{ contains(github.ref_name, 'a') || contains(github.ref_name, 'b') || contains(github.ref_name, 'rc') }}

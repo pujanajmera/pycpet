@@ -1,3 +1,4 @@
+import importlib
 import numpy as np
 from CPET.source.calculator import calculator
 import warnings
@@ -7,10 +8,8 @@ import json
 
 warnings.filterwarnings(action="ignore")
 import torch
-import pkg_resources
 
 from CPET.utils.calculator import (
-    calculate_field_at_point,
     calculate_electric_field_base,
     calculate_electric_field_c_shared_full_alt,
 )

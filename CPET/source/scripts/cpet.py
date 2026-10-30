@@ -1,5 +1,5 @@
 from CPET.source.CPET import CPET
-from CPET.utils import intro_citation
+from CPET.utils import intro_citation  # noqa: F401 - prints citation banner on import
 
 import json
 import os
@@ -24,10 +24,7 @@ def main():
     )
 
     parser.add_argument(
-        "-o",
-        type=str,
-        help="Options for CPET",
-        default="./options/options.json",
+        "-o", type=str, help="Options for CPET", default="./options/options.json",
     )
 
     # Overrides to the options file

@@ -29,7 +29,7 @@ def split_and_filter(
     sparsify=False,
     sparse_factor=1,
 ):
-    mag = np.sqrt(np.sum(mat**2, axis=3))
+    mag = np.sqrt(np.sum(mat ** 2, axis=3))
 
     arr_mean = np.mean(mag)
     arr_std = np.std(mag)

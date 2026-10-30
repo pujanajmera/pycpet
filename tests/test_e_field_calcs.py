@@ -1,19 +1,8 @@
 import numpy as np
 from CPET.source.calculator import calculator
-from CPET.utils.calculator import (
-    make_histograms,
-    construct_distance_matrix_alt2,
-    construct_distance_matrix,
-)
 import warnings
 
 warnings.filterwarnings(action="ignore")
-import json
-import argparse
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-import os
 
 from CPET.utils.calculator import (
     compute_field_on_grid,
@@ -22,7 +11,6 @@ from CPET.utils.calculator import (
     calculate_electric_field_c_shared_full_alt,
 )
 
-from CPET.utils.gpu import calculate_electric_field_torch_batch_gpu
 
 
 def gather_reference_from_utility(topo):

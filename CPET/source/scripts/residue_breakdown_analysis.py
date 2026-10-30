@@ -5,9 +5,6 @@ import argparse
 import os
 import json
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib
-import matplotlib.colors
 
 
 def load_hist(pdb, tops_dir):
