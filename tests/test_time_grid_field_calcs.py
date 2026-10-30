@@ -1,3 +1,4 @@
+import importlib
 import numpy as np
 from CPET.source.calculator import calculator
 import warnings
