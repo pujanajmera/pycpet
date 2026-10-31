@@ -22,6 +22,7 @@ Key features:
    Installation
    GetStarted
    Options
+   InputFiles
    AtomSpec
    FieldTopESP
    Visualization

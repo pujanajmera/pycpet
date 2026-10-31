@@ -31,7 +31,7 @@ General
    * - ``inputfiletype``
      - field calculations
      - ``"pdb"``
-     - ``"pdb"`` or ``"pqr"``. PDB files must carry charges in columns 56–64.
+     - ``"pdb"`` or ``"pqr"``. See :doc:`Input Files <InputFiles>` for the format each needs.
 
 Orientation and box
 -------------------
