@@ -61,7 +61,7 @@ class pca_pycpet:
                 raise ValueError("No data found in the input path!")
             field_file_name = self.outputpath + "/field_file_list.txt"
             with open(field_file_name, "w") as file_list:
-                for i in self.file_list:
+                for i in self.field_file_list:
                     file_list.write(f"{i} \n")
         else:
             self.field_file_list = options["field_file_list"]
