@@ -277,6 +277,8 @@ Output and debugging
      - ``false``
      - Developer option for profiling.
 
+.. _command-line-flags:
+
 Command-line flags
 ------------------
 
