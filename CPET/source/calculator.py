@@ -34,39 +34,62 @@ log = logging.getLogger(__name__)
 
 
 class calculator:
-    """Initialize the calculator object with the following parameters
+    """
+    Load one structure and compute fields, potentials or topologies for it.
+
+    Creating the object reads the PDB or PQR file, applies the ``filter``,
+    ``filter_radius`` and ``filter_in_box`` options, and moves the charges into
+    the frame set by ``center``, ``x`` and ``y``. For volume methods it builds
+    the grid, and for topology methods it chooses the streamline start points.
 
     Parameters
     ----------
     options : dict
-        Dictionary from input options.json file
-    path_to_pdb : str, optional
-        Path to the PDB file, by default None
+        Options for the calculation; defaults are filled in. See the Options
+        Reference.
+    path_to_pdb : str
+        Path to the PDB or PQR file. Required, despite the None default.
 
     Attributes
     ----------
-    self.profile : Bool
-        If True, the calculator will profile the code (development, intended for GPU)
-    self.path_to_pdb : str
-        Path to the PDB file
-    self.step_size : float
-        Step size for the electric field calculation, relevant for the topology calculation or volume field calcs
-    self.dimensions : list
-        Dimensions of the box for the electric field/topology calculations
-    self.n_samples : int
-        Number of streamlines used for the topology calculation
-    self.max_streamline_init : str
-        Method for determining when streamlines end
-    self.concur_slip : int
-        Number of concurrent processes for the CPU-accelerated topology calculation
-    self.GPU_batch_freq : int
-        Number of batches for the GPU-accelerated topology calculation
-    self.dtype : str
-        Data type for the calculations (float32 or float64)
+    x : np.ndarray
+        Coordinates of the charges after filtering, in the oriented frame, shape (N, 3).
+    Q : np.ndarray
+        Charges after filtering, shape (N, 1).
+    ID : list or np.ndarray
+        Identity of each charge, as (atom_number, atom_type, resid, resnum, chain).
+    center : np.ndarray
+        The ``center`` point in the input file's frame, shape (3,).
+    transformation_matrix : np.ndarray
+        Rotation into the oriented frame, shape (3, 3). Only set when ``x`` and
+        ``y`` are given.
+    mesh : np.ndarray
+        Grid points for ``volume`` and ``volume_ESP``.
+    random_start_points : np.ndarray
+        Streamline start points for ``topo`` and ``topo_GPU``.
+    step_size : float
+        Grid spacing for volumes, or streamline step length for topologies.
+    dimensions : np.ndarray
+        Box half widths, shape (3,).
+    n_samples : int
+        Number of streamlines.
+    max_streamline_init : str
+        ``"true_rand"`` or ``"fixed_rand"``; how streamline lengths are drawn.
+    concur_slip : int
+        Number of worker processes for CPU topologies.
+    GPU_batch_freq : int
+        Streamline steps computed per GPU batch.
+    dtype : str
+        ``"float32"`` or ``"float64"``.
+    profile : bool
+        Developer option for profiling.
     """
 
     def __init__(self, options, path_to_pdb=None):
         # self.efield_calc = calculator(math_loc=math_loc)
+        """
+        Load the structure, filter and orient it, and prepare the grid or streamline start points.
+        """
         options = default_options_initializer(
             options
         )  # Double in case calculator is called outside of CPET.py
@@ -404,12 +427,13 @@ class calculator:
         self.log.info("Initialized calculator")
 
     def compute_point_mag(self):
-        """Compute the electric field magnitude at a point defined by the center and the charges Q at positions x.
+        """
+        Compute the magnitude of the electric field at ``center``.
 
         Returns
         -------
-        point_mag : np.ndarray
-            The computed electric field magnitude at the point
+        point_mag : float
+            Magnitude of the field.
         """
         self.log.info("Computing point field (magnitude)")
         self.log.info(f"Number of charges: {len(self.Q)}")
@@ -428,12 +452,13 @@ class calculator:
         return point_mag
 
     def compute_point_field(self):
-        """Compute the electric field at a point defined by the center and the charges Q at positions x.
+        """
+        Compute the electric field vector at ``center``.
 
         Returns
         -------
         point_field : np.ndarray
-            The computed electric field at the point
+            Field vector in the oriented frame, shape (1, 3).
         """
         self.log.info("Computing point field (vector)")
         self.log.info(f"Number of charges: {len(self.Q)}")
@@ -451,12 +476,16 @@ class calculator:
 
     # WIP
     def compute_point_field_polarizable(self):
-        """Compute the electric field at a point defined by the center and multipole moments T at positions x.
+        """
+        Compute the electric field at ``center`` from multipole moments.
+
+        In development. Needs a ``T`` attribute of multipole moments, set by the
+        caller; the calculator does not set it.
 
         Returns
         -------
         point_field : np.ndarray
-            The computed electric field at the point
+            Field vector in the oriented frame.
         """
         self.log.info("Computing point field (vector)")
         self.log.info(f"Number of charges: {len(self.Q)}")
@@ -473,14 +502,16 @@ class calculator:
         return point_field
 
     def compute_box(self):
-        """Compute the electric field on a grid defined by the mesh and the charges Q at positions x.
+        """
+        Compute the electric field at every grid point.
 
         Returns
         -------
         field_box : np.ndarray
-            The computed electric field on the grid
-        mesh.shape : tuple
-            The shape of the mesh grid
+            One ``x y z Ex Ey Ez`` row per grid point, in the oriented frame, shape
+            (n_points, 6).
+        mesh_shape : tuple
+            Shape of the grid, (nx, ny, nz, 3).
         """
         self.log.info("Computing box field")
         self.log.info(f"Number of charges: {len(self.Q)}")
@@ -493,14 +524,16 @@ class calculator:
         return field_box, self.mesh.shape
 
     def compute_box_ESP(self):
-        """Compute the electrostatic potential on a grid defined by the mesh and the charges Q at positions x.
+        """
+        Compute the electrostatic potential at every grid point.
 
         Returns
         -------
         esp_box : np.ndarray
-            The computed electrostatic potential on the grid
-        mesh.shape : tuple
-            The shape of the mesh grid
+            One ``x y z V`` row per grid point, in the oriented frame, shape
+            (n_points, 4), stored as float16.
+        mesh_shape : tuple
+            Shape of the grid, (nx, ny, nz, 3).
         """
         self.log.info("Computing box ESP")
         self.log.info(f"Number of charges: {len(self.Q)}")
@@ -514,14 +547,18 @@ class calculator:
 
     # WIP
     def compute_box_QM(self):
-        """Compute the electric field on a grid, generated from QM calculations with optional MM embedding. Defined by mesh, density, and charges Q at position x.
+        """
+        Compute the electric field on the grid from a QM density, optionally adding MM charges.
+
+        In development. Needs ``moldenpath`` and ``qmmm`` attributes set by the
+        caller; the calculator does not set them.
 
         Returns
         -------
         field_box : np.ndarray
-            The computed electric field on the grid
-        mesh.shape : tuple
-            The shape of the mesh grid
+            One ``x y z Ex Ey Ez`` row per grid point, shape (n_points, 6).
+        mesh_shape : tuple
+            Shape of the grid, (nx, ny, nz, 3).
         """
         self.log.info("Computing box field")
         self.log.info(f"Number of charges: {len(self.Q)}")
@@ -536,6 +573,19 @@ class calculator:
         return field_box, self.mesh.shape
 
     def compute_topo_base(self):
+        """
+        Compute streamlines on CPU worker processes with the pure Python propagator.
+
+        Notes
+        -----
+        Not working: it calls ``.get()`` on the list returned by ``Pool.starmap``,
+        which raises an error.
+
+        Returns
+        -------
+        hist : list
+            Results for each streamline.
+        """
         self.log.info("Computing topology")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
@@ -565,6 +615,14 @@ class calculator:
         return hist
 
     def compute_topo(self):
+        """
+        Compute the streamline distribution on CPU worker processes.
+
+        Returns
+        -------
+        hist : np.ndarray
+            Distance and curvature of each streamline, shape (n_samples, 2).
+        """
         self.log.info("Computing topology")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
@@ -599,6 +657,18 @@ class calculator:
         return hist
 
     def compute_topo_single(self):
+        """
+        Compute the streamline distribution in a single process, as a reference.
+
+        With debug logging on, also writes the distribution, streamline start and
+        end points, and how each streamline ended to text files in the current
+        working directory.
+
+        Returns
+        -------
+        hist : np.ndarray
+            Distance and curvature of each streamline, shape (n_samples, 2).
+        """
         self.log.info("Computing topology (baseline)")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
@@ -651,6 +721,16 @@ class calculator:
         return hist
 
     def compute_topo_complete_c_shared(self):
+        """
+        Compute the streamline distribution on CPU worker processes, using the C extension.
+
+        This is the method ``topo`` uses. Runs ``concur_slip`` processes.
+
+        Returns
+        -------
+        hist : np.ndarray
+            Distance and curvature of each streamline, shape (n_samples, 2).
+        """
         self.log.info("Computing topology")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
@@ -690,7 +770,15 @@ class calculator:
 
     def compute_topo_complete_c_shared_dipole(self):
         """
-        IN DEVELOPMENT, FOR TESTING ONLY
+        Compute the streamline distribution from point dipoles instead of charges.
+
+        In development, for testing only. Needs a ``mu`` attribute of dipole moments,
+        set by the caller as ``field_topology_dipole.py`` does.
+
+        Returns
+        -------
+        hist : np.ndarray
+            Distance and curvature of each streamline, shape (n_samples, 2).
         """
         self.log.info("Computing topology from dipoles")
         self.log.info(f"Number of samples: {self.n_samples}")
@@ -725,6 +813,17 @@ class calculator:
         return hist
 
     def compute_topo_batched(self):
+        """
+        Compute the streamline distribution on CPU worker processes, a batch of streamlines per task.
+
+        Needs ``random_start_points_batched`` and ``random_max_samples_batched``
+        attributes set by the caller; the calculator does not set them.
+
+        Returns
+        -------
+        hist : np.ndarray
+            Distance and curvature of each streamline, shape (n_samples, 2).
+        """
         self.log.info("Computing topology in batches")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
@@ -766,12 +865,17 @@ class calculator:
         return hist
 
     def compute_topo_GPU_batch_filter(self):
-        """Compute the topology using GPU with batch-filtering
+        """
+        Compute the streamline distribution on the GPU.
+
+        This is the method ``topo_GPU`` uses. Streamlines are propagated in batches
+        of ``GPU_batch_freq`` steps, and finished streamlines are dropped between
+        batches.
 
         Returns
         -------
-        hist : np.ndarray
-            The computed topology data
+        topology : np.ndarray
+            Distance and curvature of each streamline, shape (n_samples, 2).
         """
         import torch
         from CPET.utils.gpu import (
