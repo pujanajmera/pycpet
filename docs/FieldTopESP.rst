@@ -75,6 +75,29 @@ Output and running
 - Structures run in random order and finished ones are skipped, so several copies of ``cpet.py`` can share a folder.
 - The field is computed for the whole grid in one call, on a single thread. The potential is computed one grid point at a time, with each sum parallelized over charges using OpenMP, so it follows ``OMP_NUM_THREADS``.
 
-Electric Field Topologies (Distribution of Streamlines)
---------------------------------------------------------
-To be added. Advised to use parallel/GPU accelerated calculations.
+Electric Field Topologies
+-------------------------
+
+``topo`` and ``topo_GPU`` compute the distribution of field streamlines in a box around ``center`` [Hennefarth2020]_ [Dinh2008]_ [Ajmera2025]_. They need ``x``, ``y``, ``dimensions`` and ``step_size`` as for volumes, plus ``n_samples``, the number of streamlines.
+
+.. important::
+
+   For ``topo``, set ``OMP_NUM_THREADS=1`` and parallelize only with ``concur_slip`` in the options file. With more than one OpenMP thread, the CPU field calculation gives incorrect results. ``topo_GPU`` isn't affected.
+
+Streamlines
+^^^^^^^^^^^
+
+- Start points fill the box on a regular grid (``initializer: "uniform"``, the default), with ``n_samples`` rounded up to the next perfect cube, or at random positions (``"random"``).
+- Each streamline gets a random maximum number of steps, from 1 up to the box diagonal divided by ``step_size``. ``"max_streamline_init": "fixed_rand"`` fixes the random seed so runs are reproducible.
+- Each step moves ``step_size`` Å along the field direction, using the :ref:`point field <point-fields>` sum. A streamline stops when it leaves the box or reaches its maximum steps.
+
+For each streamline, *PyCPET* records the distance between its start and end, and the mean of its curvature at both ends, :math:`\kappa = \lvert \mathbf{r}' \times \mathbf{r}'' \rvert / \lvert \mathbf{r}' \rvert^{3}`, estimated from the next two steps.
+
+Output and running
+^^^^^^^^^^^^^^^^^^
+
+- Each structure gets ``<name>.top`` in ``outputpath``, one row per streamline: distance, then curvature. :doc:`Dynamics <Dynamics>` turns these into histograms for clustering.
+- Structures run in random order and finished ones are skipped, so several copies of ``cpet.py`` can share a folder.
+- ``topo`` runs streamlines on ``concur_slip`` worker processes (default 4), in C. ``topo_GPU`` runs them on one GPU in batches of ``GPU_batch_freq`` steps; see :doc:`Parallel & GPU <Parallel>`.
+
+Example ``3A_field-topology`` computes 5000 streamlines in a 1 Å box.

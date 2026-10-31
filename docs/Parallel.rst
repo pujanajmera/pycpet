@@ -29,7 +29,7 @@ paper [Ajmera2025]_. This is designed for HPC or more powerful workstations with
 
 .. note::
 
-   Keep ``OMP_NUM_THREADS=1`` (see :doc:`Installation <Installation>`) so each process runs a single thread and the processes don't compete for cores.
+   Set ``OMP_NUM_THREADS=1`` and parallelize only with ``concur_slip``. With more than one OpenMP thread, ``topo`` gives incorrect results (see :doc:`Installation <Installation>`).
 
 GPU Acceleration (through pytorch)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

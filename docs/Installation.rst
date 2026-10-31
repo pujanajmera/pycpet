@@ -52,7 +52,7 @@ Before running
 
        export OMP_NUM_THREADS=1
 
-   The C extension uses OpenMP, and topology calculations already run several worker processes. Without this setting, each worker starts one thread per CPU core, which can oversubscribe the node and slow topology calculations dramatically.
+   With more than one OpenMP thread, the CPU topology calculation (``topo``) gives incorrect results. Topology calculations also already run several worker processes; without this setting, each worker starts one thread per CPU core, which oversubscribes the node.
 
 For GPU-accelerated code (available for topologies, fields in development), choose the GPU with:
 
