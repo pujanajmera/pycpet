@@ -27,7 +27,6 @@ Key features:
    Dynamics
    SpecialScripts
    Parallel
-   Example Suite
    citation
    apiref
 

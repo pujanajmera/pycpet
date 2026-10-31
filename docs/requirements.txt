@@ -2,6 +2,4 @@ numpy
 torch
 matplotlib       # likely used in CPET.utils.calculator
 sphinx
-sphinx-book-theme
-sphinx-rtd-theme
 furo

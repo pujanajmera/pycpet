@@ -29,7 +29,6 @@ author = "Pujan Ajmera, Santiago Vargas, Matthew Hennefarth, Alexandrova Group"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinx_book_theme",
     "sphinx.ext.autodoc",  # To generate autodocs
     "sphinx.ext.mathjax",  # autodoc with maths
     "sphinx.ext.napoleon",  # For auto-doc configuration
@@ -67,8 +66,3 @@ autodoc_mock_imports = [
 # Use readthedocs theme
 #
 html_theme = "furo"
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
