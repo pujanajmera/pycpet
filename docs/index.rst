@@ -21,13 +21,14 @@ Key features:
 
    Installation
    GetStarted
+   Options
+   InputFiles
    AtomSpec
    FieldTopESP
    Visualization
    Dynamics
    SpecialScripts
    Parallel
-   Example Suite
    citation
    apiref
 

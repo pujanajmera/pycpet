@@ -26,12 +26,24 @@ VALID_CPET_METHODS = [
 
 def get_input_files(inputpath, filetype):
     """
-    Check if the pdb/pqr folder contains any pdb/pqr files
-    Parameters:
-        pdb_folder (str): Path to the folder containing pdb/pqr
-        filetype (str): Type of input files ('pdb' or 'pqr')
-    Returns:
-        files_input (list): List of pdb/pqr files in the folder
+    List the PDB or PQR files in a folder.
+
+    Parameters
+    ----------
+    inputpath : str
+        Path to the folder containing the structure files.
+    filetype : str
+        Type of input files, ``"pdb"`` or ``"pqr"``.
+
+    Returns
+    -------
+    files_input : list of str
+        Paths of the matching files in the folder.
+
+    Raises
+    ------
+    ValueError
+        If ``filetype`` is not ``"pdb"`` or ``"pqr"``, or no matching files are found.
     """
     if filetype not in ["pdb", "pqr"]:
         raise ValueError("filetype must be 'pdb' or 'pqr'")
@@ -45,11 +57,19 @@ def get_input_files(inputpath, filetype):
 
 def write_field_to_file(grid_points, field_points, filename):
     """
-    Write grid points and field points to a files
-    Takes:
-        grid_points(array): 3D grid points (shape: (M,M,M 3))
-        field_points(array): Corresponding field values (shape: (M,M,M,3))
-        filename(str): Name of the file to write
+    Write grid points and their field vectors to a text file.
+
+    The file starts with 7 ``#`` lines, followed by one ``x y z Ex Ey Ez`` line
+    per grid point.
+
+    Parameters
+    ----------
+    grid_points : np.ndarray
+        Grid point coordinates, shape (M, M, M, 3).
+    field_points : np.ndarray
+        Field vectors at the grid points, shape (M, M, M, 3).
+    filename : str
+        Path of the file to write.
     """
     # Flatten the grid and field points arrays and stack them along the last axis
     data = np.column_stack((grid_points.reshape(-1, 3), field_points.reshape(-1, 3)))
@@ -66,11 +86,17 @@ def write_field_to_file(grid_points, field_points, filename):
 
 def save_numpy_as_dat(meta_data, volume, name):
     """
-    Saves np array in original format from cpet output
-    Takes:
-        meta_data: dictionary with meta data
-        field: np array with average field
-        name: name of file to save
+    Save an array as a field file with a CPET-format header.
+
+    Parameters
+    ----------
+    meta_data : dict
+        Metadata for the header, with keys ``"dimensions"``, ``"num_steps"``,
+        ``"transformation_matrix"`` and ``"center"``.
+    volume : np.ndarray
+        2D array of rows to write, for example ``x y z Ex Ey Ez`` per grid point.
+    name : str
+        Path of the file to write.
     """
 
     dimensions = meta_data["dimensions"]
@@ -109,13 +135,27 @@ def save_numpy_as_dat(meta_data, volume, name):
 
 def read_mat(file, meta_data=False, verbose=False):
     """
-    Pulls the matrix from a cpet file
-    Takes
-        file: cpet file
-        meta_data(Optionally): returns the meta data
+    Read the field vectors, or only the header metadata, from a field file.
+
+    Reads files written by PyCPET and by the original CPET.
+
+    Parameters
+    ----------
+    file : str
+        Path to the field file.
+    meta_data : bool, optional
+        If True, return only the metadata dictionary. Default is False.
+    verbose : bool, optional
+        If True, log the metadata. Default is False.
+
     Returns
-        mat: matrix of xyz coordinates
-        meta_data(Optionally): dictionary of meta data
+    -------
+    mat : np.ndarray
+        Field vectors on the grid, shape (steps_x, steps_y, steps_z, 3). Returned
+        when ``meta_data`` is False.
+    meta_dict : dict
+        Grid metadata: number of points, step size and bounds along each axis.
+        Returned instead of ``mat`` when ``meta_data`` is True.
     """
     with open(file) as f:
         lines = f.readlines()
@@ -184,6 +224,19 @@ def read_mat(file, meta_data=False, verbose=False):
 
 
 def pull_mats_from_MD_folder(root_dir):
+    """
+    Read every field file in a folder.
+
+    Parameters
+    ----------
+    root_dir : str
+        Folder containing the ``.dat`` field files.
+
+    Returns
+    -------
+    x : np.ndarray
+        Field vectors from each file, shape (n_files, steps_x, steps_y, steps_z, 3).
+    """
     x = []
     target_files = []
     target_files = glob(root_dir + "/*.dat")
@@ -198,11 +251,17 @@ def pull_mats_from_MD_folder(root_dir):
 
 def default_options_initializer(options):
     """
-    Initializes default options for CPET after checking if they are present in the options dictionary
-    Takes
-        options(dict) - dictionary of options
+    Fill in default values for any options missing from the options dictionary.
+
+    Parameters
+    ----------
+    options : dict
+        Options read from the options file.
+
     Returns
-        options(dict) - new dictionary of options with default values; the input is not modified
+    -------
+    options : dict
+        A new dictionary with the defaults added; the input is not modified.
     """
     options = dict(options)
 
@@ -297,11 +356,18 @@ def default_options_initializer(options):
 
 def check_valid_options(options):
     """
-    Checks if options are valid and raises errors if not
-    Takes
-        options(dict) - dictionary of options
-    Returns
-        None, but raises errors if options are invalid
+    Check that the options are valid.
+
+    Parameters
+    ----------
+    options : dict
+        Options, after defaults have been filled in.
+
+    Raises
+    ------
+    ValueError
+        If ``CPET_method`` is missing or unknown, ``inputfiletype`` or
+        ``initializer`` has an invalid value, or ``x`` and ``y`` are the same.
     """
     if "CPET_method" not in options:
         raise ValueError("CPET_method must be specified in the options")
@@ -322,6 +388,27 @@ def check_valid_options(options):
 
 
 def filter_radius(x, Q, center, radius=2.0):
+    """
+    Keep only the charges within a radius of the center.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Coordinates of the charges, shape (N, 3).
+    Q : np.ndarray
+        Charges, shape (N, 1).
+    center : np.ndarray
+        Center point, shape (3,).
+    radius : float, optional
+        Distance from ``center`` in Angstroms. Default is 2.0.
+
+    Returns
+    -------
+    x_filtered : np.ndarray
+        Coordinates of the charges within the radius.
+    Q_filtered : np.ndarray
+        Charges within the radius.
+    """
     # Filter out points that are inside the box
     x_recentered = x - center
     r = np.linalg.norm(x_recentered, axis=1)
@@ -336,14 +423,33 @@ def filter_radius(x, Q, center, radius=2.0):
 
 def filter_radius_whole_residue(x, Q, ID, center, radius=2.0):
     """
-    Filters out entire residues that have any points that fall outside of the radius
-    Takes
-        x(array) - coordinates of charges of shape (N,3)
-        Q(array) - magnitude and sign of charges of shape (N,1)
-        ID(list) - identity information of shape (N,), where each value is a tuple of
-            the form (atom_number, atom_type, resid, resnum, chain). Chain is optional.
-        center(array) - center of box of shape (1,3)
-        radius(float) - radius to filter
+    Keep only whole residues with at least one atom within a radius of the center.
+
+    A residue is a run of consecutive atoms with the same residue name and number.
+    Residues with no atom within the radius are removed entirely.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Coordinates of the charges, shape (N, 3).
+    Q : np.ndarray
+        Charges, shape (N, 1).
+    ID : list
+        Identity of each charge, length N, as tuples of
+        (atom_number, atom_type, resid, resnum, chain). Chain is optional.
+    center : np.ndarray
+        Center point, shape (3,).
+    radius : float, optional
+        Distance from ``center`` in Angstroms. Default is 2.0.
+
+    Returns
+    -------
+    x_filtered : np.ndarray
+        Coordinates of the charges that are kept.
+    Q_filtered : np.ndarray
+        Charges that are kept.
+    ID_filtered : np.ndarray
+        Identity information of the charges that are kept.
     """
     x_recentered = x - center
     is_in_radius = np.linalg.norm(x_recentered, axis=1) < radius
@@ -485,13 +591,13 @@ def filter_in_box(x, Q, ID, center, dimensions):
         Coordinates of charges of shape (N,3)
     Q : array
         Magnitude and sign of charges of shape (N,1)
-    ID : list
+    ID : np.ndarray
         Identity information of shape (N,), where each value is a tuple of
         the form (atom_number, atom_type, resid, resnum, chain). Chain is optional.
-    filter_dict : dict
-        Dictionary of identity information to filter out
-    intersect : bool
-        If True, filter out only if all conditions in filter_dict are met (intersection)
+    center : array
+        Center of the box, shape (3,)
+    dimensions : array
+        Half widths of the box along x, y and z, in the current frame
 
     Returns
     -------
@@ -533,14 +639,30 @@ def filter_in_box(x, Q, ID, center, dimensions):
 
 def parse_pqr(path_to_pqr):
     """
-    Parses pqr file to obtain charges and positions of charges (beta, removes charges that are 0)
-    Takes
-        path_to_pqr(str) - path to pqr file
-        ret_atom_names(bool) - whether to return atom names
-        ret_residue_names(bool) - whether to return residue names
+    Read charges, coordinates and atom identities from a PQR file.
+
+    Reads ``ATOM`` and ``HETATM`` lines, including lines where the record name
+    runs into the atom number or the residue number runs into the chain.
+
+    Parameters
+    ----------
+    path_to_pqr : str
+        Path to the PQR file.
+
     Returns
-        np.array(x)(array) - coordinates of charges of shape (N,3)
-        np.array(Q).reshape(-1,1) - magnitude and sign of charges of shape (N,1)
+    -------
+    x : np.ndarray
+        Coordinates of the charges, shape (N, 3).
+    Q : np.ndarray
+        Charges, shape (N, 1).
+    atom_number : np.ndarray
+        Atom serial numbers, shape (N,).
+    resid : np.ndarray
+        Residue names, shape (N,).
+    resnum : np.ndarray
+        Residue numbers, shape (N,).
+    atom_type : np.ndarray
+        Atom names, shape (N,).
     """
     x = []
     Q = []
@@ -628,12 +750,37 @@ def parse_pqr(path_to_pqr):
 
 def parse_pdb(pdb_file_path, get_charges=False, float32=True):
     """
-    Takes:
-        pdb_file_path(str) - path to pdb file
-        get_charges(bool) - whether to parse/return charges
+    Read coordinates, atom identities and optionally charges from a PDB file.
 
-    Returns:
-        atom_info(list of tuples) - containing information about each atom in the pdb file
+    Reads ``ATOM`` and ``HETATM`` lines by fixed columns. Charges are read from
+    characters 56-64 of each line.
+
+    Parameters
+    ----------
+    pdb_file_path : str
+        Path to the PDB file.
+    get_charges : bool, optional
+        If True, also read and return the charges. Default is False.
+    float32 : bool, optional
+        If True, return coordinates, charges and atom numbers as float32,
+        otherwise float64. Default is True.
+
+    Returns
+    -------
+    xyz : np.ndarray
+        Coordinates, shape (N, 3).
+    Q : np.ndarray
+        Charges, shape (N, 1). Only returned when ``get_charges`` is True.
+    atom_number : np.ndarray
+        Atom serial numbers, shape (N,).
+    residue_name : np.ndarray
+        Residue names, shape (N,).
+    residue_number : np.ndarray
+        Residue numbers, shape (N,).
+    atom_type : np.ndarray
+        Atom names, shape (N,).
+    chains : np.ndarray
+        Chain IDs, shape (N,).
     """
 
     xyz = []
@@ -692,6 +839,38 @@ def parse_pdb(pdb_file_path, get_charges=False, float32=True):
 
 
 def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="center"):
+    """
+    Find the coordinates of the atoms selected for ``center``, ``x`` or ``y``.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Coordinates of all atoms, shape (N, 3).
+    atom_type : array_like
+        Atom names, length N.
+    residue_number : array_like
+        Residue numbers, length N.
+    chains : array_like
+        Chain IDs, length N. Only used when the selection has ``"chains"``.
+    options : dict
+        Options containing the selection under ``options[seltype]``, with an
+        ``"atoms"`` list of ``{atom_name: residue_number}`` entries and an
+        optional ``"chains"`` list of the same length.
+    seltype : str, optional
+        Which selection to read: ``"center"``, ``"x"`` or ``"y"``. Default is
+        ``"center"``.
+
+    Returns
+    -------
+    pos_considered : list of np.ndarray
+        Coordinates of the matching atoms. Without ``"chains"`` they are in input
+        file order; with ``"chains"`` they follow the order of ``"atoms"``.
+
+    Raises
+    ------
+    ValueError
+        If ``"chains"`` is not a list or its length differs from ``"atoms"``.
+    """
     if "chains" in options[seltype]:
         if type(options[seltype]["chains"]) != list:
             raise ValueError("chains must be a list")
@@ -733,12 +912,21 @@ def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="c
 
 def calculate_center(coordinates, method):
     """
-    Helper to calculate the center of a list of atoms
-    Takes:
-        atoms(list) - list of atoms
-        method(str) - method to calculate the center
-    Returns:
-        np.array(center) - center of the atoms
+    Reduce a set of atom coordinates to one point.
+
+    Parameters
+    ----------
+    coordinates : array_like
+        Coordinates of the selected atoms, shape (M, 3).
+    method : str
+        ``"mean"`` for the average position, ``"first"`` for the first atom, or
+        ``"inverse"`` for the first atom reflected through the average of the
+        others (2 x average of the others - first).
+
+    Returns
+    -------
+    center : np.ndarray
+        The point, shape (3,). None if ``method`` is not recognized.
     """
 
     if method == "mean":
