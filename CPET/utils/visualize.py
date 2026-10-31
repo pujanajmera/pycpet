@@ -3,6 +3,8 @@ import warnings
 import math
 import logging
 
+from CPET.utils.io import default_options_initializer
+
 """
 Overall script for all visualization functions and visualization-affiliates.
 
@@ -28,27 +30,16 @@ def visualize_esp(path_to_esp, outputpath, options):
         path_to_esp: Path to the corresponding ESP file
         options: Options dictionary
     """
+    # Fill defaults in case this is called outside of CPET.py
+    options = default_options_initializer(options)
 
-    if "visualization" in options.keys():
-        cutoff = (
-            options["visualization"]["cutoff"]
-            if "cutoff" in options["visualization"]
-            else 0
-        )
-        sparsify_factor = (
-            options["visualization"]["sparsify_factor"]
-            if "sparsify_factor" in options["visualization"]
-            else 1
-        )
+    cutoff = options["visualization"]["cutoff"]
+    sparsify_factor = options["visualization"]["sparsify_factor"]
 
-    else:
-        cutoff = 0
-        sparsify_factor = 1
-
-    max_p_esp = options["max_p_esp"] if "max_p_esp" in options else None
-    min_p_esp = options["min_p_esp"] if "min_p_esp" in options else None
-    max_n_esp = options["max_n_esp"] if "max_n_esp" in options else None
-    min_n_esp = options["min_n_esp"] if "min_n_esp" in options else None
+    max_p_esp = options["max_p_esp"]
+    min_p_esp = options["min_p_esp"]
+    max_n_esp = options["max_n_esp"]
+    min_n_esp = options["min_n_esp"]
 
     name = path_to_esp.split("/")[-1].split(".")[0]
 
@@ -93,22 +84,11 @@ def visualize_field(path_to_efield, outputpath, options):
         display: Boolean to display the fields in ChimeraX
     """
 
-    # Extract key options
+    # Extract key options, filling defaults in case this is called outside of CPET.py
+    options = default_options_initializer(options)
 
-    if "visualization" in options.keys():
-        cutoff = (
-            options["visualization"]["cutoff"]
-            if "cutoff" in options["visualization"]
-            else 0
-        )
-        sparsify_factor = (
-            options["visualization"]["sparsify_factor"]
-            if "sparsify_factor" in options["visualization"]
-            else 1
-        )
-    else:
-        cutoff = 0
-        sparsify_factor = 1
+    cutoff = options["visualization"]["cutoff"]
+    sparsify_factor = options["visualization"]["sparsify_factor"]
 
     name = path_to_efield.split("/")[-1].split(".")[0]
 

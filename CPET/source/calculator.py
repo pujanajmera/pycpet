@@ -77,29 +77,23 @@ class calculator:
         # Electric field grid parameters
         self.step_size = options["step_size"]
         self.dimensions = (
-            np.array(options["dimensions"]) if "dimensions" in options.keys() else None
+            np.array(options["dimensions"])
+            if options["dimensions"] is not None
+            else None
         )
 
         # Topology calculation parameters
-        self.n_samples = options["n_samples"] if "n_samples" in options.keys() else None
+        self.n_samples = options["n_samples"]
         self.concur_slip = options["concur_slip"]
         self.GPU_batch_freq = options["GPU_batch_freq"]
         self.dtype = options["dtype"]
-        self.max_streamline_init = (
-            options["max_streamline_init"]
-            if "max_streamline_init" in options.keys()
-            else "true_rand"
-        )
+        self.max_streamline_init = options["max_streamline_init"]
 
         self.write_transformed_pdb = options["write_transformed_pdb"]
-        self.strip_filter = (
-            options["strip_filter"] if "strip_filter" in options.keys() else False
-        )
+        self.strip_filter = options["strip_filter"]
 
         # Be very careful with the box_shift option. The box needs to be centered at the origin and therefore, the code will shift protein in the opposite direction of the provided box vector
-        self.box_shift = (
-            options["box_shift"] if "box_shift" in options.keys() else [0, 0, 0]
-        )
+        self.box_shift = options["box_shift"]
 
         # Parse pdb/pqr file
         if ".pqr" in self.path_to_pdb:
@@ -342,16 +336,15 @@ class calculator:
             self.x = self.x - self.center
 
         # Box filtering, must be done after coordinates are rotated
-        if "filter_in_box" in options.keys():
-            if bool(options["filter_in_box"]):
-                self.log.info("Filtering charges in sampling box")
-                self.x, self.Q, self.ID = filter_in_box(
-                    x=self.x,
-                    Q=self.Q,
-                    ID=self.ID,
-                    center=self.center,
-                    dimensions=self.dimensions,
-                )
+        if options["filter_in_box"]:
+            self.log.info("Filtering charges in sampling box")
+            self.x, self.Q, self.ID = filter_in_box(
+                x=self.x,
+                Q=self.Q,
+                ID=self.ID,
+                center=self.center,
+                dimensions=self.dimensions,
+            )
 
         """
         #Debug version

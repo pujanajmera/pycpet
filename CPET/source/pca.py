@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from sklearn.decomposition import PCA
 
-from CPET.utils.io import save_numpy_as_dat, read_mat
+from CPET.utils.io import save_numpy_as_dat, read_mat, default_options_initializer
 
 log = logging.getLogger(__name__)
 
@@ -28,12 +28,14 @@ class pca_pycpet:
         pca_compare
 
         """
+        # Fill defaults in case pca_pycpet is used outside of CPET.py
+        options = default_options_initializer(options)
 
         # Note: need to figure out what this means:
-        self.pca_reload = options["pca_reload"] if "pca_reload" in options else False
-        self.save_pca_tf = options["save_pca"] if "save_pca" in options else False
-        self.whitening = options["whitening"] if "whitening" in options else False
-        self.verbose = options["verbose"] if "verbose" in options else True
+        self.pca_reload = options["pca_reload"]
+        self.save_pca_tf = options["save_pca"]
+        self.whitening = options["whitening"]
+        self.verbose = options["verbose"]
 
         self.inputpath = options["inputpath"]
         self.outputpath = options["outputpath"]

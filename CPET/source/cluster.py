@@ -18,6 +18,7 @@ from CPET.utils.calculator import (
     determine_rank,
     reduce_tensor,
 )
+from CPET.utils.io import default_options_initializer
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +41,9 @@ class cluster:
         Takes:
             options: dictionary with options for the cluster object parsed from options.json file
         """
+        # Fill defaults in case cluster is used outside of CPET.py
+        options = default_options_initializer(options)
+
         # General Options
         self.inputpath = options["inputpath"]
         self.outputpath = options["outputpath"]
@@ -50,24 +54,14 @@ class cluster:
             self.cluster_method = "kmeds"
         else:
             self.cluster_method = options["cluster_method"]
-        self.plot_clusters = (
-            options["plot_clusters"] if "plot_clusters" in options else False
-        )
-        self.plot_dwell_times = (
-            options["plot_dwell_times"] if "plot_dwell_times" in options else False
-        )
-        self.cluster_reload = (
-            options["cluster_reload"] if "cluster_reload" in options else False
-        )
-        self.defined_n_clusters = (
-            options["defined_n_clusters"] if "defined_n_clusters" in options else None
-        )
-        self.tensor_threshold = (
-            options["tensor_threshold"] if "tensor_threshold" in options else 0.001
-        )
-        self.rank = options["rank"] if "rank" in options else None
-        self.max_rank = options["max_rank"] if "max_rank" in options else 30
-        self.min_rank = options["min_rank"] if "min_rank" in options else 1
+        self.plot_clusters = options["plot_clusters"]
+        self.plot_dwell_times = options["plot_dwell_times"]
+        self.cluster_reload = options["cluster_reload"]
+        self.defined_n_clusters = options["defined_n_clusters"]
+        self.tensor_threshold = options["tensor_threshold"]
+        self.rank = options["rank"]
+        self.max_rank = options["max_rank"]
+        self.min_rank = options["min_rank"]
         # Make sure the provided value for n_clusters and rank is an integer, not a string
         assert self.defined_n_clusters == None or isinstance(
             self.defined_n_clusters, int
