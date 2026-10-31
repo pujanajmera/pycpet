@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.abspath(".."))
 
 # -- Project information -----------------------------------------------------
 
-project = "pycpet"
+project = "PyCPET"
 copyright = "2025, Pujan Ajmera, Santiago Vargas, Matthew Hennefarth, Alexandrova Group"
 author = "Pujan Ajmera, Santiago Vargas, Matthew Hennefarth, Alexandrova Group"
 
@@ -35,6 +35,7 @@ extensions = [
     "sphinx.ext.autodoc",  # To generate autodocs
     "sphinx.ext.mathjax",  # autodoc with maths
     "sphinx.ext.napoleon",  # For auto-doc configuration
+    "sphinx_design",  # Cards and grids on the landing page
 ]
 
 napoleon_google_docstring = False  # Turn off googledoc strings
@@ -77,6 +78,24 @@ autodoc_mock_imports = [
 # Use readthedocs theme
 #
 html_theme = "furo"
+html_title = "PyCPET"
+html_logo = "_static/pycpet-logo.png"
+html_favicon = "_static/favicon.png"
+html_static_path = ["_static"]
+html_css_files = ["custom.css"]
+
+# Brand colors from the logo: coral (protein ribbon) and cyan (negative charges),
+# darkened in light mode so links stay readable on white
+html_theme_options = {
+    "light_css_variables": {
+        "color-brand-primary": "#c2503b",
+        "color-brand-content": "#0b78a8",
+    },
+    "dark_css_variables": {
+        "color-brand-primary": "#f2917f",
+        "color-brand-content": "#38bdf8",
+    },
+}
 
 # -- Reference order check ---------------------------------------------------
 

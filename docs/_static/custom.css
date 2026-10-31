@@ -1,0 +1,13 @@
+/* Landing page: center the logo's tagline and give it more room */
+.hero-tagline {
+    text-align: center;
+    font-size: 1.1em;
+    max-width: 42em;
+    margin: 0.5em auto 1.5em;
+}
+
+/* Card icons and titles in the logo's coral */
+.sd-card-title .sd-octicon {
+    color: var(--color-brand-primary);
+    margin-right: 0.3em;
+}
