@@ -21,6 +21,7 @@ Key features:
 
    Installation
    GetStarted
+   Options
    AtomSpec
    FieldTopESP
    Visualization

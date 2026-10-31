@@ -1,7 +1,7 @@
 Getting Started - Input Options File
 =========================================
 
-Examples for pycpet are located in the `examples` directory of the repository. The examples are designed to demonstrate how to use the package for various applications.
+Examples for pycpet are located in the ``examples`` directory of the repository. The examples are designed to demonstrate how to use the package for various applications.
 Here, we will provide a fairly in-depth overview of *PyCPET*'s features, and how to use them.
 
 PyCPET features
@@ -27,68 +27,72 @@ We outline the tested functionalities below, primarily focusing on making your o
 
 The Options File
 -----------------
-The options file is the cornerstone of *PyCPET*. It is a .json file that contains all relevant parameters you wish to specify for the calculation. Examples can be found in `examples`
+The options file is the cornerstone of *PyCPET*. It is a .json file that contains all relevant parameters you wish to specify for the calculation. Examples can be found in ``examples``
 
 General Options File Parameters
 -------------------------------------------------
-These are some general options that are required for most/all calculations.
+These are some general options that are required for most/all calculations. Every option, with its default, is listed in the :doc:`Options Reference <Options>`.
 
-1. `CPET_method`: The method to use for the calculation. These are the tested available methods:
+1. ``CPET_method``: The method to use for the calculation. These are the tested available methods:
     - Standalone methods that can be run for single pdbs, or over any set of pdbs in a directory as long as they have a common orientable atom set:
-    - `point_field`: Computing the electric field at a point, either arbitrary or defined by some atom selection.
-    - `point_mag`: Computing the electric field magnitude at a point.
-    - `volume`: Computing the electric field in a volume, defined by an oriented grid.
-    - `volume_ESP`: Computing the electrostatic potential in a volume, defined by an oriented grid.
-    - `topo`: Computing the electric field topology in a volume by distribution of streamlines (multithreaded). See https://doi.org/10.1021/acscatal.0c02795 and https://doi.org/10.1007/978-3-540-89689-0_23
-    - `topo_GPU`: Same as above, but GPU-accelerated. See https://doi.org/10.1021/acs.jctc.5c00138
-    - `box_check`: Prints out any residues that are intruding in the box volume defined by the user
+    - ``point_field``: Computing the electric field at a point, either arbitrary or defined by some atom selection.
+    - ``point_mag``: Computing the electric field magnitude at a point.
+    - ``volume``: Computing the electric field in a volume, defined by an oriented grid.
+    - ``volume_ESP``: Computing the electrostatic potential in a volume, defined by an oriented grid.
+    - ``topo``: Computing the electric field topology in a volume by distribution of streamlines (runs on several processes in parallel). See https://doi.org/10.1021/acscatal.0c02795 and https://doi.org/10.1007/978-3-540-89689-0_23
+    - ``topo_GPU``: Same as above, but GPU-accelerated. See https://doi.org/10.1021/acs.jctc.5c00138
+    - ``box_check``: Prints out any residues that are intruding in the box volume defined by the user
 
     - The below are methods that depend on one or more previous calculations run above. These provide immense value for dynamics analysis.
-    - `cluster`: Clustering a set of electric field topologies to get representative fields
-    - `cluster_volume_tensor`: Clustering a set of electric field volumes to get representative fields, using a tensor-decomposition. See (CM Paper CITE)
-    - `cluster_volume_esp_tensor`: Clustering a set of electrostatic potential volumes to get representative electrostatic potentials, using a tensor-decomposition. This is the only method to use for electrostatic potential clustering.
-    - `pca`: Performing PCA on a set of electric field volumes, especially useful for comparing field dynamics between mutants. See https://doi.org/10.1021/jacs.4c03914 and https://doi.org/10.1021/acs.jctc.5c00138
-    - `visualize_field` or `visualize_esp`: Make a .bild file for ChimeraX to visualize the electric field or electrostatic potential, respectively.
+    - ``cluster``: Clustering a set of electric field topologies to get representative fields
+    - ``cluster_volume``: Clustering a set of electric field volumes to get representative fields, using distances between the fields directly.
+    - ``cluster_volume_tensor``: Clustering a set of electric field volumes to get representative fields, using a tensor-decomposition. See [Chaturvedi2025]_
+    - ``cluster_volume_esp_tensor``: Clustering a set of electrostatic potential volumes to get representative electrostatic potentials, using a tensor-decomposition. This is the only method to use for electrostatic potential clustering.
+    - ``pca``: Performing PCA on a set of electric field volumes, especially useful for comparing field dynamics between mutants. See https://doi.org/10.1021/jacs.4c03914 and https://doi.org/10.1021/acs.jctc.5c00138
+    - ``pca_compare``: Performing PCA separately on each of several sets of electric field volumes (e.g. variants), listed in ``inputpath_list``.
+    - ``visualize_field`` or ``visualize_esp``: Make a .bild file for ChimeraX to visualize the electric field or electrostatic potential, respectively.
 
-2. `input_path`: The path to input structures, typically a folder of pdb/pqr files or a folder of 3D electric field/topology files
+2. ``inputpath``: The path to input structures, typically a folder of pdb/pqr files or a folder of 3D electric field/topology files. Default is ``./inpdir``.
 
-3. `output_path` (optional): The path to output the results. If not specified, results will be output to a default directory typically `./cpet/`
+3. ``outputpath`` (optional): The path to output the results. If not specified, results will be output to ``./outdir``, which is created if needed.
 
-4. `write_transformed_pdb` (optional): If True, write out the transformed pdb files after orienting to the active site frame. Default is False. This function is useful for making schemes in ChimeraX, see :doc:`Visualization <../Visualization>`.
+4. ``inputfiletype`` (optional): ``pdb`` (default) or ``pqr``.
 
-5. `strip_filter` (optional): If True while `write_transformed_pdb` is True, the transformed pdb files will be stripped of filtered residue.
+5. ``write_transformed_pdb`` (optional): If True, write out the transformed pdb files after orienting to the active site frame, as ``transform_<name>.pdb`` in the current working directory. Default is False. This function is useful for making schemes in ChimeraX, see :doc:`Visualization <../Visualization>`.
+
+6. ``strip_filter`` (optional): If True while ``write_transformed_pdb`` is True, the transformed pdb files will be stripped of filtered atoms.
 
 Field Options File Parameters
 -------------------------------------------------
 These are some general options that are required for electric field, or electrostatic potential calculations.
 
-1. `center`: The center of the calculation. For point fields/electrostatic potential, this is where the quantity is computed. See :doc:`AtomSpec <../AtomSpec>` for more information.
+1. ``center``: The center of the calculation. For point fields/electrostatic potential, this is where the quantity is computed. See :doc:`AtomSpec <../AtomSpec>` for more information.
 
-2. `x`: The point used for defining the x-axis of the volume. See :doc:`AtomSpec <../AtomSpec>` for more information.
+2. ``x`` (optional): The point used for defining the x-axis of the volume. See :doc:`AtomSpec <../AtomSpec>` for more information. If this isn't provided, there will be no rotation into the active site frame, and ``y`` is ignored.
 
-3. `y` (optional): The point used for defining the y-axis of the volume. See :doc:`AtomSpec <../AtomSpec>` for more information. If this isn't provided, there will be no rotation into the active site frame.
+3. ``y`` (optional): The point used for defining the y-axis of the volume. See :doc:`AtomSpec <../AtomSpec>` for more information. ``volume``, ``volume_ESP``, ``topo`` and ``topo_GPU`` need both ``x`` and ``y``.
 
-4. `dimensions` (optional): The **half width** dimensions of the volumes to compute 3D fields/topology/ESP, provided as a list of 3 numbers, e.g. `[0.5,0.5,0.75]` is a 1x1x1.5 volume. Units are in Angstroms.
+4. ``dimensions`` (required for volumes and topologies): The **half width** dimensions of the volumes to compute 3D fields/topology/ESP, provided as a list of 3 numbers, e.g. ``[0.5,0.5,0.75]`` is a 1x1x1.5 volume. Units are in Angstroms.
 
-5. `step_size` (optional): The grid size used for computing 3D fields/ESP, provided as a single number. For topologies, this number dictates how the streamlines are seeded and the steps size of the streamline itself and is a convergence parameter. Units are in Angstroms.
+5. ``step_size`` (required for volumes and topologies): The grid size used for computing 3D fields/ESP, provided as a single number. For topologies, this number dictates how the streamlines are seeded and the steps size of the streamline itself and is a convergence parameter. Units are in Angstroms.
 
-6. `n_samples` (optional): Only required for 3D field topologies, this is the integer number of streamlines to compute, and acts as a convergence parameter. See :doc:`Parallel <../Parallel>` for more information on how to parallelize over streamlines.
+6. ``n_samples`` (required for topologies): This is the integer number of streamlines to compute, and acts as a convergence parameter. See :doc:`Parallel <../Parallel>` for more information on how to parallelize over streamlines.
 
 Filtering parameters:
 
-7. `filter_intersect` (optional): If True, find the intersection of the provided filters. If False, find the union of the provided filters. Default is False.
+7. ``filter_intersect`` (optional): If True, find the intersection of the provided filters. If False, find the union of the provided filters. Default is False.
 
-8. `filter` (optional): A list of residue/atom/etc filters to apply to the field/topology/ESP calculations. See :doc:`AtomSpec <../AtomSpec>` for more information.
+8. ``filter`` (optional): Atom names, residue names, residue numbers, atom numbers or chains whose atoms are removed from the field/topology/ESP calculations. See :doc:`AtomSpec <../AtomSpec>` for more information.
 
-9. `filter_radius` (optional): If specified, the radius from the `center` selection to exclude atoms/residues from the field/topology/ESP calculations. Units are in Angstroms.
+9. ``filter_radius`` (optional): If specified, only residues with at least one atom within this distance of ``center`` are kept; whole residues outside it are removed from the field/topology/ESP calculations. Units are in Angstroms.
 
 Clustering Options File Parameters
 -------------------------------------------------
-TBD
+TBD. All clustering options are listed in the :doc:`Options Reference <Options>`.
 
 Visualization Options File Parameters
 -------------------------------------------------
-TBD
+TBD. All visualization options are listed in the :doc:`Options Reference <Options>`.
 
 
 
