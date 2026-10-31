@@ -44,13 +44,15 @@ Source builds (the development install above, platforms without a prebuilt packa
 Before running
 --------------
 
-Set the number of OpenMP threads:
+.. important::
 
-.. code-block:: console
+   Set the number of OpenMP threads before running:
 
-    export OMP_NUM_THREADS=1
+   .. code-block:: console
 
-The C extension uses OpenMP, and topology calculations already run several worker processes. Without this setting, each worker starts one thread per CPU core, which can oversubscribe the node and slow topology calculations dramatically.
+       export OMP_NUM_THREADS=1
+
+   The C extension uses OpenMP, and topology calculations already run several worker processes. Without this setting, each worker starts one thread per CPU core, which can oversubscribe the node and slow topology calculations dramatically.
 
 For GPU-accelerated code (available for topologies, fields in development), choose the GPU with:
 

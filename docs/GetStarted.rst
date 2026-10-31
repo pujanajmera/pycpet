@@ -47,9 +47,9 @@ These are some general options that are required for most/all calculations. Ever
     - ``cluster``: Clustering a set of electric field topologies to get representative fields
     - ``cluster_volume``: Clustering a set of electric field volumes to get representative fields, using distances between the fields directly.
     - ``cluster_volume_tensor``: Clustering a set of electric field volumes to get representative fields, using a tensor-decomposition. See [Chaturvedi2025]_
-    - ``cluster_volume_esp_tensor``: Clustering a set of electrostatic potential volumes to get representative electrostatic potentials, using a tensor-decomposition. This is the only method to use for electrostatic potential clustering.
-    - ``pca``: Performing PCA on a set of electric field volumes, especially useful for comparing field dynamics between mutants. See [Chaturvedi2024]_ and [Ajmera2025]_
-    - ``pca_compare``: Performing PCA separately on each of several sets of electric field volumes (e.g. variants), listed in ``inputpath_list``.
+    - ``cluster_volume_esp_tensor`` :bdg-secondary-line:`beta`: Clustering a set of electrostatic potential volumes to get representative electrostatic potentials, using a tensor-decomposition. This is the only method to use for electrostatic potential clustering.
+    - ``pca`` :bdg-secondary-line:`beta`: Performing PCA on a set of electric field volumes, especially useful for comparing field dynamics between mutants. See [Chaturvedi2024]_ and [Ajmera2025]_
+    - ``pca_compare`` :bdg-secondary-line:`beta`: Performing PCA separately on each of several sets of electric field volumes (e.g. variants), listed in ``inputpath_list``.
     - ``visualize_field`` or ``visualize_esp``: Make a .bild file for ChimeraX to visualize the electric field or electrostatic potential, respectively.
 
 2. ``inputpath``: The path to input structures, typically a folder of pdb/pqr files or a folder of 3D electric field/topology files. Default is ``./inpdir``.

@@ -3,6 +3,10 @@ Special Scripts
 
 The following are tutorials for special scripts that aren't built into the cpet.py executable, but use the pycpet libraries to do some neat analyses.
 
+.. note::
+
+   Only ``cpet.py`` is installed as a command. These scripts are in ``CPET/source/scripts`` in the repository; run them with ``python`` and their path.
+
 Electrostatic Interaction Energy Analysis
 -------------------------------------------------
 Authors: Anubhav Goswami, Pujan Ajmera. Credit to the Binju Wang group for the original method (w/o nuclear correction): [Yan2023]_
@@ -24,11 +28,11 @@ where :math:`q_i` and :math:`Q_j` are the partial charges of MM region of intere
 - `-o/--options`: PyCPET options file. Please see the :doc:`Get Started <../GetStarted>` page for more information on how to write an options file. This is solely used in this script to filter out the QM region atoms, otherwise the interaction energy will be unrealistic.
 - `-v/--verbose`: Flag for verbose output. If provided, the script will tell you what interaction it is computing.
 
-These interaction energies are output to the command line, so the following usage is recommended (The script should be in your path if you have correctly installed PyCPET):
+These interaction energies are output to the command line, so the following usage is recommended, from the repository folder:
 
 .. code-block:: console
 
-    electrostatic_interaction_QM.py -m name_of_molden_file -p protein.pdb -o options.json -r > interaction_energies.txt
+    python CPET/source/scripts/electrostatic_interaction_QM.py -m name_of_molden_file -p protein.pdb -o options.json -r > interaction_energies.txt
 
 The Alexandrova group's work on Chorismate Mutase inspired this script [Chaturvedi2025]_
 

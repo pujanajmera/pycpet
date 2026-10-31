@@ -2,3 +2,4 @@ numpy
 sphinx
 furo
 sphinx-design
+sphinx-copybutton

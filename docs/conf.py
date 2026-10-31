@@ -36,6 +36,7 @@ extensions = [
     "sphinx.ext.mathjax",  # autodoc with maths
     "sphinx.ext.napoleon",  # For auto-doc configuration
     "sphinx_design",  # Cards and grids on the landing page
+    "sphinx_copybutton",  # Copy buttons on code blocks
 ]
 
 napoleon_google_docstring = False  # Turn off googledoc strings
@@ -49,6 +50,12 @@ templates_path = ["_templates"]
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+
+# Show short names on the API pages (compute_box, not CPET.source.calculator.calculator.compute_box),
+# listed in the order they appear in the source
+add_module_names = False
+toc_object_entries_show_parents = "hide"
+autodoc_member_order = "bysource"
 
 autodoc_default_options = {
     "members": True,
