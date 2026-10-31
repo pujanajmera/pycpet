@@ -31,7 +31,7 @@ class NpEncoder(json.JSONEncoder):
             return float(obj)
         if isinstance(obj, np.ndarray):
             return obj.tolist()
-        return super(NpEncoder, self).default(obj)
+        return super().default(obj)
 
 
 class cluster:
@@ -49,7 +49,7 @@ class cluster:
         self.outputpath = options["outputpath"]
 
         # Cluster Specific Options
-        if "cluster_method" not in options.keys():
+        if "cluster_method" not in options:
             log.info("No cluster method specified, defaulting to K-Medoids")
             self.cluster_method = "kmeds"
         else:
@@ -437,7 +437,7 @@ class cluster:
         )
         # print percentage of each cluster
         log.info("Percentage of each cluster:")
-        for key in compressed_dictionary.keys():
+        for key in compressed_dictionary:
             if type(key) == int:
                 log.info(
                     f"Cluster {key}: {compressed_dictionary[key]['percentage']}% of total"

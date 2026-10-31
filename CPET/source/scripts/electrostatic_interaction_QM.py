@@ -130,7 +130,7 @@ def main():
     x_qm = mol.atom_coords()  # Get coordinates of atoms in Bohr
     q_qm = mol.atom_charges()  # Get atomic numbers to get nuclear charges
     dm = density_matrix(mo_coeff, mo_occ)  # Density matrix in AO basis
-    print(f"Molden file parsed successfully. MO coefficients shape (AOxMO):")
+    print("Molden file parsed successfully. MO coefficients shape (AOxMO):")
 
     print(x[0:5], q[0:5])  # Print first 5 coordinates and charges for debugging
     print(

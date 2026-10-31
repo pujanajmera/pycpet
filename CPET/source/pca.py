@@ -97,7 +97,7 @@ class pca_pycpet:
             mat_transform = self.pca_obj.transform(mat_transform)
 
         cum_explained_var = []
-        for i in range(0, len(self.pca_obj.explained_variance_ratio_)):
+        for i in range(len(self.pca_obj.explained_variance_ratio_)):
             if i == 0:
                 cum_explained_var.append(self.pca_obj.explained_variance_ratio_[0])
             else:
@@ -173,7 +173,7 @@ class pca_pycpet:
     ):
         if type(components) is list:
             fig, axs = plt.subplots(len(components), 1)
-            names = ["PC {}".format(str(temp)) for temp in components]
+            names = [f"PC {str(temp)}" for temp in components]
 
             for ind, comp in enumerate(components):
                 list_data = []
@@ -212,15 +212,11 @@ class pca_pycpet:
                 fig.show()
             if type == "png":
                 fig.savefig(
-                    "./pca_comps_alcdehydro/{}/pca_{}-{}.png".format(
-                        loc, components[0], components[-1]
-                    )
+                    f"./pca_comps_alcdehydro/{loc}/pca_{components[0]}-{components[-1]}.png"
                 )
             elif type == "svg":
                 fig.savefig(
-                    "./pca_comps_alcdehydro/{}/pca_{}-{}.svg".format(
-                        loc, components[0], components[-1]
-                    )
+                    f"./pca_comps_alcdehydro/{loc}/pca_{components[0]}-{components[-1]}.svg"
                 )
             else:
                 raise ValueError("Invalid plot format")

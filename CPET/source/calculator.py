@@ -159,7 +159,7 @@ class calculator:
             self.center = calculate_center(pos_considered, method=method)
         else:
             raise ValueError("center must be a list or dict")
-        if "x" not in options.keys():
+        if "x" not in options:
             self.log.info(
                 "No x vector specified, using the input file reference frame and ignoring y"
             )
@@ -208,7 +208,7 @@ class calculator:
             self.chains_copy = deepcopy(self.chains)
 
         # Any sort of filtering related to atom identity information
-        if "filter" in options.keys():
+        if "filter" in options:
             self.x, self.Q, self.ID = filter_atomspec(
                 self.x, self.Q, self.ID, options["filter"], options["filter_intersect"]
             )
@@ -230,7 +230,7 @@ class calculator:
             self.log.info("No atom spec filtering specified, using all atoms")
 
         # Radius-based filtering, added from previous, residue-inclusive filtering
-        if "filter_radius" in options.keys():
+        if "filter_radius" in options:
             self.log.info(f"Filtering by radius: {options['filter_radius']} Angstrom")
             r = np.linalg.norm(self.x, axis=1)  # Distance from origin
             self.log.debug(f"Distances from origin before radius filter: {r}")
@@ -244,7 +244,7 @@ class calculator:
             r = np.linalg.norm(self.x, axis=1)
             self.log.debug(f"Distances from origin after radius filter: {r}")
 
-        assert "CPET_method" in options.keys(), "CPET_method must be specified"
+        assert "CPET_method" in options, "CPET_method must be specified"
 
         if (
             options["CPET_method"] == "volume" or options["CPET_method"] == "volume_ESP"

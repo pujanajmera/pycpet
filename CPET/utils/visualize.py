@@ -71,7 +71,7 @@ def visualize_esp(path_to_esp, outputpath, options):
         min_n_esp,
         bild_path,
     )
-    return "Bild file saved for {}".format(name)
+    return f"Bild file saved for {name}"
 
 
 def visualize_field(path_to_efield, outputpath, options):
@@ -118,7 +118,7 @@ def visualize_field(path_to_efield, outputpath, options):
         bild_path,
         path_to_efield,
     )
-    return "Bild file saved for {}".format(name)
+    return f"Bild file saved for {name}"
 
 
 def process_field_file(file_path, type="field"):

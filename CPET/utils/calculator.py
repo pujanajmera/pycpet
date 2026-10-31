@@ -810,7 +810,7 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
 
         actual = np.array(actual)
         outfile = os.path.join(
-            output_dir, f"{topo_files[i].split('/')[-1][:-4]}_hist.npy"
+            output_dir, f"{topo_file.split('/')[-1][:-4]}_hist.npy"
         )
         np.save(outfile, actual.flatten())
         hist_list.append(outfile)

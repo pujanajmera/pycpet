@@ -184,7 +184,7 @@ def cluster_analyze(distance_matrix, cluster_results, file_list):
     )
     # print percentage of each cluster
     print("Percentage of each cluster: ")
-    for key in compressed_dictionary.keys():
+    for key in compressed_dictionary:
         if type(key) == int:
             print(
                 f"Cluster {key}: {compressed_dictionary[key]['percentage']}% of total"
@@ -249,7 +249,7 @@ def main():
     # Parse first directory:
     inputpath = args.dir1
     file_list1 = []
-    for file in glob(inputpath + f"/*_esp.dat"):
+    for file in glob(inputpath + "/*_esp.dat"):
         file_list1.append(file)
     file_list1.sort()
     list_file = "esp_file_list1.txt"
@@ -272,7 +272,7 @@ def main():
     # Parse second directory, using first directory file names as reference:
     inputpath = args.dir2
     file_list2 = []
-    for file in glob(inputpath + f"/*_esp.dat"):
+    for file in glob(inputpath + "/*_esp.dat"):
         file_list2.append(file)
     file_list2.sort()
     list_file = "esp_file_list2.txt"

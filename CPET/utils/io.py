@@ -78,27 +78,10 @@ def save_numpy_as_dat(meta_data, volume, name):
     trans_mat = meta_data["transformation_matrix"].transpose()
     center = meta_data["center"]
 
-    first_line = "#Sample Density: {} {} {}; Volume: Box: {} {} {}\n".format(
-        num_steps_list[0],
-        num_steps_list[1],
-        num_steps_list[2],
-        dimensions[0],
-        dimensions[1],
-        dimensions[2],
-    )
+    first_line = f"#Sample Density: {num_steps_list[0]} {num_steps_list[1]} {num_steps_list[2]}; Volume: Box: {dimensions[0]} {dimensions[1]} {dimensions[2]}\n"
     second_line = "#Frame 0\n"
-    third_line = "#Center: {} {} {}\n".format(center[0], center[1], center[2])
-    basis_matrix_lines = "#Basis Matrix:\n# {} {} {}\n# {} {} {}\n# {} {} {}\n".format(
-        trans_mat[0][0],
-        trans_mat[0][1],
-        trans_mat[0][2],
-        trans_mat[1][0],
-        trans_mat[1][1],
-        trans_mat[1][2],
-        trans_mat[2][0],
-        trans_mat[2][1],
-        trans_mat[2][2],
-    )
+    third_line = f"#Center: {center[0]} {center[1]} {center[2]}\n"
+    basis_matrix_lines = f"#Basis Matrix:\n# {trans_mat[0][0]} {trans_mat[0][1]} {trans_mat[0][2]}\n# {trans_mat[1][0]} {trans_mat[1][1]} {trans_mat[1][2]}\n# {trans_mat[2][0]} {trans_mat[2][1]} {trans_mat[2][2]}\n"
 
     lines_header = [first_line] + [second_line] + [third_line] + [basis_matrix_lines]
     """
@@ -320,7 +303,7 @@ def check_valid_options(options):
     Returns
         None, but raises errors if options are invalid
     """
-    if "CPET_method" not in options.keys():
+    if "CPET_method" not in options:
         raise ValueError("CPET_method must be specified in the options")
     if options["CPET_method"] not in VALID_CPET_METHODS:
         raise ValueError(
@@ -333,7 +316,7 @@ def check_valid_options(options):
     if options["initializer"] not in ["uniform", "random"]:
         raise ValueError("initializer must be 'uniform' or 'random'")
     # Ensure that x and y vectors are not redundant, if both exist
-    if "x" in options.keys() and "y" in options.keys():
+    if "x" in options and "y" in options:
         if options["x"] == options["y"]:
             raise ValueError("x and y points used for vectors cannot be the same")
 
@@ -443,7 +426,7 @@ def filter_atomspec(x, Q, ID, filter_dict, intersect):
     filter_idx = []
     atom_attributes_list = ["atom_number", "atom_type", "resid", "resnum", "chain"]
     atom_attributes_considered = []
-    for key in filter_dict.keys():
+    for key in filter_dict:
         if key not in atom_attributes_list:
             raise ValueError(
                 f"Key {key} not recognized. Must be one of {atom_attributes_list}"
@@ -709,7 +692,7 @@ def parse_pdb(pdb_file_path, get_charges=False, float32=True):
 
 
 def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="center"):
-    if "chains" in options[seltype].keys():
+    if "chains" in options[seltype]:
         if type(options[seltype]["chains"]) != list:
             raise ValueError("chains must be a list")
         if len(options[seltype]["chains"]) != len(options[seltype]["atoms"]):
