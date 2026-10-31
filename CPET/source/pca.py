@@ -1,6 +1,5 @@
 import numpy as np
 import pickle as pkl
-import json
 from glob import glob
 import warnings
 import logging
@@ -129,15 +128,13 @@ class pca_pycpet:
         return mat_transform
 
     def save_pca(self):
-        with open(self.outputpath + "pca.pkl", "wb") as f:
+        with open(self.outputpath + "/pca.pkl", "wb") as f:
             pkl.dump(self.pca_obj, f)
 
     def load_pca(self):
-        with open(self.outputpath + "pca.pkl", "rb") as f:
+        # meta_data is set from the input files by load(), which runs after this
+        with open(self.outputpath + "/pca.pkl", "rb") as f:
             self.pca_obj = pkl.load(f)
-
-        with open(self.outputpath + "meta_data.pkl", "rb") as f:
-            self.meta_data = json.load(f)
 
     def save_component(self, component=0, filename="pca_comp", shape=[21, 21, 21, 21]):
         if type(component) == list:
