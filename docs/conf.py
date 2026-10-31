@@ -11,7 +11,10 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import re
 import sys
+
+from sphinx.util import logging
 
 sys.path.insert(0, os.path.abspath(".."))
 
@@ -74,3 +77,23 @@ autodoc_mock_imports = [
 # Use readthedocs theme
 #
 html_theme = "furo"
+
+# -- Reference order check ---------------------------------------------------
+
+# Fail the build if the References list in citation.rst isn't alphabetical,
+# so new references have to be added in their sorted place
+def check_reference_order(app):
+    with open(os.path.join(app.confdir, "citation.rst")) as f:
+        keys = re.findall(r"^\.\. \[([^\]]+)\]", f.read(), flags=re.MULTILINE)
+    for previous, current in zip(keys, keys[1:]):
+        if current.lower() < previous.lower():
+            logging.getLogger(__name__).error(
+                "References in citation.rst are out of order: put [%s] before [%s]",
+                current,
+                previous,
+            )
+            app.statuscode = 1
+
+
+def setup(app):
+    app.connect("builder-inited", check_reference_order)
