@@ -10,8 +10,27 @@ permissions:
   id-token: write
 
 jobs:
+  check_version:
+    name: Check tag matches version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Stop before building anything if the tag and pyproject.toml disagree
+      - name: Compare tag with pyproject.toml version
+        run: |
+          version=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match pyproject.toml version ${version} (expected tag v${version})"
+            exit 1
+          fi
+          echo "Tag ${GITHUB_REF_NAME} matches pyproject.toml version ${version}"
+
   build_wheels:
     name: Build wheels (${{ matrix.os }})
+    needs: check_version
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -64,6 +83,7 @@ jobs:
 
   build_sdist:
     name: Build source distribution
+    needs: check_version
     runs-on: ubuntu-latest
 
     steps:
