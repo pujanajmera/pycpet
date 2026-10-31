@@ -1,14 +1,15 @@
-import numpy as np
 import ctypes
+import logging
+
+import numpy as np
 import numpy.ctypeslib as npct
+
+log = logging.getLogger(__name__)
 
 
 class Math_ops:
-    def __init__(self, shared_loc=None):
-        if shared_loc is None:
-            self.math = ctypes.CDLL("./math_module.so")
-        else:
-            self.math = ctypes.CDLL(shared_loc)
+    def __init__(self, shared_loc):
+        self.math = ctypes.CDLL(shared_loc)
 
         # creates pointers to array data types
         self.array_1d_int = npct.ndpointer(dtype=np.int32, ndim=1, flags="C")
@@ -228,7 +229,6 @@ class Math_ops:
 
     def einsum_operation_batch(self, R, r_mag, Q, batch_size):
         # res = np.ascontiguousarray(np.zeros(3, dtype="float32"))
-        # print("einsum in")
         res = np.zeros((batch_size, 3), dtype="float32")
         self.math.einsum_operation_batch.restype = None
         Q = Q.reshape(-1)
@@ -292,8 +292,6 @@ class Math_ops:
         self.math.thread_operation(
             n_charges, n_iter, step_size, x_0, dimensions, x, Q, res
         )
-        # print(res)
-
         return res
 
     def thread_operation_dipole(self, x_0, n_iter, x, mu, step_size, dimensions):
@@ -311,7 +309,16 @@ class Math_ops:
         """
         res = np.zeros(2, dtype="float32")
         n_dipoles = len(mu)
-        # print(n_dipoles, n_iter, step_size, x_0, dimensions, x, mu, res)
+        log.debug(
+            "Dipole thread inputs: n_dipoles %s, n_iter %s, step size %s, x_0 %s, dimensions %s, x %s, mu %s",
+            n_dipoles,
+            n_iter,
+            step_size,
+            x_0,
+            dimensions,
+            x,
+            mu,
+        )
         self.math.thread_operation_dipole.restype = None
         self.math.thread_operation_dipole(
             n_dipoles, n_iter, step_size, x_0, dimensions, x, mu, res

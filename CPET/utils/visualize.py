@@ -3,12 +3,14 @@ import warnings
 import math
 import logging
 
+from CPET.utils.io import default_options_initializer
+
 """
 Overall script for all visualization functions and visualization-affiliates.
 
 Current functions:
-- visualize_fields: Visualize electric fields in proteins by creating a bild file
-for Chimera/ChimeraX input
+- visualize_field / visualize_esp: Visualize electric fields or electrostatic
+potentials in proteins by creating a bild file for Chimera/ChimeraX input
 
 To-add:
 - Time-dependent animations
@@ -28,31 +30,20 @@ def visualize_esp(path_to_esp, outputpath, options):
         path_to_esp: Path to the corresponding ESP file
         options: Options dictionary
     """
+    # Fill defaults in case this is called outside of CPET.py
+    options = default_options_initializer(options)
 
-    if "visualization" in options.keys():
-        cutoff = (
-            options["visualization"]["cutoff"]
-            if "cutoff" in options["visualization"]
-            else 0
-        )
-        sparsify_factor = (
-            options["visualization"]["sparsify_factor"]
-            if "sparsify_factor" in options["visualization"]
-            else 1
-        )
+    cutoff = options["visualization"]["cutoff"]
+    sparsify_factor = options["visualization"]["sparsify_factor"]
 
-    else:
-        cutoff = 0
-        sparsify_factor = 1
-
-    max_p_esp = options["max_p_esp"] if "max_p_esp" in options else None
-    min_p_esp = options["min_p_esp"] if "min_p_esp" in options else None
-    max_n_esp = options["max_n_esp"] if "max_n_esp" in options else None
-    min_n_esp = options["min_n_esp"] if "min_n_esp" in options else None
+    max_p_esp = options["max_p_esp"]
+    min_p_esp = options["min_p_esp"]
+    max_n_esp = options["max_n_esp"]
+    min_n_esp = options["min_n_esp"]
 
     name = path_to_esp.split("/")[-1].split(".")[0]
 
-    log.info(f"Generating bild file for field: {name}")
+    log.info(f"Generating BILD file for {name}")
 
     bild_path = outputpath + "/" + name
 
@@ -80,7 +71,7 @@ def visualize_esp(path_to_esp, outputpath, options):
         min_n_esp,
         bild_path,
     )
-    return "Bild file saved for {}".format(name)
+    return f"Bild file saved for {name}"
 
 
 def visualize_field(path_to_efield, outputpath, options):
@@ -93,26 +84,15 @@ def visualize_field(path_to_efield, outputpath, options):
         display: Boolean to display the fields in ChimeraX
     """
 
-    # Extract key options
+    # Extract key options, filling defaults in case this is called outside of CPET.py
+    options = default_options_initializer(options)
 
-    if "visualization" in options.keys():
-        cutoff = (
-            options["visualization"]["cutoff"]
-            if "cutoff" in options["visualization"]
-            else 0
-        )
-        sparsify_factor = (
-            options["visualization"]["sparsify_factor"]
-            if "sparsify_factor" in options["visualization"]
-            else 1
-        )
-    else:
-        cutoff = 0
-        sparsify_factor = 1
+    cutoff = options["visualization"]["cutoff"]
+    sparsify_factor = options["visualization"]["sparsify_factor"]
 
     name = path_to_efield.split("/")[-1].split(".")[0]
 
-    log.info(f"Generating bild file for field: {name}")
+    log.info(f"Generating BILD file for {name}")
 
     bild_path = outputpath + "/" + name
 
@@ -138,7 +118,7 @@ def visualize_field(path_to_efield, outputpath, options):
         bild_path,
         path_to_efield,
     )
-    return "Bild file saved for {}".format(name)
+    return f"Bild file saved for {name}"
 
 
 def process_field_file(file_path, type="field"):
@@ -216,7 +196,7 @@ def process_field_file(file_path, type="field"):
             check_field(np.array(field), np.array(sample_density), type)
         elif type == "esp":
             check_field(np.array(esp), np.array(sample_density), type)
-    # print(np.array(basis_matrix))
+    log.debug("Basis matrix: %s", np.array(basis_matrix))
     if type == "field":
         return (
             np.array(sample_density),
@@ -245,14 +225,14 @@ def check_field(elec_array, sample_density_array, type="field"):
     Outputs:
         None
     """
-    # print(sample_density_array)
-    # print(field_array.shape)
+    log.debug("Sample density: %s", sample_density_array)
+    log.debug("Shape of %s array: %s", type, elec_array.shape)
     if elec_array.shape[0] != np.product(sample_density_array, axis=0):
         raise ValueError(
             f"{type} provided does not match sample density, {type} of shape {elec_array.shape[0]} does not match expected sample amount of {np.product(sample_density_array, axis=0)}"
         )
     else:
-        print(f"{type} matches sample density, check passed, continuing...")
+        log.debug(f"Sample density check passed for {type} array")
 
 
 def transform_field(field_array, center_array, basis_matrix_array):
@@ -267,7 +247,12 @@ def transform_field(field_array, center_array, basis_matrix_array):
     """
     field_coords = field_array[:, 0:3]
     field_vecs = field_array[:, 3:6]
-    # print(field_coords, field_vecs, basis_matrix_array)
+    log.debug(
+        "Field coordinates: %s, field vectors: %s, basis matrix: %s",
+        field_coords,
+        field_vecs,
+        basis_matrix_array,
+    )
     # Need to transform and recenter field coords, but only transform field vecs
     transformed_field_coords = field_coords @ basis_matrix_array.T
     transformed_field_coords = transformed_field_coords + center_array
@@ -342,7 +327,9 @@ def generate_radii(esp_array, sample_density_array, volume_box_array):
     Outputs:
         radii: Radii for each point of the ESP field
     """
-    print(sample_density_array, volume_box_array)
+    log.debug(
+        "Sample density: %s, volume box: %s", sample_density_array, volume_box_array
+    )
 
     # Normalize esp_array (only esp values)
     zero_min_esps = np.abs(esp_array[:, 3]) - np.min(esp_array[:, 3])
@@ -391,9 +378,7 @@ def sparsify_vec_field(
         printflag: flag to print number of points
     """
     # sparsify_factor=3
-    # print(nx)
-    # print(ny)
-    # print(nz)
+    log.debug("Grid points (nx, ny, nz): %s, %s, %s", nx, ny, nz)
 
     max_dim = max(dim1, dim2, dim3)
 
@@ -409,7 +394,7 @@ def sparsify_vec_field(
     sy = fac(ny, d2 * sparsify_factor)  # =3
     sz = fac(nz, d3 * sparsify_factor)  # =3
 
-    # print("S", sx, sy, sz)
+    log.debug("Sparsification steps (sx, sy, sz): %s, %s, %s", sx, sy, sz)
     indices = [i for i in range(len(vectors))]
 
     # sparsify along x direction
@@ -422,8 +407,8 @@ def sparsify_vec_field(
             indices_yzs.append(indices_zs[i])
     new_ny = ny / sy  # =3
     # new_ny = ny/7
-    # print(indices_xys)
-    # print("new ny", new_ny)
+    log.debug("Indices kept after y/z sparsification: %s", indices_yzs)
+    log.debug("Grid points in y after sparsification: %s", new_ny)
     indices_xyzs = []
     for i in range(len(indices_yzs)):
         if (i // (new_ny * new_nz)) % sx == 0:  # if (i // 7*7) % 3 == 0
@@ -431,22 +416,16 @@ def sparsify_vec_field(
     new_nx = nx / sx
 
     if printflag == 1:
-        print("Original field has ", nx, " X ", ny, " X ", nz, " points.")
-        print(
-            "Sparsified field has ",
-            int(new_nx),
-            " X ",
-            int(new_ny),
-            " X ",
-            int(new_nz),
-            " points before filtering.",
+        log.info(f"Original field has {nx} x {ny} x {nz} points")
+        log.info(
+            f"Sparsified field has {int(new_nx)} x {int(new_ny)} x {int(new_nz)} points before filtering"
         )
 
     vectors_s = []
     for i in indices_xyzs:
         vectors_s.append(vectors[i])
     vectors_s_np = np.array(vectors_s)
-    # print(len(vectors_s_np) )
+    log.debug("Number of sparsified vectors: %s", len(vectors_s_np))
     return vectors_s_np
 
 
@@ -531,10 +510,8 @@ def generate_bild_file(
     sparsify_factor = math.gcd(
         fac(nx, sparsify_factor), fac(nx, sparsify_factor), fac(nx, sparsify_factor)
     )
-    print(
-        "Sparsification factor modified to: ",
-        sparsify_factor,
-        " to give grid-like visualization.",
+    log.info(
+        f"Sparsification factor set to {sparsify_factor} for a grid-like visualization"
     )
 
     transformed_field_vecs = transformed_field_array[:, 3:6]
@@ -545,11 +522,14 @@ def generate_bild_file(
     # field_mags_min = 0.001
     field_mags_min = np.min(field_mags)
 
-    print("Max field magnitude: ", field_mags_max)
-    print("Min field magnitude: ", field_mags_min)
+    log.info(f"Max field magnitude: {field_mags_max}")
+    log.info(f"Min field magnitude: {field_mags_min}")
 
     field_mags = (field_mags - field_mags_min) / (field_mags_max - field_mags_min)
-    # print(max(field_mags), min(field_mags)) #Debug, make sure min and max are 0 and 1
+    # Make sure min and max are 0 and 1
+    log.debug(
+        "Normalized field magnitude max and min: %s, %s", max(field_mags), min(field_mags)
+    )
     percentile_cutoff = np.percentile(field_mags, percentile)
     r = sparsify_vec_field(
         (1 - field_mags), sparsify_factor, nx, ny, nz, dim1, dim2, dim3
@@ -645,8 +625,8 @@ def generate_bild_file_esp(
             np.min(esp_temp_negative[:, 3]) if len(esp_temp_negative) > 0 else None
         )
 
-    print(f"Max P ESP: {max_p_esp}, Min P ESP: {min_p_esp}")
-    print(f"Max N ESP: {max_n_esp}, Min N ESP: {min_n_esp}")
+    log.info(f"Positive ESP max: {max_p_esp}, min: {min_p_esp}")
+    log.info(f"Negative ESP max: {max_n_esp}, min: {min_n_esp}")
 
     r = np.ones((len(esp_array), 1))
     g = np.ones((len(esp_array), 1))

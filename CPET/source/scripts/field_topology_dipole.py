@@ -83,7 +83,7 @@ def main():
 
     dimensions = np.array(args.dimensions)
     print("Box dimensions:", dimensions)
-    files_input = glob(args.dipole_dir + f"/*.dip")
+    files_input = glob(args.dipole_dir + "/*.dip")
     for i in range(len(files_input) * 100):
         if len(files_input) != 0:
             file = choice(files_input)
@@ -154,7 +154,7 @@ def main():
 
         # Save hist based on the dipole file name in working directory
         filename = file.split("/")[-1].split(".")[0]
-        np.savetxt("{}.top".format(filename), hist)
+        np.savetxt(f"{filename}.top", hist)
 
 
 if __name__ == "__main__":
