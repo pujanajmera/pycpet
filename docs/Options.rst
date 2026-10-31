@@ -31,7 +31,7 @@ General
    * - ``inputfiletype``
      - field calculations
      - ``"pdb"``
-     - ``"pdb"`` or ``"pqr"``. PDB files must carry charges in columns 55–64.
+     - ``"pdb"`` or ``"pqr"``. PDB files must carry charges in columns 56–64.
 
 Orientation and box
 -------------------
@@ -147,7 +147,7 @@ Clustering
    * - ``cluster_method``
      - clustering methods
      - ``"kmeds"``
-     - ``"kmeds"`` (K-Medoids), ``"affinity"`` (affinity propagation) or ``"hdbscan"``. Unknown values fall back to ``"kmeds"``.
+     - ``"kmeds"`` (K-Medoids). ``"affinity"`` (affinity propagation) and ``"hdbscan"`` are in the code but don't work yet. Unknown values fall back to ``"kmeds"``.
    * - ``defined_n_clusters``
      - ``kmeds``
      - none
@@ -243,7 +243,7 @@ Visualization
    * - ``visualization``
      - ``visualize_field``, ``visualize_esp``
      - ``{"cutoff": 0, "sparsify_factor": 1}``
-     - ``cutoff`` is a percentile (0–100) of magnitudes; ``sparsify_factor`` thins the grid, so larger values draw fewer arrows. Keys you leave out keep their defaults.
+     - ``cutoff`` is a percentile (0–100) of magnitudes below which nothing is drawn. ``sparsify_factor`` thins the grid for ``visualize_field`` only, so larger values draw fewer arrows. Keys you leave out keep their defaults.
    * - ``max_p_esp``, ``min_p_esp``
      - ``visualize_esp``
      - from the data

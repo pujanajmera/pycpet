@@ -111,7 +111,7 @@ Most of the code here requires well-formated PDB or PQR files. The formatting is
 
 PDB:
 - Up to and including charge information, follow standard formatting: https://www.cgl.ucsf.edu/chimerax/docs/user/formats/pdbintro.html
-- For charge information, charges must be in columns 55-64 of each line, inclusive
+- For charge information, charges must be in columns 56-64 of each line, inclusive
 
 PQR:
 - 
