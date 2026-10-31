@@ -1,13 +1,15 @@
 import numpy as np
 import pickle as pkl
-import json
 from glob import glob
 import warnings
+import logging
 import matplotlib.pyplot as plt
 
 from sklearn.decomposition import PCA
 
-from CPET.utils.io import save_numpy_as_dat, read_mat
+from CPET.utils.io import save_numpy_as_dat, read_mat, default_options_initializer
+
+log = logging.getLogger(__name__)
 
 
 class pca_pycpet:
@@ -26,12 +28,14 @@ class pca_pycpet:
         pca_compare
 
         """
+        # Fill defaults in case pca_pycpet is used outside of CPET.py
+        options = default_options_initializer(options)
 
         # Note: need to figure out what this means:
-        self.pca_reload = options["pca_reload"] if "pca_reload" in options else False
-        self.save_pca_tf = options["save_pca"] if "save_pca" in options else False
-        self.whitening = options["whitening"] if "whitening" in options else False
-        self.verbose = options["verbose"] if "verbose" in options else True
+        self.pca_reload = options["pca_reload"]
+        self.save_pca_tf = options["save_pca"]
+        self.whitening = options["whitening"]
+        self.verbose = options["verbose"]
 
         self.inputpath = options["inputpath"]
         self.outputpath = options["outputpath"]
@@ -58,7 +62,7 @@ class pca_pycpet:
                 raise ValueError("No data found in the input path!")
             field_file_name = self.outputpath + "/field_file_list.txt"
             with open(field_file_name, "w") as file_list:
-                for i in self.file_list:
+                for i in self.field_file_list:
                     file_list.write(f"{i} \n")
         else:
             self.field_file_list = options["field_file_list"]
@@ -93,7 +97,7 @@ class pca_pycpet:
             mat_transform = self.pca_obj.transform(mat_transform)
 
         cum_explained_var = []
-        for i in range(0, len(self.pca_obj.explained_variance_ratio_)):
+        for i in range(len(self.pca_obj.explained_variance_ratio_)):
             if i == 0:
                 cum_explained_var.append(self.pca_obj.explained_variance_ratio_[0])
             else:
@@ -104,11 +108,10 @@ class pca_pycpet:
         self.cum_explained_var = cum_explained_var
 
         if self.verbose:
-            print(
-                "individual explained vars: \n"
-                + str(self.pca_obj.explained_variance_ratio_)
+            log.info(
+                f"Individual explained variance ratios: {self.pca_obj.explained_variance_ratio_}"
             )
-            print("cumulative explained vars ratio: \n" + str(cum_explained_var))
+            log.info(f"Cumulative explained variance ratios: {cum_explained_var}")
 
         if self.save_pca_tf:
             self.save_pca()
@@ -127,15 +130,13 @@ class pca_pycpet:
         return mat_transform
 
     def save_pca(self):
-        with open(self.outputpath + "pca.pkl", "wb") as f:
+        with open(self.outputpath + "/pca.pkl", "wb") as f:
             pkl.dump(self.pca_obj, f)
 
     def load_pca(self):
-        with open(self.outputpath + "pca.pkl", "rb") as f:
+        # meta_data is set from the input files by load(), which runs after this
+        with open(self.outputpath + "/pca.pkl", "rb") as f:
             self.pca_obj = pkl.load(f)
-
-        with open(self.outputpath + "meta_data.pkl", "rb") as f:
-            self.meta_data = json.load(f)
 
     def save_component(self, component=0, filename="pca_comp", shape=[21, 21, 21, 21]):
         if type(component) == list:
@@ -172,7 +173,7 @@ class pca_pycpet:
     ):
         if type(components) is list:
             fig, axs = plt.subplots(len(components), 1)
-            names = ["PC {}".format(str(temp)) for temp in components]
+            names = [f"PC {str(temp)}" for temp in components]
 
             for ind, comp in enumerate(components):
                 list_data = []
@@ -211,15 +212,11 @@ class pca_pycpet:
                 fig.show()
             if type == "png":
                 fig.savefig(
-                    "./pca_comps_alcdehydro/{}/pca_{}-{}.png".format(
-                        loc, components[0], components[-1]
-                    )
+                    f"./pca_comps_alcdehydro/{loc}/pca_{components[0]}-{components[-1]}.png"
                 )
             elif type == "svg":
                 fig.savefig(
-                    "./pca_comps_alcdehydro/{}/pca_{}-{}.svg".format(
-                        loc, components[0], components[-1]
-                    )
+                    f"./pca_comps_alcdehydro/{loc}/pca_{components[0]}-{components[-1]}.svg"
                 )
             else:
                 raise ValueError("Invalid plot format")

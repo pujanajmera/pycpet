@@ -47,15 +47,4 @@ packages = [
     "CPET.source.scripts"
 ]
 
-[[tool.setuptools.ext-modules]]
-name = "CPET.utils.math_module"          # import path
-sources = ["CPET/utils/math_module.c"]
-
-# compiler flags  (gcc -O3 -march=native -funroll-loops -ffast-math -fPIC -fopenmp …)
-extra-compile-args = [
-  "-O3",
-  "-march=native",
-  "-funroll-loops",
-  "-ffast-math",
-  "-fPIC",
-]
+# The math_module C extension and its compiler flags are defined in setup.py

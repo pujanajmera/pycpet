@@ -5,6 +5,24 @@ import logging
 
 log = logging.getLogger(__name__)
 
+VALID_CPET_METHODS = [
+    "topo",
+    "topo_GPU",
+    "volume",
+    "volume_ESP",
+    "point_field",
+    "point_mag",
+    "cluster",
+    "cluster_volume",
+    "cluster_volume_tensor",
+    "cluster_volume_esp_tensor",
+    "box_check",
+    "visualize_field",
+    "visualize_esp",
+    "pca",
+    "pca_compare",
+]
+
 
 def get_input_files(inputpath, filetype):
     """
@@ -21,7 +39,7 @@ def get_input_files(inputpath, filetype):
     if len(files_input) == 0:
         raise ValueError("No pdb files found in the input directory")
     if len(files_input) == 1:
-        log.warning("Only one pdb file found in the input directory")
+        log.warning(f"Only one {filetype.upper()} file found in the input directory")
     return files_input
 
 
@@ -60,27 +78,10 @@ def save_numpy_as_dat(meta_data, volume, name):
     trans_mat = meta_data["transformation_matrix"].transpose()
     center = meta_data["center"]
 
-    first_line = "#Sample Density: {} {} {}; Volume: Box: {} {} {}\n".format(
-        num_steps_list[0],
-        num_steps_list[1],
-        num_steps_list[2],
-        dimensions[0],
-        dimensions[1],
-        dimensions[2],
-    )
+    first_line = f"#Sample Density: {num_steps_list[0]} {num_steps_list[1]} {num_steps_list[2]}; Volume: Box: {dimensions[0]} {dimensions[1]} {dimensions[2]}\n"
     second_line = "#Frame 0\n"
-    third_line = "#Center: {} {} {}\n".format(center[0], center[1], center[2])
-    basis_matrix_lines = "#Basis Matrix:\n# {} {} {}\n# {} {} {}\n# {} {} {}\n".format(
-        trans_mat[0][0],
-        trans_mat[0][1],
-        trans_mat[0][2],
-        trans_mat[1][0],
-        trans_mat[1][1],
-        trans_mat[1][2],
-        trans_mat[2][0],
-        trans_mat[2][1],
-        trans_mat[2][2],
-    )
+    third_line = f"#Center: {center[0]} {center[1]} {center[2]}\n"
+    basis_matrix_lines = f"#Basis Matrix:\n# {trans_mat[0][0]} {trans_mat[0][1]} {trans_mat[0][2]}\n# {trans_mat[1][0]} {trans_mat[1][1]} {trans_mat[1][2]}\n# {trans_mat[2][0]} {trans_mat[2][1]} {trans_mat[2][2]}\n"
 
     lines_header = [first_line] + [second_line] + [third_line] + [basis_matrix_lines]
     """
@@ -119,15 +120,19 @@ def read_mat(file, meta_data=False, verbose=False):
     with open(file) as f:
         lines = f.readlines()
 
-    steps_x = 2 * int(lines[0].split()[2]) + 1
-    steps_y = 2 * int(lines[0].split()[3]) + 1
-    steps_z = 2 * int(lines[0].split()[4]) + 1
-    x_size = float(lines[0].split()[-3])
-    y_size = float(lines[0].split()[-2])
-    z_size = float(lines[0].split()[-1])
-    step_size_x = np.round(x_size / float(lines[0].split()[2]), 4)
-    step_size_y = np.round(y_size / float(lines[0].split()[3]), 4)
-    step_size_z = np.round(z_size / float(lines[0].split()[4]), 4)
+    # PyCPET writes "#Sample Density: Nx Ny Nz; Volume: Box: X Y Z" with the number
+    # of points per axis, while original CPET output has no ";" and gives half the
+    # number of grid intervals per axis
+    header = lines[0].replace(";", " ").split()
+    density = [int(n) for n in header[2:5]]
+    if ";" in lines[0]:
+        steps_x, steps_y, steps_z = density
+    else:
+        steps_x, steps_y, steps_z = [2 * n + 1 for n in density]
+    x_size, y_size, z_size = [float(v) for v in header[-3:]]
+    step_size_x = np.round(2 * x_size / (steps_x - 1), 4)
+    step_size_y = np.round(2 * y_size / (steps_y - 1), 4)
+    step_size_z = np.round(2 * z_size / (steps_z - 1), 4)
 
     meta_dict = {
         "first_line": lines[0],
@@ -141,24 +146,21 @@ def read_mat(file, meta_data=False, verbose=False):
         "bounds_y": [-y_size, y_size + step_size_y],
         "bounds_z": [-z_size, z_size + step_size_z],
     }
-    print(lines[0].split())
-    print(meta_dict)
+    log.debug("Header line: %s", lines[0].split())
+    log.debug("Metadata: %s", meta_dict)
     if verbose:
-        print(meta_dict)
+        log.info("Metadata: %s", meta_dict)
 
     if meta_data:
         return meta_dict
 
     else:
-        steps_x = 2 * int(lines[0].split()[2]) + 1
-        steps_y = 2 * int(lines[0].split()[3]) + 1
-        steps_z = 2 * int(lines[0].split()[4]) + 1
         mat = np.zeros((steps_x, steps_y, steps_z, 3))
-        # print(mat.shape)
+        log.debug("Field matrix shape: %s", mat.shape)
 
-        for ind, i in enumerate(lines[7:]):
+        data_lines = [line for line in lines if line.strip() and not line.startswith("#")]
+        for ind, i in enumerate(data_lines):
             line_split = i.split()
-            # print(i)
             mat[
                 int(ind / (steps_z * steps_y)),
                 int(ind / steps_z % steps_y),
@@ -200,47 +202,95 @@ def default_options_initializer(options):
     Takes
         options(dict) - dictionary of options
     Returns
-        options(dict) - dictionary of options with default values
+        options(dict) - new dictionary of options with default values; the input is not modified
     """
+    options = dict(options)
+
     # Directories:
-    if "inputpath" not in options.keys():
+    if "inputpath" not in options:
         options["inputpath"] = "./inpdir"
-    if "outputpath" not in options.keys():
+    if "outputpath" not in options:
         options["outputpath"] = "./outdir"
-    if "inputfiletype" not in options.keys():
+    if "inputfiletype" not in options:
         options["inputfiletype"] = "pdb"  # Default to pdb with charges
 
     # Developer Options:
-    if "profile" not in options.keys():
+    if "profile" not in options:
         options["profile"] = False
 
     # Debugging Options:
-    if "write_transformed_pdb" not in options.keys():
+    if "write_transformed_pdb" not in options:
         options["write_transformed_pdb"] = False
 
     # Box options (all 3D calcs):
-    if "dimensions" not in options.keys():
+    if "dimensions" not in options:
         options["dimensions"] = None
-    if "step_size" not in options.keys():  # Both for topology/box
+    if "step_size" not in options:  # Both for topology/box
         options["step_size"] = None
-    if "initializer" not in options.keys():
+    if "initializer" not in options:
         options["initializer"] = "uniform"
-    if "box_shift" not in options.keys():
+    if "box_shift" not in options:
         options["box_shift"] = [0, 0, 0]
 
     # Filtering Options:
-    if "filter_intersect" not in options.keys():
+    if "filter_intersect" not in options:
         options["filter_intersect"] = False
+    if "filter_in_box" not in options:
+        options["filter_in_box"] = False
+    if "strip_filter" not in options:
+        options["strip_filter"] = False
 
     # Topology Options:
-    if "concur_slip" not in options.keys():
+    if "concur_slip" not in options:
         options["concur_slip"] = 4
-    if "dtype" not in options.keys():
+    if "dtype" not in options:
         options["dtype"] = "float32"
-    if "GPU_batch_freq" not in options.keys():
+    if "GPU_batch_freq" not in options:
         options["GPU_batch_freq"] = 100
-    if "n_samples" not in options.keys():
+    if "n_samples" not in options:
         options["n_samples"] = None
+    if "max_streamline_init" not in options:
+        options["max_streamline_init"] = "true_rand"
+
+    # Clustering Options:
+    if "plot_clusters" not in options:
+        options["plot_clusters"] = False
+    if "plot_dwell_times" not in options:
+        options["plot_dwell_times"] = False
+    if "cluster_reload" not in options:
+        options["cluster_reload"] = False
+    if "defined_n_clusters" not in options:
+        options["defined_n_clusters"] = None
+    if "tensor_threshold" not in options:
+        options["tensor_threshold"] = 0.001
+    if "rank" not in options:
+        options["rank"] = None
+    if "max_rank" not in options:
+        options["max_rank"] = 30
+    if "min_rank" not in options:
+        options["min_rank"] = 1
+
+    # PCA Options:
+    if "pca_reload" not in options:
+        options["pca_reload"] = False
+    if "save_pca" not in options:
+        options["save_pca"] = False
+    if "whitening" not in options:
+        options["whitening"] = False
+    if "verbose" not in options:
+        options["verbose"] = True
+    if "pca_combined_only" not in options:
+        options["pca_combined_only"] = False
+
+    # Visualization Options (user settings override the nested defaults):
+    options["visualization"] = {
+        "cutoff": 0,
+        "sparsify_factor": 1,
+        **options.get("visualization", {}),
+    }
+    for esp_limit in ["max_p_esp", "min_p_esp", "max_n_esp", "min_n_esp"]:
+        if esp_limit not in options:
+            options[esp_limit] = None
 
     return options
 
@@ -253,12 +303,20 @@ def check_valid_options(options):
     Returns
         None, but raises errors if options are invalid
     """
+    if "CPET_method" not in options:
+        raise ValueError("CPET_method must be specified in the options")
+    if options["CPET_method"] not in VALID_CPET_METHODS:
+        raise ValueError(
+            "CPET_method '{}' not recognized. Valid methods are: {}".format(
+                options["CPET_method"], ", ".join(VALID_CPET_METHODS)
+            )
+        )
     if options["inputfiletype"] not in ["pdb", "pqr"]:
         raise ValueError("inputfiletype must be 'pdb' or 'pqr'")
     if options["initializer"] not in ["uniform", "random"]:
         raise ValueError("initializer must be 'uniform' or 'random'")
     # Ensure that x and y vectors are not redundant, if both exist
-    if "x" in options.keys() and "y" in options.keys():
+    if "x" in options and "y" in options:
         if options["x"] == options["y"]:
             raise ValueError("x and y points used for vectors cannot be the same")
 
@@ -267,13 +325,12 @@ def filter_radius(x, Q, center, radius=2.0):
     # Filter out points that are inside the box
     x_recentered = x - center
     r = np.linalg.norm(x_recentered, axis=1)
-    # print("radius filtering {}".format(radius))
+    log.info("Filtering atoms within %s Angstrom of the center", radius)
     mask = r < radius
     # remove masked points
     x_filtered = x[mask]
     Q_filtered = Q[mask]
-    print("radius filter leaves: {}".format(len(Q_filtered)))
-    # print(np.linalg.norm(x_filtered, axis=1))
+    log.debug("Radius filter leaves %s atoms", len(Q_filtered))
     return x_filtered, Q_filtered
 
 
@@ -298,10 +355,13 @@ def filter_radius_whole_residue(x, Q, ID, center, radius=2.0):
     resids = np.array([id[2] for id in ID])
     resnums = np.array([id[3] for id in ID])
 
-    print(x_recentered.shape)
-    print(Q.shape)
-    print(resids.shape)
-    print(resnums.shape)
+    log.debug(
+        "Array shapes (x_recentered, Q, resids, resnums): %s, %s, %s, %s",
+        x_recentered.shape,
+        Q.shape,
+        resids.shape,
+        resnums.shape,
+    )
     j = 0
     # Generate dictionary of indices. Accounts for residues that have the same resnum but different resid, as those aren't adjacent
     for i in range(len(resids)):
@@ -330,8 +390,7 @@ def filter_radius_whole_residue(x, Q, ID, center, radius=2.0):
     x_filtered = np.delete(x, indices_to_filter_out, axis=0)
     Q_filtered = np.delete(Q, indices_to_filter_out, axis=0)
     ID_filtered = np.delete(ID, indices_to_filter_out, axis=0)
-    print("radius filter leaves: {}".format(len(Q_filtered)))
-    print(np.linalg.norm(x_filtered, axis=1))
+    log.debug("Radius filter leaves %s atoms", len(Q_filtered))
     return x_filtered, Q_filtered, ID_filtered
 
 
@@ -367,7 +426,7 @@ def filter_atomspec(x, Q, ID, filter_dict, intersect):
     filter_idx = []
     atom_attributes_list = ["atom_number", "atom_type", "resid", "resnum", "chain"]
     atom_attributes_considered = []
-    for key in filter_dict.keys():
+    for key in filter_dict:
         if key not in atom_attributes_list:
             raise ValueError(
                 f"Key {key} not recognized. Must be one of {atom_attributes_list}"
@@ -406,13 +465,13 @@ def filter_atomspec(x, Q, ID, filter_dict, intersect):
                 if match:
                     filter_idx.append(j)
         filter_idx = list(set(filter_idx))  # Remove duplicates
-    log.debug(f"Length before filtering: {len(x)}, {len(Q)}, {len(ID)}")
+    log.debug(f"Lengths before filtering (x, Q, ID): {len(x)}, {len(Q)}, {len(ID)}")
     x_filtered = np.delete(x, filter_idx, axis=0)
     Q_filtered = np.delete(Q, filter_idx, axis=0)
     ID_filtered = np.delete(ID, filter_idx, axis=0)
     if len(x_filtered) != len(Q_filtered) or len(x_filtered) != len(ID_filtered):
         raise ValueError("Unexpected: filtered arrays have different lengths")
-    log.info(f"Number of atoms filtered out: {len(filter_idx)}")
+    log.debug(f"Attribute filter removes {len(filter_idx)} atoms")
     return x_filtered, Q_filtered, ID_filtered
 
 
@@ -450,8 +509,8 @@ def filter_in_box(x, Q, ID, center, dimensions):
         "y": [-dimensions[1], dimensions[1]],
         "z": [-dimensions[2], dimensions[2]],
     }
-    # print("box dimensions: {}".format(limits))
-    # print(x.shape)
+    log.debug("Box dimensions: %s", limits)
+    log.debug("Coordinate array shape: %s", x.shape)
     mask_x = (x_recentered[:, 0] > limits["x"][0]) & (
         x_recentered[:, 0] < limits["x"][1]
     )
@@ -468,7 +527,7 @@ def filter_in_box(x, Q, ID, center, dimensions):
     x_filtered = x[~mask]
     Q_filtered = Q[~mask]
     ID_filtered = ID[~mask]
-    # print("masked points: {}".format(len(mask)))
+    log.debug("Box filter removes %s atoms", np.sum(mask))
     return x_filtered, Q_filtered, ID_filtered
 
 
@@ -530,14 +589,13 @@ def parse_pqr(path_to_pqr):
             ]
 
             if shift == -1:
-                print("----------------------")
-                print("coords: ", coords)
+                log.debug("Parsed coordinates: %s", coords)
 
             coords = [_.strip() for _ in coords]
             charge = line[54 + shift : 61 + shift]
 
             if shift == -1:
-                print("charge: ", [charge])
+                log.debug("Parsed charge: %s", [charge])
 
             charge = charge.strip()
 
@@ -546,8 +604,8 @@ def parse_pqr(path_to_pqr):
                 temp = [float(_) for _ in coords]
 
             except:
-                print(
-                    f"Charge or coordinates is not a useable number. Check pqr file formatting for the following line: {line}"
+                log.error(
+                    f"Charge or coordinates are not usable numbers. Check PQR file formatting for line: {line}"
                 )
 
             assert temp != [], "charge incorrectly parsed"
@@ -634,7 +692,7 @@ def parse_pdb(pdb_file_path, get_charges=False, float32=True):
 
 
 def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="center"):
-    if "chains" in options[seltype].keys():
+    if "chains" in options[seltype]:
         if type(options[seltype]["chains"]) != list:
             raise ValueError("chains must be a list")
         if len(options[seltype]["chains"]) != len(options[seltype]["atoms"]):
@@ -646,10 +704,9 @@ def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="c
             )
             for k, v in atom_dict.items()
         ]
-        log.debug(f"len(chains): {len(chains)}")
-        log.debug(f"len(atom_type): {len(atom_type)}")
-        log.debug(f"len(residue_number): {len(residue_number)}")
-        log.debug(f"len(x): {len(x)}")
+        log.debug(
+            f"Array lengths (chains, atom_type, residue_number, x): {len(chains)}, {len(atom_type)}, {len(residue_number)}, {len(x)}"
+        )
         pos_considered = [
             pos
             for atom_res in centering_atoms
@@ -657,20 +714,20 @@ def get_atoms_for_axes(x, atom_type, residue_number, chains, options, seltype="c
             if (atom_type[idx], residue_number[idx], chains[idx],) == atom_res
         ]
     else:
-        log.debug(options[seltype]["atoms"])
+        log.debug(f"Atoms specified for {seltype}: {options[seltype]['atoms']}")
         centering_atoms = [
             (k, v)
             for atom_dict in options[seltype]["atoms"]
             for k, v in atom_dict.items()
         ]
-        log.info(f"centering atoms for {seltype}: {centering_atoms}")
+        log.info(f"Atoms used for {seltype}: {centering_atoms}")
         atom_set = set(centering_atoms)
         pos_considered = [
             pos
             for (atype, rnum), pos in zip(zip(atom_type, residue_number), x)
             if (atype, rnum) in atom_set
         ]
-    log.debug(f"pos considered for {seltype}: {pos_considered}")
+    log.debug(f"Positions considered for {seltype}: {pos_considered}")
     return pos_considered
 
 
