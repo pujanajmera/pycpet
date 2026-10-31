@@ -53,10 +53,18 @@ autodoc_default_options = {
 }
 
 autodoc_mock_imports = [
-    "CPET.utils.parallel",
+    # Needs the compiled math_module C extension, which the docs build doesn't compile
     "CPET.utils.calculator",
-    "CPET.utils.io",
-    "CPET.utils.gpu",
+    # Heavy or compiled dependencies the docs build doesn't install
+    "kneed",
+    "matplotlib",
+    "numba",
+    "scipy",
+    "sklearn",
+    "sklearn_extra",
+    "tensorly",
+    "torch",
+    "tqdm",
 ]
 
 # -- Options for HTML output -------------------------------------------------
