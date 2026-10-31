@@ -23,10 +23,10 @@ On Linux (x86_64) and on Apple Silicon Macs with macOS 14 or newer, this install
 
 One dependency, ``scikit-learn-extra``, only has prebuilt packages for Python 3.11 and older on x86_64. On Python 3.12, and on every Apple Silicon Mac, pip compiles it during installation, which needs a C compiler. On macOS, install the Xcode Command Line Tools first with ``xcode-select --install`` (see `#19 <https://github.com/pujanajmera/pycpet/issues/19>`_).
 
-Latest development version
---------------------------
+Development install
+-------------------
 
-To get changes before they are released, or to modify the code:
+To modify the code, or to work from the repository:
 
 .. code-block:: console
 
@@ -39,7 +39,7 @@ Update later with ``git pull``, and rerun ``pip install -e .`` if ``CPET/utils/m
 Building from source
 --------------------
 
-Source builds (the development version above, platforms without a prebuilt package, or ``pip install --no-binary pycpet pycpet`` to compile a release yourself) need gcc on Linux or the Xcode Command Line Tools on macOS. They compile the C extension for your own CPU (``-march=native``), while prebuilt packages target a portable baseline (AVX2 on x86_64) so they run on any modern machine. On Linux, source builds use OpenMP; on macOS they build without it, while the prebuilt macOS package includes it.
+Source builds (the development install above, platforms without a prebuilt package, or ``pip install --no-binary pycpet pycpet`` to compile a release yourself) need gcc on Linux or the Xcode Command Line Tools on macOS. They compile the C extension for your own CPU (``-march=native``), while prebuilt packages target a portable baseline (AVX2 on x86_64) so they run on any modern machine. On Linux, source builds use OpenMP; on macOS they build without it, while the prebuilt macOS package includes it.
 
 Before running
 --------------

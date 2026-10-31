@@ -2,7 +2,7 @@
 <img title="logo" alt="" src="pycpet-logo.png"  width="600" height="300" align="center">      
 
 <br/><br/>
-[![DOI:10.1021/acs.jctc.5c00138](https://img.shields.io/badge/DOI-10.1021%2Facs.jctc.5c00138%5D-blue
+[![DOI:10.1021/acs.jctc.5c00138](https://img.shields.io/badge/DOI-10.1021%2Facs.jctc.5c00138-blue
 )](https://doi.org/10.1021/acs.jctc.5c00138)
 [![PyPI version](https://img.shields.io/pypi/v/pycpet.svg)](https://pypi.org/project/pycpet/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/pycpet.svg)](https://pypi.org/project/pycpet/)
@@ -40,9 +40,9 @@ On Linux (x86_64) and on Apple Silicon Macs with macOS 14 or newer, this install
 
 One dependency, `scikit-learn-extra`, only has prebuilt packages for Python 3.11 and older on x86_64. On Python 3.12, and on every Apple Silicon Mac, pip compiles it during installation, which needs a C compiler. On macOS, install the Xcode Command Line Tools first with `xcode-select --install` (see [#19](https://github.com/pujanajmera/pycpet/issues/19)).
 
-### Latest development version
+### Development install
 
-To get changes before they are released, or to modify the code:
+To modify the code, or to work from the repository:
 
 ```bash
 git clone https://github.com/pujanajmera/pycpet.git
@@ -53,7 +53,7 @@ pip install -e .
 Update later with `git pull`, and rerun `pip install -e .` if `CPET/utils/math_module.c` changed. This compiles the C extension on your machine (see below).
 
 ### Building from source
-Source builds (the development version above, platforms without a prebuilt package, or `pip install --no-binary pycpet pycpet` to compile a release yourself) need gcc on Linux or the Xcode Command Line Tools on macOS. They compile the C extension for your own CPU (`-march=native`), while prebuilt packages target a portable baseline (AVX2 on x86_64) so they run on any modern machine. On Linux, source builds use OpenMP; on macOS they build without it, while the prebuilt macOS package includes it.
+Source builds (the development install above, platforms without a prebuilt package, or `pip install --no-binary pycpet pycpet` to compile a release yourself) need gcc on Linux or the Xcode Command Line Tools on macOS. They compile the C extension for your own CPU (`-march=native`), while prebuilt packages target a portable baseline (AVX2 on x86_64) so they run on any modern machine. On Linux, source builds use OpenMP; on macOS they build without it, while the prebuilt macOS package includes it.
 
 ### Before running
 Set the number of OpenMP threads:
@@ -73,11 +73,11 @@ export CUDA_VISIBLE_DEVICES=N
 where N is the GPU number. This is only needed outside of HPC schedulers.
 
 ## Documentation
-Almost all use of *PyCPET* is either scripting with the objects provided (requires in-depth knowledge of the code) or using the cpet.py script with an options file. We are developing in-depth documentation of how to format and use the options file, examples, and cookbooks at (), but key features and explanation of example files are noted below.
+Almost all use of *PyCPET* is either scripting with the objects provided (requires in-depth knowledge of the code) or using the `cpet.py` script with an options file. Full documentation, including every options file key and the API reference, is at [pycpet.readthedocs.io](https://pycpet.readthedocs.io/en/latest/). Key features and example files are noted below.
 
 ## Features
 
-These are the following available features, and their corresponding options file 'method' keywords:
+These are the following available features, and their corresponding `CPET_method` values in the options file:
 
 - Computing point electric fields: 'point_field'
 - Computing point electric field magnitudes: 'point_mag'
@@ -85,6 +85,7 @@ These are the following available features, and their corresponding options file
 - Computing 3-D electrostatic potentials: 'volume_ESP'
 - Computing 3-D distribution of streamlines: 'topo' (CPU, default) and 'topo_GPU' (GPU)
 - Clustering by distribution of streamlines: 'cluster'
+- Clustering by 3-D electric field (direct distances): 'cluster_volume'
 - Clustering by 3-D electric field (tensor decomp): 'cluster_volume_tensor'
 - Clustering by 3-D electrostatic potential: 'cluster_volume_esp_tensor' **IN BETA**
 - Visualizing 3-D fields and electrostatic potentials: 'visualize_field' and 'visualize_esp'
@@ -98,12 +99,12 @@ Several examples are in the ```examples``` directory. Most of these are designed
 
 ## Specialized Scripts
 
-For features unavailable from the cpet.py script mentioned above, we offer scripts in ```source/scripts``` for the following. Please note that these are not rigorously tested for all cases, but showcase the scripting ability of the pycpet library:
+For features unavailable from the `cpet.py` script mentioned above, we offer scripts in `CPET/source/scripts` for the following. Only `cpet.py` is installed as a command, so run these by their path. Please note that these are not rigorously tested for all cases, but showcase the scripting ability of the pycpet library:
 
 - electrostatic_interaction_QM.py: Electrostatic interaction energy and residue-breakdown for QM/MM calculations
 - residue_breakdown_analysis.py: Residue contribution to topology over dynamics, ranked. Requires completed topology calculations for an MD **IN BETA**
 - tensor_based_cluster_double.py: Electrostatic potential/electric field-based clustering for two sets of electric fields/electrostatic potentials. Assumes that all field calculations have been completed for both sets of directories. **IN BETA**
-- field_topology_dipoel.py: Electric field streamline distributions from a given set of dipoles **IN BETA**
+- field_topology_dipole.py: Electric field streamline distributions from a given set of dipoles **IN BETA**
 
 ## Note: Formatting of PDB/PQR files
 
@@ -114,4 +115,6 @@ PDB:
 - For charge information, charges must be in columns 56-64 of each line, inclusive
 
 PQR:
-- 
+- Lines must include a chain ID column; lines without one fail to parse. Chain IDs are not kept, so `chain` filters don't apply to PQR input
+- Coordinates must be in columns 31-54 and charges in columns 55-61. For residue numbers above 999, these columns shift right by one for each extra digit
+- Radii are not read
