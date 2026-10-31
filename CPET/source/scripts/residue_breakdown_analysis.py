@@ -61,7 +61,7 @@ def main():
     args = parser.parse_args()
     options = args.o
     if not os.path.exists(options):
-        ValueError("Error: Options file not found")
+        raise ValueError("Error: Options file not found")
     else:
         with open(options, "r") as f:
             options = json.load(f)
@@ -78,11 +78,11 @@ def main():
         (float(curvbound[1]) - float(curvbound[0])) / float(args.curvres)
     )
     if len(curvbound) != 2 or len(distbound) != 2:
-        ValueError("Error: Curvature and distance bounds must be lists of 2 numbers")
+        raise ValueError("Error: Curvature and distance bounds must be lists of 2 numbers")
     if float(curvbound[1]) <= float(curvbound[0]) or float(distbound[1]) <= float(
         distbound[0]
     ):
-        ValueError("Error: Upper bound (right) must be greater than lower bound (left)")
+        raise ValueError("Error: Upper bound (right) must be greater than lower bound (left)")
 
     # Get list of full input topologies and pdbs, sorted
     tops = os.listdir(args.tops)
@@ -93,7 +93,7 @@ def main():
     # Check to make sure all topologies have a corresponding pdb (topologies end in .top, pdbs end in .pdb)
     for t in tops:
         if t[:-4] + ".pdb" not in pdbs:
-            ValueError("Error: Topology " + t + " does not have a corresponding pdb")
+            raise ValueError("Error: Topology " + t + " does not have a corresponding pdb")
 
     # Get resid list from first pdb
     first_pdb = pdbs[0]
@@ -115,7 +115,7 @@ def main():
         if residue_dict == residue_dict_prev or residue_dict["resname"] == "WAT":
             continue
         elif residue_dict in residues_list:
-            ValueError(
+            raise ValueError(
                 "Error: Residue " + str(residue_dict) + " is repeated in the list"
             )
         else:
@@ -143,7 +143,7 @@ def main():
             if residue_dict == residue_dict_prev or residue_dict["resname"] == "WAT":
                 continue
             elif residue_dict in residues_list_temp:
-                ValueError(
+                raise ValueError(
                     "Error: Residue " + str(residue_dict) + " is repeated in the list"
                 )
             else:

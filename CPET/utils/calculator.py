@@ -733,7 +733,7 @@ def make_histograms_mem(topo_files, output_dir, plot=False):
                 curvatures.append(float(line[1]))
         log.debug("Max distance and curvature in file: %s, %s", max(distances), max(curvatures))
         if len(distances) != len(curvatures):
-            ValueError(
+            raise ValueError(
                 f"Length of distances and curvatures do not match for {topo_file}"
             )
         else:
@@ -881,7 +881,7 @@ def make_single_4d_tensor(
 
     if init == False:
         if N == [0, 0, 0]:
-            ValueError("Please provide the dimensions of the grid if init is false")
+            raise ValueError("Please provide the dimensions of the grid if init is false")
         if type == "field":
             tensor_4d = np.zeros((N[0], N[1], N[2], 3))
         elif type == "esp":
@@ -943,7 +943,7 @@ def make_5d_tensor(field_files, type="field"):
                 field_file, uniques=uniques, N=N, type="esp"
             )
     else:
-        ValueError(
+        raise ValueError(
             "Please provide the correct type of tensor clustering method, either 'field' or 'esp'"
         )
 

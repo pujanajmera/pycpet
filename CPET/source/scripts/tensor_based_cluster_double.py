@@ -221,7 +221,7 @@ def main():
     args = parser.parse_args()
     options = args.o
     if not os.path.exists(options):
-        ValueError("Error: Options file not found")
+        raise ValueError("Error: Options file not found")
     else:
         with open(options, "r") as f:
             options = json.load(f)
@@ -241,10 +241,10 @@ def main():
         os.makedirs(outputpath)
 
     # Make sure file names in both directories are identical
-    dir1_files = os.listdir(args.dir1).sort()
-    dir2_files = os.listdir(args.dir2).sort()
+    dir1_files = sorted(os.listdir(args.dir1))
+    dir2_files = sorted(os.listdir(args.dir2))
     if dir1_files != dir2_files:
-        ValueError("Error: Files in directories are not identical")
+        raise ValueError("Error: Files in directories are not identical")
 
     # Parse first directory:
     inputpath = args.dir1
