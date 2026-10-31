@@ -425,7 +425,7 @@ class calculator:
         self.log.debug(f"First 5 coordinates: {self.x[:5]}")
         start_time = time.time()
         # Since x and Q are already rotated and translated, need to supply 0 vector as center
-        point_mag = np.norm(
+        point_mag = np.linalg.norm(
             calculate_electric_field_c_shared_full_alt(
                 np.array([0, 0, 0]), self.x, self.Q
             )
