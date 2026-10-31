@@ -1115,17 +1115,17 @@ def report_inside_box(calculator_object):
     """
     Reports atoms that are inside the box, not including anything
     that has been filtered (vectorized). Trick to ignore atoms more than 1A outside of box circumsphere
-    (along largest side)
     """
     calc_obj_copy = (
         calculator_object  # Copy the object to avoid modifying the original object
     )
-    max_len_box = calc_obj_copy.dimensions.max()
-    outside_sphere = np.linalg.norm(calc_obj_copy.x - calc_obj_copy.center, axis=1) > (
-        max_len_box + 1
+    # Coordinates are already centered on the box, so distances are from the origin
+    circumsphere_radius = np.linalg.norm(calc_obj_copy.dimensions)
+    outside_sphere = np.linalg.norm(calc_obj_copy.x, axis=1) > (
+        circumsphere_radius + 1
     )  # 1A wiggle room
 
-    for i in np.where(outside_sphere)[0]:
+    for i in np.where(~outside_sphere)[0]:
         # Check to see if atom is in box
         if Inside_Box(calc_obj_copy.x[i], calc_obj_copy.dimensions):
             log.warning(
