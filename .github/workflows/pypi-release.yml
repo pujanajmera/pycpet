@@ -42,17 +42,15 @@ jobs:
         env:
           CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
 
-          # Linux
-          CIBW_ENVIRONMENT_LINUX: >
-            CFLAGS="-O3 -march=native -funroll-loops -ffast-math -fPIC"
+          # Optimization and CPU target flags come from setup.py
 
-          # macOS
+          # macOS (OpenMP through Homebrew libomp)
           CIBW_ENVIRONMENT_MACOS: >
             MACOSX_DEPLOYMENT_TARGET=15.0
             CC=clang
             CXX=clang++
             CPPFLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include"
-            CFLAGS="-O3 -march=native -funroll-loops -ffast-math -fPIC -Xpreprocessor -fopenmp"
+            CFLAGS="-Xpreprocessor -fopenmp"
             LDFLAGS="-L$(brew --prefix libomp)/lib -lomp"
 
           # Skip unsupported builds
