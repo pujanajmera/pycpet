@@ -137,15 +137,19 @@ def read_mat(file, meta_data=False, verbose=False):
     with open(file) as f:
         lines = f.readlines()
 
-    steps_x = 2 * int(lines[0].split()[2]) + 1
-    steps_y = 2 * int(lines[0].split()[3]) + 1
-    steps_z = 2 * int(lines[0].split()[4]) + 1
-    x_size = float(lines[0].split()[-3])
-    y_size = float(lines[0].split()[-2])
-    z_size = float(lines[0].split()[-1])
-    step_size_x = np.round(x_size / float(lines[0].split()[2]), 4)
-    step_size_y = np.round(y_size / float(lines[0].split()[3]), 4)
-    step_size_z = np.round(z_size / float(lines[0].split()[4]), 4)
+    # PyCPET writes "#Sample Density: Nx Ny Nz; Volume: Box: X Y Z" with the number
+    # of points per axis, while original CPET output has no ";" and gives half the
+    # number of grid intervals per axis
+    header = lines[0].replace(";", " ").split()
+    density = [int(n) for n in header[2:5]]
+    if ";" in lines[0]:
+        steps_x, steps_y, steps_z = density
+    else:
+        steps_x, steps_y, steps_z = [2 * n + 1 for n in density]
+    x_size, y_size, z_size = [float(v) for v in header[-3:]]
+    step_size_x = np.round(2 * x_size / (steps_x - 1), 4)
+    step_size_y = np.round(2 * y_size / (steps_y - 1), 4)
+    step_size_z = np.round(2 * z_size / (steps_z - 1), 4)
 
     meta_dict = {
         "first_line": lines[0],
@@ -168,13 +172,11 @@ def read_mat(file, meta_data=False, verbose=False):
         return meta_dict
 
     else:
-        steps_x = 2 * int(lines[0].split()[2]) + 1
-        steps_y = 2 * int(lines[0].split()[3]) + 1
-        steps_z = 2 * int(lines[0].split()[4]) + 1
         mat = np.zeros((steps_x, steps_y, steps_z, 3))
         log.debug("Field matrix shape: %s", mat.shape)
 
-        for ind, i in enumerate(lines[7:]):
+        data_lines = [line for line in lines if line.strip() and not line.startswith("#")]
+        for ind, i in enumerate(data_lines):
             line_split = i.split()
             mat[
                 int(ind / (steps_z * steps_y)),
