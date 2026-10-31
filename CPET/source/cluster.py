@@ -24,7 +24,24 @@ log = logging.getLogger(__name__)
 
 
 class NpEncoder(json.JSONEncoder):
+    """
+    JSON encoder that also writes NumPy integers, floats and arrays.
+    """
     def default(self, obj):
+        """
+        Convert a NumPy value to its Python equivalent for JSON.
+
+        Parameters
+        ----------
+        obj : object
+            The value to convert.
+
+        Returns
+        -------
+        object
+            An ``int``, ``float`` or ``list`` for NumPy values; other types go to the
+            standard encoder.
+        """
         if isinstance(obj, np.integer):
             return int(obj)
         if isinstance(obj, np.floating):
@@ -35,11 +52,24 @@ class NpEncoder(json.JSONEncoder):
 
 
 class cluster:
+    """
+    Cluster a set of topologies, field volumes or electrostatic potential volumes.
+
+    Creating the object finds the input files (``.top``, ``_efield.dat`` or
+    ``_esp.dat``, depending on ``CPET_method``) and computes the distance matrix
+    between them, saving the file list and matrix to ``outputpath``. With
+    ``cluster_reload``, it loads those saved files instead. Call :meth:`Cluster`
+    to cluster.
+
+    Parameters
+    ----------
+    options : dict
+        Options. Reads ``CPET_method``, ``inputpath``, ``outputpath`` and the
+        clustering options (see the Options Reference).
+    """
     def __init__(self, options):
         """
-        Method to initialize the cluster object
-        Takes:
-            options: dictionary with options for the cluster object parsed from options.json file
+        Find the input files and compute or load the distance matrix.
         """
         # Fill defaults in case cluster is used outside of CPET.py
         options = default_options_initializer(options)
@@ -161,7 +191,10 @@ class cluster:
 
     def Cluster(self):
         """
-        Run clustering through various methods
+        Cluster with the chosen method and save a summary of the results.
+
+        Runs ``cluster_method`` (K-Medoids unless another is set), then writes the
+        summary from :meth:`cluster_analyze` to ``outputpath/compressed_dictionary.json``.
         """
         if self.cluster_method == "kmeds":
             self.cluster_results = self.kmeds()
@@ -180,9 +213,16 @@ class cluster:
 
     def kmeds(self):
         """
-        Method to run K-Medoids clustering, optimized via knee-locator
-        Returns:
-            cluster_results: dictionary with information about the clusters in best performing K-Medoids
+        Cluster with K-Medoids (PAM) on the squared distance matrix.
+
+        Uses ``defined_n_clusters`` clusters if set. Otherwise fits 1-50 clusters
+        and picks the elbow of the inertia curve.
+
+        Returns
+        -------
+        cluster_results : dict
+            ``n_clusters``, ``labels`` (cluster of each file), ``silhouette_score``
+            and ``cluster_centers_indices`` (index of each cluster's medoid).
         """
         from sklearn_extra.cluster import KMedoids
 
@@ -298,6 +338,14 @@ class cluster:
         return cluster_results
 
     def affinity(self):
+        """
+        Cluster with affinity propagation, using 1 - distance as the affinity.
+
+        Notes
+        -----
+        Not working yet: it stores results on ``self.cluster_results`` before that
+        exists and returns nothing, so ``cluster_method: "affinity"`` fails.
+        """
         from sklearn.cluster import AffinityPropagation
 
         affinity = AffinityPropagation(
@@ -313,6 +361,15 @@ class cluster:
         )
 
     def hdbscan(self):
+        """
+        Cluster with HDBSCAN, trying two distance cutoffs and keeping the best
+        silhouette score.
+
+        Notes
+        -----
+        Not working yet: it reads ``self.cluster_results`` before that exists and
+        returns nothing, so ``cluster_method: "hdbscan"`` fails.
+        """
         from sklearn.cluster import HDBSCAN
 
         performance_list = []
@@ -382,11 +439,17 @@ class cluster:
 
     def cluster_analyze(self):
         """
-        Method to analyze, format, and plot clustering results
-        Takes:
-            self: information about clustering and topology files
-        Returns:
-            compressed_dictionary: dictionary with information about the clusters
+        Summarize the clusters, and optionally plot them.
+
+        Returns
+        -------
+        compressed_dictionary : dict
+            One entry per cluster, keyed by cluster number and sorted from largest to
+            smallest, with the ``count``, ``percentage``, the medoid's index
+            (``index_center``) and file (``name_center``), ``mean_distance`` and
+            ``max_distance`` from the medoid, and the cluster's ``files`` and their
+            ``distances`` from the medoid. Also has ``silhouette``, ``n_clusters`` and
+            ``total_count``.
         """
         # generate compressed distance matrix of cluster centers
         self.reduced_distance_matrix = self.distance_matrix[
