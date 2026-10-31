@@ -94,7 +94,7 @@ jobs:
         !contains(github.ref_name, 'b') &&
         !contains(github.ref_name, 'rc')
     name: Publish to PyPI
-    needs: build_wheels
+    needs: [build_wheels, build_sdist]
 
     # ONLY publish stable versions like v0.0.8
     # DO NOT publish prereleases like v0.0.8a
