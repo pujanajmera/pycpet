@@ -26,6 +26,53 @@ The Options File
 
 The options file is the cornerstone of *PyCPET*. It is a .json file that contains all relevant parameters you wish to specify for the calculation. Examples can be found in ``examples``. Every option, with its default, is listed in the :doc:`Options Reference <Options>`, and :doc:`Atom Specification <AtomSpec>` explains how to choose the ``center``, axes and filters.
 
+Your First Calculation
+----------------------
+
+``examples/1A_point-field`` computes the electric field at the midpoint of a C=O bond in residue 378 of an alcohol dehydrogenase variant, for two frames of a simulation. Its options file, ``options/options.json``, is:
+
+.. code-block:: json
+
+    {
+        "CPET_method": "point_field",
+        "inputpath": "./pdb",
+        "center": {
+            "method": "mean",
+            "atoms": [
+                {"C7": 378},
+                {"O9": 378}
+            ]
+        },
+        "filter_intersect": true,
+        "filter": {
+            "resid": ["CF1"],
+            "resnum": [378]
+        },
+        "filter_radius": 40
+    }
+
+- ``"CPET_method": "point_field"`` computes the field vector at one point.
+- ``"inputpath": "./pdb"`` points to the folder with the two frames, ``1_alcdehydro_run1.pdb`` and ``2_alcdehydro_run1.pdb``.
+- ``center`` is the point itself: the mean position of atoms C7 and O9 of residue 378, which is the midpoint of the bond.
+- There is no ``x`` or ``y``, so the field is given in the input file's frame rather than a frame aligned to the bond.
+- ``filter`` with ``"filter_intersect": true`` removes residue CF1 378, so the residue's own charges don't contribute to the field at its bond.
+- ``"filter_radius": 40`` keeps only residues with at least one atom within 40 Å of the center.
+- ``outputpath`` isn't set, so results go to ``./outdir``.
+
+Run it from the example's folder:
+
+.. code-block:: console
+
+    cd examples/1A_point-field
+    cpet.py -o options/options.json
+
+The log lists the atoms used for the center, the filters applied and each structure as it is processed. ``outdir/point_field.dat`` then has one line per structure, with the x, y and z components of the field:
+
+.. code-block:: text
+
+    1_alcdehydro_run1:[-1.010131    0.5121924   0.28650615]
+    2_alcdehydro_run1:[-1.0865108   0.33583832  0.3645109 ]
+
 Available Methods
 -----------------
 
