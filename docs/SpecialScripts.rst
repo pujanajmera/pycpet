@@ -5,7 +5,7 @@ The following are tutorials for special scripts that aren't built into the cpet.
 
 Electrostatic Interaction Energy Analysis
 -------------------------------------------------
-Authors: Anubhav Goswami, Pujan Ajmera. Credit to the Binju Wang group for the original method (w/o nuclear correction): https://doi.org/10.1021/acs.jpcb.3c01054
+Authors: Anubhav Goswami, Pujan Ajmera. Credit to the Binju Wang group for the original method (w/o nuclear correction): [Yan2023]_
 
 The script is electrostatic_interaction_QM.py, and it computes interaction energies (for QM/MM calculations/QM calculations with point charge embedding) using these equations:
 

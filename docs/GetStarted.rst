@@ -39,8 +39,8 @@ These are some general options that are required for most/all calculations. Ever
     - ``point_mag``: Computing the electric field magnitude at a point.
     - ``volume``: Computing the electric field in a volume, defined by an oriented grid.
     - ``volume_ESP``: Computing the electrostatic potential in a volume, defined by an oriented grid.
-    - ``topo``: Computing the electric field topology in a volume by distribution of streamlines (runs on several processes in parallel). See https://doi.org/10.1021/acscatal.0c02795 and https://doi.org/10.1007/978-3-540-89689-0_23
-    - ``topo_GPU``: Same as above, but GPU-accelerated. See https://doi.org/10.1021/acs.jctc.5c00138
+    - ``topo``: Computing the electric field topology in a volume by distribution of streamlines (runs on several processes in parallel). See [Hennefarth2020]_ and [Dinh2008]_
+    - ``topo_GPU``: Same as above, but GPU-accelerated. See [Ajmera2025]_
     - ``box_check``: Prints out any residues that are intruding in the box volume defined by the user
 
     - The below are methods that depend on one or more previous calculations run above. These provide immense value for dynamics analysis.
@@ -48,7 +48,7 @@ These are some general options that are required for most/all calculations. Ever
     - ``cluster_volume``: Clustering a set of electric field volumes to get representative fields, using distances between the fields directly.
     - ``cluster_volume_tensor``: Clustering a set of electric field volumes to get representative fields, using a tensor-decomposition. See [Chaturvedi2025]_
     - ``cluster_volume_esp_tensor``: Clustering a set of electrostatic potential volumes to get representative electrostatic potentials, using a tensor-decomposition. This is the only method to use for electrostatic potential clustering.
-    - ``pca``: Performing PCA on a set of electric field volumes, especially useful for comparing field dynamics between mutants. See https://doi.org/10.1021/jacs.4c03914 and https://doi.org/10.1021/acs.jctc.5c00138
+    - ``pca``: Performing PCA on a set of electric field volumes, especially useful for comparing field dynamics between mutants. See [Chaturvedi2024]_ and [Ajmera2025]_
     - ``pca_compare``: Performing PCA separately on each of several sets of electric field volumes (e.g. variants), listed in ``inputpath_list``.
     - ``visualize_field`` or ``visualize_esp``: Make a .bild file for ChimeraX to visualize the electric field or electrostatic potential, respectively.
 
