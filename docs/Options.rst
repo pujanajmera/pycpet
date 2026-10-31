@@ -127,7 +127,7 @@ Topology
    * - ``concur_slip``
      - ``topo``
      - ``4``
-     - Number of worker processes. See :doc:`Parallel Execution <Parallel>`.
+     - Number of worker processes. See :doc:`Parallel & GPU <Parallel>`.
    * - ``GPU_batch_freq``
      - ``topo_GPU``
      - ``100``

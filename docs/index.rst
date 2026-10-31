@@ -29,12 +29,6 @@ PyCPET, or Python-based Computation of Protein Electric Field Topology, is built
 
       Write an options file and run your first calculation.
 
-   .. grid-item-card:: :octicon:`gear` Options reference
-      :link: Options
-      :link-type: doc
-
-      Every options file key, with its default and the methods that use it.
-
    .. grid-item-card:: :octicon:`zap` Fields, topologies & potentials
       :link: FieldTopESP
       :link-type: doc
@@ -46,6 +40,12 @@ PyCPET, or Python-based Computation of Protein Electric Field Topology, is built
       :link-type: doc
 
       Clustering and PCA of fields across trajectories and variants.
+
+   .. grid-item-card:: :octicon:`gear` Options reference
+      :link: Options
+      :link-type: doc
+
+      Every options file key, with its default and the methods that use it.
 
    .. grid-item-card:: :octicon:`code` API reference
       :link: apiref
@@ -89,17 +89,29 @@ If you use *PyCPET*, please :doc:`cite the PyCPET paper <citation>`.
 .. toctree::
    :hidden:
    :maxdepth: 2
-   :caption: Contents
+   :caption: User guide
 
    Installation
    GetStarted
-   Options
    InputFiles
    AtomSpec
    FieldTopESP
+   Parallel
    Visualization
    Dynamics
    SpecialScripts
-   Parallel
-   citation
+
+.. toctree::
+   :hidden:
+   :maxdepth: 2
+   :caption: Reference
+
+   Options
    apiref
+
+.. toctree::
+   :hidden:
+   :maxdepth: 2
+   :caption: About
+
+   citation

@@ -1,5 +1,5 @@
-Parallel Execution
-==================
+Parallel & GPU
+==============
 
 Default Execution
 -----------------

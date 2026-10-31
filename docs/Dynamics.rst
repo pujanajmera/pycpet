@@ -1,6 +1,6 @@
-Dynamics of 3-D E-Fields and Potentials
-================================================
-Most of this section depends on prior computations of electric field, streamline distribution, or electrostatic potential. Please refer to the `FieldTopESP` section for details on how to compute these quantities.
+Dynamics: Clustering & PCA
+==========================
+Most of this section depends on prior computations of electric field, streamline distribution, or electrostatic potential. Please refer to :doc:`FieldTopESP` for details on how to compute these quantities.
 
 Electric Field Topologies
 -------------------------
