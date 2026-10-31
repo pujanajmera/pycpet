@@ -155,6 +155,27 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Changes are merged locally rather than through PRs, so list the commit
+      # subjects since the previous tag; GitHub appends its compare link below
+      - name: Write release notes from commit messages
+        run: |
+          previous=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          if [ -n "${previous}" ]; then
+            range="${previous}..${GITHUB_REF_NAME}"
+            echo "## Changes since ${previous}" > release_notes.md
+          else
+            range="${GITHUB_REF_NAME}"
+            echo "## Changes" > release_notes.md
+          fi
+          echo "" >> release_notes.md
+          git log --no-merges --reverse --format='- %s' "${range}" >> release_notes.md
+          cat release_notes.md
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -170,5 +191,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: final_dist/*
+          body_path: release_notes.md
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, 'a') || contains(github.ref_name, 'b') || contains(github.ref_name, 'rc') }}
