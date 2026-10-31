@@ -219,47 +219,95 @@ def default_options_initializer(options):
     Takes
         options(dict) - dictionary of options
     Returns
-        options(dict) - dictionary of options with default values
+        options(dict) - new dictionary of options with default values; the input is not modified
     """
+    options = dict(options)
+
     # Directories:
-    if "inputpath" not in options.keys():
+    if "inputpath" not in options:
         options["inputpath"] = "./inpdir"
-    if "outputpath" not in options.keys():
+    if "outputpath" not in options:
         options["outputpath"] = "./outdir"
-    if "inputfiletype" not in options.keys():
+    if "inputfiletype" not in options:
         options["inputfiletype"] = "pdb"  # Default to pdb with charges
 
     # Developer Options:
-    if "profile" not in options.keys():
+    if "profile" not in options:
         options["profile"] = False
 
     # Debugging Options:
-    if "write_transformed_pdb" not in options.keys():
+    if "write_transformed_pdb" not in options:
         options["write_transformed_pdb"] = False
 
     # Box options (all 3D calcs):
-    if "dimensions" not in options.keys():
+    if "dimensions" not in options:
         options["dimensions"] = None
-    if "step_size" not in options.keys():  # Both for topology/box
+    if "step_size" not in options:  # Both for topology/box
         options["step_size"] = None
-    if "initializer" not in options.keys():
+    if "initializer" not in options:
         options["initializer"] = "uniform"
-    if "box_shift" not in options.keys():
+    if "box_shift" not in options:
         options["box_shift"] = [0, 0, 0]
 
     # Filtering Options:
-    if "filter_intersect" not in options.keys():
+    if "filter_intersect" not in options:
         options["filter_intersect"] = False
+    if "filter_in_box" not in options:
+        options["filter_in_box"] = False
+    if "strip_filter" not in options:
+        options["strip_filter"] = False
 
     # Topology Options:
-    if "concur_slip" not in options.keys():
+    if "concur_slip" not in options:
         options["concur_slip"] = 4
-    if "dtype" not in options.keys():
+    if "dtype" not in options:
         options["dtype"] = "float32"
-    if "GPU_batch_freq" not in options.keys():
+    if "GPU_batch_freq" not in options:
         options["GPU_batch_freq"] = 100
-    if "n_samples" not in options.keys():
+    if "n_samples" not in options:
         options["n_samples"] = None
+    if "max_streamline_init" not in options:
+        options["max_streamline_init"] = "true_rand"
+
+    # Clustering Options:
+    if "plot_clusters" not in options:
+        options["plot_clusters"] = False
+    if "plot_dwell_times" not in options:
+        options["plot_dwell_times"] = False
+    if "cluster_reload" not in options:
+        options["cluster_reload"] = False
+    if "defined_n_clusters" not in options:
+        options["defined_n_clusters"] = None
+    if "tensor_threshold" not in options:
+        options["tensor_threshold"] = 0.001
+    if "rank" not in options:
+        options["rank"] = None
+    if "max_rank" not in options:
+        options["max_rank"] = 30
+    if "min_rank" not in options:
+        options["min_rank"] = 1
+
+    # PCA Options:
+    if "pca_reload" not in options:
+        options["pca_reload"] = False
+    if "save_pca" not in options:
+        options["save_pca"] = False
+    if "whitening" not in options:
+        options["whitening"] = False
+    if "verbose" not in options:
+        options["verbose"] = True
+    if "pca_combined_only" not in options:
+        options["pca_combined_only"] = False
+
+    # Visualization Options (user settings override the nested defaults):
+    options["visualization"] = {
+        "cutoff": 0,
+        "sparsify_factor": 1,
+        **options.get("visualization", {}),
+    }
+    for esp_limit in ["max_p_esp", "min_p_esp", "max_n_esp", "min_n_esp"]:
+        if esp_limit not in options:
+            options[esp_limit] = None
 
     return options
 
