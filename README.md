@@ -1,5 +1,5 @@
 <div align="center">
-<img title="logo" alt="PyCPET logo" src="pycpet-logo.png" width="600">
+<img title="logo" alt="PyCPET logo" src="docs/_static/pycpet-logo.png" width="300">
 
 <br/><br/>
 [![DOI:10.1021/acs.jctc.5c00138](https://img.shields.io/badge/DOI-10.1021%2Facs.jctc.5c00138-blue

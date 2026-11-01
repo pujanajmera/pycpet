@@ -75,8 +75,8 @@ Each dipole file (``.dip``) has a header line, then one line per dipole with 7 c
 - `-d/--dipole_dir`: Folder of ``.dip`` files. Every file is processed, in random order.
 - `-c/--center`: The box center, as 3 coordinates (default 0 0 0).
 - `-x`: A point the x axis points to from the center, as 3 coordinates (default 1 0 0).
-- `-y`: A point that sets the y axis, as for ``y`` in the options file. Always set it: the default is the same as `-x`, which gives no frame.
-- `-dim/--dimensions`: The box half widths in Å. Always set it: the script currently fails with the default.
+- `-y`: A point that sets the y axis, as for ``y`` in the options file (default 0 1 0).
+- `-dim/--dimensions`: The box half widths in Å (default 1 1 1).
 - `-n/--n-samples`: The number of streamlines (default 1000), rounded up to the next perfect cube.
 - `-s/--step-size`: The streamline step size in Å (default 0.1).
 - `-t/--threads`: The number of worker processes for streamlines (default 1). As for ``topo``, set ``OMP_NUM_THREADS=1``.
@@ -95,13 +95,13 @@ The script is residue_breakdown_analysis.py, and it ranks how much each residue 
 
 These are the following options that can be passed to the script:
 
-- `-t/--tops`: Folder of ``.top`` files from ``topo``.
-- `-p/--pdbs`: Folder of the matching PDB files. Every PDB file needs a ``.top`` file of the same name, and all structures must contain the same residues.
+- `-t/--tops`: Folder of ``.top`` files from ``topo``. Other files in the folder are ignored.
+- `-p/--pdbs`: Folder of the matching PDB files. Every PDB file needs a ``.top`` file of the same name, and every ``.top`` file a PDB file. Other files in the folder are ignored.
 - `-c/--curvbound`: Lower and upper curvature bounds of the histograms, separated by a comma (e.g. 0,2).
 - `-cx/--curvres`: Curvature bin width of the histograms.
 - `-d/--distbound`: Lower and upper distance bounds of the histograms, separated by a comma.
 - `-dx/--distres`: Distance bin width of the histograms.
-- `-o`: PyCPET options file (default ./options/options.json). Use the one from the ``topo`` run, with ``"max_streamline_init": "fixed_rand"``, so each residue's streamlines start from the same points and run for the same number of steps as the full topology. Residues are taken from the first PDB file after filtering, skipping water (WAT).
+- `-o`: PyCPET options file (default ./options/options.json). Use the one from the ``topo`` run, with ``"max_streamline_init": "fixed_rand"``, so each residue's streamlines start from the same points and run for the same number of steps as the full topology. Residues are taken from the first PDB file after filtering, skipping water (WAT); a structure without one of them is left out of that residue's average.
 
 Each residue's distance is printed for every structure as it is computed. The working directory gets residue_list.txt, the residues analyzed, and chi_squared_avg.txt, each residue's mean and standard deviation of the distance over all structures, lowest first. One topology is computed per residue per structure, so this is slow for large systems; as for ``topo``, set ``OMP_NUM_THREADS=1``. The following usage is recommended, from the repository folder:
 

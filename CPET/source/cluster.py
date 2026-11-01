@@ -23,6 +23,44 @@ from CPET.utils.io import default_options_initializer
 log = logging.getLogger(__name__)
 
 
+def reusable_tensor(tensor_path, file_list):
+    """
+    Check whether a saved 5D tensor of electrostatic potentials can be reused.
+
+    It can be if it has one entry per input file and one value per grid point (so it
+    isn't a field tensor), and it is newer than every input file.
+
+    Parameters
+    ----------
+    tensor_path : str
+        Path to the saved tensor.
+    file_list : list of str
+        The potential files that are being clustered.
+
+    Returns
+    -------
+    bool
+        True if the saved tensor can be used instead of building it again.
+    """
+    if not os.path.exists(tensor_path):
+        return False
+    if os.path.getmtime(tensor_path) < max(os.path.getmtime(f) for f in file_list):
+        log.info("Saved 5D tensor is older than the input files, building it again")
+        return False
+    try:
+        shape = np.load(tensor_path, mmap_mode="r").shape
+    except (OSError, ValueError):
+        log.info("Saved 5D tensor can't be read, building it again")
+        return False
+    if len(shape) != 5 or shape[0] != len(file_list) or shape[-1] != 1:
+        log.info(
+            f"Saved 5D tensor has shape {shape}, which doesn't fit {len(file_list)} "
+            "potential files, building it again"
+        )
+        return False
+    return True
+
+
 class NpEncoder(json.JSONEncoder):
     """
     JSON encoder that also writes NumPy integers, floats and arrays.
@@ -165,15 +203,16 @@ class cluster:
                     self.reduced_tensor
                 )
             elif options["CPET_method"] == "cluster_volume_esp_tensor":
-                # Skip 5d tensor if already made
-                if os.path.exists(self.outputpath + "/5d_tensor.npy"):
+                # Skip 5d tensor if already made from these files
+                tensor_path = self.outputpath + "/5d_tensor.npy"
+                if reusable_tensor(tensor_path, self.file_list):
                     log.info("5D tensor already found in output directory, skipping")
-                    self.full_tensor = np.load(self.outputpath + "/5d_tensor.npy")
+                    self.full_tensor = np.load(tensor_path)
                 else:
                     self.full_tensor = make_5d_tensor(
                         self.file_list, type="esp"
                     )  # Try to use same fxn as above, to be efficient
-                np.save(self.outputpath + "/5d_tensor.npy", self.full_tensor)
+                    np.save(tensor_path, self.full_tensor)
                 if self.rank == None:
                     self.rank = determine_rank(
                         self.full_tensor,
