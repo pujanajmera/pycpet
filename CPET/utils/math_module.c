@@ -306,8 +306,8 @@ void calc_field_base(float E[3], float x_init[3], int n_charges, float x[n_charg
     float r_norm;
     float E_temp[n_charges][3];
 
-    //# pragma omp parallel for shared(E, x_init, n_charges, x, Q) private(r_mag_cube, r_norm, R)
-    # pragma omp parallel for
+    // Each thread handles different charges, so R, r_norm and r_mag_cube are private to each thread
+    # pragma omp parallel for private(R, r_norm, r_mag_cube)
     for (int i = 0; i < n_charges; i++)
     {
         //get difference of x and x_init
