@@ -48,3 +48,14 @@ packages = [
 ]
 
 # The math_module C extension and its compiler flags are defined in setup.py
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: runs cpet.py end to end, takes more than a few seconds",
+    "gpu: needs a CUDA GPU",
+]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::UserWarning"]
