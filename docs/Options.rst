@@ -127,7 +127,7 @@ Topology
    * - ``concur_slip``
      - ``topo``
      - ``4``
-     - Number of worker processes. See :doc:`Parallel Execution <Parallel>`.
+     - Number of worker processes. See :doc:`Parallel & GPU <Parallel>`.
    * - ``GPU_batch_freq``
      - ``topo_GPU``
      - ``100``
@@ -147,7 +147,7 @@ Clustering
    * - ``cluster_method``
      - clustering methods
      - ``"kmeds"``
-     - ``"kmeds"`` (K-Medoids). ``"affinity"`` (affinity propagation) and ``"hdbscan"`` are in the code but don't work yet. Unknown values fall back to ``"kmeds"``.
+     - ``"kmeds"`` (K-Medoids). ``"affinity"`` (affinity propagation) and ``"hdbscan"`` are also accepted :bdg-warning-line:`not working yet`. Unknown values fall back to ``"kmeds"``.
    * - ``defined_n_clusters``
      - ``kmeds``
      - none
@@ -163,7 +163,7 @@ Clustering
    * - ``plot_dwell_times``
      - clustering methods
      - ``false``
-     - Not implemented yet; setting it only logs a warning.
+     - :bdg-warning-line:`not working yet` Setting it only logs a warning.
    * - ``rank``
      - tensor clustering
      - none
@@ -227,7 +227,7 @@ PCA
    * - ``pca_combined_only``
      - ``pca_compare``
      - ``false``
-     - Combined PCA across variants is not finished: ``true`` skips the per-variant PCA and currently produces no PCA output.
+     - :bdg-warning-line:`not working yet` Combined PCA across variants: ``true`` skips the per-variant PCA and currently produces no PCA output.
 
 Visualization
 -------------
@@ -276,6 +276,8 @@ Output and debugging
      - field calculations
      - ``false``
      - Developer option for profiling.
+
+.. _command-line-flags:
 
 Command-line flags
 ------------------

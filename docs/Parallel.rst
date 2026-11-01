@@ -1,5 +1,5 @@
-Parallel Execution
-==================
+Parallel & GPU
+==============
 
 Default Execution
 -----------------
@@ -26,6 +26,10 @@ CPU-accelerated field topology calculations use 4 processes by default. To chang
 
 where the value (16 here) is the number of processes to use. This will parallelize the streamline calculations over that many processes, which is generally good for many streamlines (e.g. >1000). Example benchmarking can be found in our 
 paper [Ajmera2025]_. This is designed for HPC or more powerful workstations with many cores. The "topo" method by default uses parallelization, so you do not need to change that part of the options file.
+
+.. note::
+
+   Set ``OMP_NUM_THREADS=1`` and parallelize only with ``concur_slip``. With more than one OpenMP thread, ``topo`` gives incorrect results (see :doc:`Installation <Installation>`).
 
 GPU Acceleration (through pytorch)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

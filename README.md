@@ -32,7 +32,7 @@ cd pycpet
 pip install -e .
 ```
 
-Before running, limit OpenMP to one thread. Topology calculations already run several worker processes, and without this each one starts a thread per CPU core:
+Before running, limit OpenMP to one thread. With more than one thread, CPU topology calculations give incorrect results:
 
 ```bash
 export OMP_NUM_THREADS=1
