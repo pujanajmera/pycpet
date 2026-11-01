@@ -247,17 +247,15 @@ def calculate_electric_field_base(x_0, x, Q):
     """
     Computes electric field at a point given positions of charges, basic version
     Takes
-        x_0(array) - position to compute field at of shape (1,3)
+        x_0(array) - position to compute field at of shape (3,)
         x(array) - positions of charges of shape (N,3)
         Q(array) - magnitude and sign of charges of shape (N,1)
     Returns
-        E(array) - electric field at the point of shape (1,3)
+        E(array) - electric field at the point of shape (3,)
     """
-    # Create matrix R
-    R = np.subtract(x_0, x)  # Shape (1, N, 3)
-    denom = np.linalg.norm(R) ** 3  # Shape (1, N)
-    E_vec = R * (1 / denom).reshape(-1, 1) * Q * 14.3996451  # Shape (1, N, 3)
-    return E_vec
+    R = np.subtract(x_0, x)  # Shape (N, 3)
+    r = np.linalg.norm(R, axis=1, keepdims=True)  # Shape (N, 1)
+    return (R * Q / r ** 3).sum(axis=0) * 14.3996451
 
 
 def calculate_electric_field_dev_c_shared(x_0, x, Q):

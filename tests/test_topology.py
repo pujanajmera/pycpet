@@ -87,6 +87,18 @@ def test_c_topology_matches_reference(topo):
     np.testing.assert_allclose(hist, reference_topology(topo), rtol=1e-3, atol=1e-3)
 
 
+def test_single_process_topology_matches_c(topo):
+    """compute_topo_single, the plain Python version, agrees with the C extension."""
+    hist = topo.compute_topo_single()
+
+    assert hist.shape == (27, 2)
+    assert np.isfinite(hist).all()
+    np.testing.assert_allclose(
+        hist, topo.compute_topo_complete_c_shared(), rtol=1e-3, atol=1e-3
+    )
+    np.testing.assert_allclose(hist, reference_topology(topo), rtol=1e-3, atol=1e-3)
+
+
 def test_c_topology_is_reproducible(topo):
     """With fixed_rand, two runs give the same result."""
     np.testing.assert_array_equal(

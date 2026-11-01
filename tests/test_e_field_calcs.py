@@ -136,14 +136,11 @@ def test_point_on_a_charge():
     assert np.isfinite(compute_field_on_grid(p.reshape(1, 1, 1, 3), x, Q)).all()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="calculate_electric_field_base divides by the norm of the whole R matrix, "
-    "and returns one row per charge, so it is only right for a single charge",
-)
-def test_base_field_sums_to_reference(charges):
+def test_base_field_matches_reference(charges):
+    """The simple implementation returns one vector, the field of all the charges."""
     x, Q, points = charges
+    for p in points:
+        E = calculate_electric_field_base(p, x, Q)
 
-    E = calculate_electric_field_base(points[0], x, Q)
-
-    np.testing.assert_allclose(E.sum(axis=0), reference_field(points[0], x, Q), rtol=1e-6)
+        assert E.shape == (3,)
+        np.testing.assert_allclose(E, reference_field(p, x, Q), rtol=1e-10)
