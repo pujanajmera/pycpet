@@ -12,7 +12,7 @@ Electric Fields
 Two options, under ``visualization``, control what's drawn:
 
 - ``cutoff``: a percentile (0–100) of field magnitude; weaker arrows aren't drawn. Raise it to show only the strongest parts of a busy field.
-- ``sparsify_factor``: draws every Nth grid point along each axis, for fewer arrows. It's rounded to the nearest factor of the number of points along x, so on an axis with a prime number of points (such as 11) it has no effect.
+- ``sparsify_factor``: draws every Nth grid point along each axis, for fewer arrows. It's rounded to a factor shared by the number of points along x, y and z, so if any axis has a prime number of points (such as 11) it has no effect.
 
 Example ``2B_3D-field-visualization`` draws the fields from ``2A_3D-field``. Visualization runs in Python.
 
