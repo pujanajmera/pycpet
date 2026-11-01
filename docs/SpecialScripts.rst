@@ -75,8 +75,8 @@ Each dipole file (``.dip``) has a header line, then one line per dipole with 7 c
 - `-d/--dipole_dir`: Folder of ``.dip`` files. Every file is processed, in random order.
 - `-c/--center`: The box center, as 3 coordinates (default 0 0 0).
 - `-x`: A point the x axis points to from the center, as 3 coordinates (default 1 0 0).
-- `-y`: A point that sets the y axis, as for ``y`` in the options file. Always set it: the default is the same as `-x`, which gives no frame.
-- `-dim/--dimensions`: The box half widths in Å. Always set it: the script currently fails with the default.
+- `-y`: A point that sets the y axis, as for ``y`` in the options file (default 0 1 0).
+- `-dim/--dimensions`: The box half widths in Å (default 1 1 1).
 - `-n/--n-samples`: The number of streamlines (default 1000), rounded up to the next perfect cube.
 - `-s/--step-size`: The streamline step size in Å (default 0.1).
 - `-t/--threads`: The number of worker processes for streamlines (default 1). As for ``topo``, set ``OMP_NUM_THREADS=1``.
