@@ -340,12 +340,13 @@ void calc_field_base_dipole(float E[3], float x_init[3], int n_dipoles, float x[
     float r_mag[n_dipoles];
     float r_mag_sq;
     float r_mag_fifth;
+    float mu_dot_r;
     float factor = 14.3996451;
     float r_norm;
     float E_temp[n_dipoles][3];
 
-    //# pragma omp parallel for shared(E, x_init, n_dipoles, x, mu) private(r_mag_cube, r_norm, R)
-    # pragma omp parallel for
+    // Each thread handles different dipoles, so these variables are private to each thread
+    # pragma omp parallel for private(R, r_norm, r_mag_sq, r_mag_fifth, mu_dot_r)
     for (int i = 0; i < n_dipoles; i++)
     {
         //get difference of x and x_init
@@ -356,10 +357,11 @@ void calc_field_base_dipole(float E[3], float x_init[3], int n_dipoles, float x[
         r_norm = sqrt(pow(R[0], 2) + pow(R[1], 2) + pow(R[2], 2));
         r_mag_sq = pow(r_norm, 2);
         r_mag_fifth = pow(r_norm, -5);
+        mu_dot_r = mu[i][0] * R[0] + mu[i][1] * R[1] + mu[i][2] * R[2];
 
-        E_temp[i][0] = factor * r_mag_fifth * ((3 * mu[i][0] * R[0] + mu[i][1] * R[1] + mu[i][2] * R[2]) * R[0] - mu[i][0] * r_mag_sq);
-        E_temp[i][1] = factor * r_mag_fifth * ((3 * mu[i][0] * R[0] + mu[i][1] * R[1] + mu[i][2] * R[2]) * R[1] - mu[i][1] * r_mag_sq);
-        E_temp[i][2] = factor * r_mag_fifth * ((3 * mu[i][0] * R[0] + mu[i][1] * R[1] + mu[i][2] * R[2]) * R[2] - mu[i][2] * r_mag_sq);
+        E_temp[i][0] = factor * r_mag_fifth * (3 * mu_dot_r * R[0] - mu[i][0] * r_mag_sq);
+        E_temp[i][1] = factor * r_mag_fifth * (3 * mu_dot_r * R[1] - mu[i][1] * r_mag_sq);
+        E_temp[i][2] = factor * r_mag_fifth * (3 * mu_dot_r * R[2] - mu[i][2] * r_mag_sq);
     }
 
     for (int i = 0; i < n_dipoles; i++)
