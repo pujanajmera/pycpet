@@ -57,6 +57,6 @@ By default the file keeps every atom, including the filtered ones, so the residu
 
 .. note::
 
-   Field and potential ``.bild`` files from ``visualize_field`` and ``visualize_esp`` are in the original frame, so they line up with the original structure, not the transformed one. With a nonzero ``box_shift``, the two ``strip_filter`` settings shift the structure in opposite directions, so check the box position.
+   Field and potential ``.bild`` files from ``visualize_field`` and ``visualize_esp`` are in the original frame, so they line up with the original structure, not the transformed one. With a nonzero ``box_shift``, the structure in the transformed file is shifted the opposite way, so the box drawn around the origin stays in the right place.
 
 *Figure to be added: a transformed structure with its box, drawn in ChimeraX.*

@@ -388,15 +388,19 @@ class calculator:
             if self.strip_filter == True:
                 self.log.info("Stripping filtered residues for transformed PDB file")
                 self.x_copy = deepcopy(self.x)
-                self.residue_number_copy = deepcopy(self.residue_number)
-                self.resids_copy = deepcopy(self.resids)
-                self.atom_number_copy = deepcopy(self.atom_number)
-                self.atom_type_copy = deepcopy(self.atom_type)
+                # Identities come from ID, which every filter trims along with x. The
+                # atom_number, atom_type, resids and residue_number attributes are not
+                # trimmed by filter_radius or filter_in_box, so they don't line up with x.
+                self.atom_number_copy = [atom[0] for atom in self.ID]
+                self.atom_type_copy = [atom[1] for atom in self.ID]
+                self.resids_copy = [atom[2] for atom in self.ID]
+                self.residue_number_copy = [atom[3] for atom in self.ID]
             else:
-                self.x_copy = (self.x_copy - self.center) @ np.linalg.inv(
-                    self.transformation_matrix
-                )
-                self.x_copy = self.x_copy + np.array(self.box_shift)
+                # Same steps as for x above: center, rotate if there are axes, shift the protein
+                self.x_copy = self.x_copy - self.center
+                if hasattr(self, "y_vec_pt"):
+                    self.x_copy = self.x_copy @ np.linalg.inv(self.transformation_matrix)
+                self.x_copy = self.x_copy - np.array(self.box_shift)
             chain_id = "A"
             with open(f"transform_{path_to_pdb.split('/')[-1][:-4]}.pdb", "w") as f:
                 for i in range(len(self.x_copy)):
