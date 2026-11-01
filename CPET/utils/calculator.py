@@ -1085,28 +1085,34 @@ def determine_rank(tensor_5d, threshold, max_rank, min_rank=1):
     # Use kneed to find the elbow point
     kneedle = KneeLocator(ranks, errors, curve="convex", direction="decreasing")
     elbow_rank = kneedle.elbow
-    optimal_rank = 50  # Just some default value
 
     # Check if the reconstruction error at the elbow rank is less than tensor_threshold
-    if errors[elbow_rank - 1] > threshold:
-        log.info(
-            f"Reconstruction error at elbow rank {elbow_rank} is {errors[elbow_rank - 1]}, above threshold {threshold}"
-        )
-        log.info(f"Searching for the lowest rank with error below {threshold}")
-
-        # Find the lowest rank where the reconstruction error is < tensor_threshold
-        for i, error in enumerate(errors):
-            if error < threshold:
-                optimal_rank = ranks[i]
-                log.info(
-                    f"Found optimal rank {optimal_rank} with reconstruction error {error}"
-                )
-                break
+    if elbow_rank is None:
+        log.info("No elbow found in the reconstruction errors")
     else:
-        optimal_rank = elbow_rank
-        log.info(f"Optimal rank from the elbow method (kneedle): {optimal_rank}")
+        elbow_error = errors[ranks.index(elbow_rank)]
+        if elbow_error <= threshold:
+            log.info(f"Optimal rank from the elbow method (kneedle): {elbow_rank}")
+            return elbow_rank
+        log.info(
+            f"Reconstruction error at elbow rank {elbow_rank} is {elbow_error}, above threshold {threshold}"
+        )
 
-    return optimal_rank
+    # Find the lowest rank where the reconstruction error is < tensor_threshold
+    log.info(f"Searching for the lowest rank with error below {threshold}")
+    for rank, error in zip(ranks, errors):
+        if error < threshold:
+            log.info(f"Found optimal rank {rank} with reconstruction error {error}")
+            return rank
+
+    # No rank reached the threshold, so use the one that comes closest
+    best = int(np.argmin(errors))
+    log.warning(
+        f"No rank from {ranks[0]} to {ranks[-1]} reached a reconstruction error below "
+        f"{threshold}. Using rank {ranks[best]}, which has the lowest error ({errors[best]}). "
+        "Increase max_rank or tensor_threshold to change this"
+    )
+    return ranks[best]
 
 
 def report_inside_box(calculator_object):

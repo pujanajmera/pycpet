@@ -53,8 +53,8 @@ Choosing the rank
 ``rank`` sets it directly. Without it, *PyCPET* decomposes the tensor at every rank from 1 to ``max_rank`` (default 30) and logs each reconstruction error (mean squared error divided by the mean absolute value of the tensor):
 
 - If the error at the elbow of that curve is at most ``tensor_threshold`` (default 0.001), the elbow rank is used.
-- Otherwise, the lowest rank with an error below ``tensor_threshold`` is used.
-- If no rank reaches it, rank 50 is used, whatever ``max_rank`` is.
+- Otherwise, or if there is no elbow, the lowest rank with an error below ``tensor_threshold`` is used.
+- If no rank reaches it, the rank with the lowest error is used and a warning is logged. Raise ``max_rank`` or ``tensor_threshold`` to change this.
 
 Trying every rank is the slowest step and needs the whole tensor in memory. Once the log shows the errors, set ``rank`` for later runs.
 
