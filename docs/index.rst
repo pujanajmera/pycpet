@@ -1,9 +1,9 @@
 PyCPET
 ======
 
-.. image:: _static/pycpet-logo.png
-   :alt: PyCPET logo
-   :width: 220px
+.. image:: _static/pycpet-overview.webp
+   :alt: PyCPET overview: enzyme structures go into PyCPET, which supports clustering field topologies, HPC topology runs and benchmarking, custom system setup, point field analysis, 3D field visualization, PCA of 3D fields, and 3D topology comparison.
+   :width: 100%
    :align: center
 
 .. rst-class:: hero-tagline
