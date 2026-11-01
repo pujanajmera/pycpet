@@ -358,14 +358,15 @@ class calculator:
             self.log.info("Not rotating coordinates since no y vector is provided")
             self.x = self.x - self.center
 
-        # Box filtering, must be done after coordinates are rotated
+        # Box filtering, must be done after coordinates are rotated. The coordinates
+        # are already centered on the box, so the box is centered on the origin.
         if options["filter_in_box"]:
             self.log.info("Filtering charges in sampling box")
             self.x, self.Q, self.ID = filter_in_box(
                 x=self.x,
                 Q=self.Q,
                 ID=self.ID,
-                center=self.center,
+                center=np.zeros(3),
                 dimensions=self.dimensions,
             )
 

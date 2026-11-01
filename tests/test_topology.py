@@ -109,16 +109,19 @@ def test_gpu_topology_matches_c(topo):
     np.testing.assert_allclose(by_distance(gpu), by_distance(cpu), rtol=1e-2, atol=1e-2)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="the calculator passes center to filter_in_box after moving the center "
-    "to the origin, so the box is in the wrong place and nothing is removed",
-)
 def test_filter_in_box_removes_charges_in_the_box(test_files):
-    options = dict(OPTIONS, filter_in_box=True)
+    """filter_in_box removes the charges inside the box, here just the center atom."""
+    options = dict(OPTIONS)
     del options["filter"], options["filter_intersect"]
+    pdb = str(test_files / "test_large.pdb")
 
-    t = calculator(options, path_to_pdb=str(test_files / "test_large.pdb"))
+    unfiltered = calculator(dict(options, filter_in_box=False), path_to_pdb=pdb)
+    filtered = calculator(dict(options, filter_in_box=True), path_to_pdb=pdb)
 
-    inside = (np.abs(t.x) < np.array(t.dimensions)).all(axis=1)
-    assert not inside.any()
+    def n_inside(t):
+        return (np.abs(t.x) < np.array(t.dimensions)).all(axis=1).sum()
+
+    assert n_inside(unfiltered) == 1
+    assert n_inside(filtered) == 0
+    assert len(filtered.x) == len(unfiltered.x) - 1
+    assert len(filtered.Q) == len(filtered.ID) == len(filtered.x)
