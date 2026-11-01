@@ -53,8 +53,8 @@ Choosing the rank
 ``rank`` sets it directly. Without it, *PyCPET* decomposes the tensor at every rank from 1 to ``max_rank`` (default 30) and logs each reconstruction error (mean squared error divided by the mean absolute value of the tensor):
 
 - If the error at the elbow of that curve is at most ``tensor_threshold`` (default 0.001), the elbow rank is used.
-- Otherwise, the lowest rank with an error below ``tensor_threshold`` is used.
-- If no rank reaches it, rank 50 is used, whatever ``max_rank`` is.
+- Otherwise, or if there is no elbow, the lowest rank with an error below ``tensor_threshold`` is used.
+- If no rank reaches it, the rank with the lowest error is used and a warning is logged. Raise ``max_rank`` or ``tensor_threshold`` to change this.
 
 Trying every rank is the slowest step and needs the whole tensor in memory. Once the log shows the errors, set ``rank`` for later runs.
 
@@ -66,4 +66,4 @@ Electrostatic Potential Tensor-Based Decomposition :bdg-secondary-line:`beta`
 ``cluster_volume_esp_tensor`` clusters the ``_esp.dat`` files from ``volume_ESP`` the same way as fields, with one value per grid point instead of three. It is the only method for clustering potentials.
 
 - The rank is chosen as for fields, from ``min_rank`` (default 1) to ``max_rank``.
-- If ``outputpath`` already has a ``5d_tensor.npy``, it is loaded instead of rebuilt, which saves time when rerunning. Use a separate ``outputpath`` from any field tensor run, or the field tensor would be loaded instead.
+- If ``outputpath`` already has a ``5d_tensor.npy`` made from these files, it is loaded instead of rebuilt, which saves time when rerunning. It is only reused if it has one entry per file and one value per grid point (so not a field tensor) and is newer than every input file; otherwise it is built again.

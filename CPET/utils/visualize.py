@@ -644,9 +644,9 @@ def generate_bild_file(
 
     nx, ny, nz = density1, density2, density3
 
-    # Added code to deal with non-ideal sparsification values: take s and convert it to hcf(closest(factors(nx),s),closest(factors(ny),s),closest(factors(ny),s))i
+    # Added code to deal with non-ideal sparsification values: take s and convert it to hcf(closest(factors(nx),s),closest(factors(ny),s),closest(factors(nz),s))
     sparsify_factor = math.gcd(
-        fac(nx, sparsify_factor), fac(nx, sparsify_factor), fac(nx, sparsify_factor)
+        fac(nx, sparsify_factor), fac(ny, sparsify_factor), fac(nz, sparsify_factor)
     )
     log.info(
         f"Sparsification factor set to {sparsify_factor} for a grid-like visualization"

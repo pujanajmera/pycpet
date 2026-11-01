@@ -36,7 +36,7 @@ def main():
     parser.add_argument(
         "-y",
         type=float,
-        default=[1.0, 0.0, 0.0],
+        default=[0.0, 1.0, 0.0],
         help="List of 3 coordinates to define the y-axis relative to center",
         nargs=3,
     )
@@ -81,7 +81,7 @@ def main():
     print("X-axis:", x)
     print("Y-axis:", y)
 
-    dimensions = np.array(args.dimensions)
+    dimensions = np.array(args.dimensions, dtype=np.float32)
     print("Box dimensions:", dimensions)
     files_input = glob(args.dipole_dir + "/*.dip")
     for i in range(len(files_input) * 100):
