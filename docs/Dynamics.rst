@@ -66,4 +66,4 @@ Electrostatic Potential Tensor-Based Decomposition :bdg-secondary-line:`beta`
 ``cluster_volume_esp_tensor`` clusters the ``_esp.dat`` files from ``volume_ESP`` the same way as fields, with one value per grid point instead of three. It is the only method for clustering potentials.
 
 - The rank is chosen as for fields, from ``min_rank`` (default 1) to ``max_rank``.
-- If ``outputpath`` already has a ``5d_tensor.npy``, it is loaded instead of rebuilt, which saves time when rerunning. Use a separate ``outputpath`` from any field tensor run, or the field tensor would be loaded instead.
+- If ``outputpath`` already has a ``5d_tensor.npy`` made from these files, it is loaded instead of rebuilt, which saves time when rerunning. It is only reused if it has one entry per file and one value per grid point (so not a field tensor) and is newer than every input file; otherwise it is built again.
