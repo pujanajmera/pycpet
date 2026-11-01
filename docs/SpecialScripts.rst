@@ -95,13 +95,13 @@ The script is residue_breakdown_analysis.py, and it ranks how much each residue 
 
 These are the following options that can be passed to the script:
 
-- `-t/--tops`: Folder of ``.top`` files from ``topo``.
-- `-p/--pdbs`: Folder of the matching PDB files. Every PDB file needs a ``.top`` file of the same name, and all structures must contain the same residues.
+- `-t/--tops`: Folder of ``.top`` files from ``topo``. Other files in the folder are ignored.
+- `-p/--pdbs`: Folder of the matching PDB files. Every PDB file needs a ``.top`` file of the same name, and every ``.top`` file a PDB file. Other files in the folder are ignored.
 - `-c/--curvbound`: Lower and upper curvature bounds of the histograms, separated by a comma (e.g. 0,2).
 - `-cx/--curvres`: Curvature bin width of the histograms.
 - `-d/--distbound`: Lower and upper distance bounds of the histograms, separated by a comma.
 - `-dx/--distres`: Distance bin width of the histograms.
-- `-o`: PyCPET options file (default ./options/options.json). Use the one from the ``topo`` run, with ``"max_streamline_init": "fixed_rand"``, so each residue's streamlines start from the same points and run for the same number of steps as the full topology. Residues are taken from the first PDB file after filtering, skipping water (WAT).
+- `-o`: PyCPET options file (default ./options/options.json). Use the one from the ``topo`` run, with ``"max_streamline_init": "fixed_rand"``, so each residue's streamlines start from the same points and run for the same number of steps as the full topology. Residues are taken from the first PDB file after filtering, skipping water (WAT); a structure without one of them is left out of that residue's average.
 
 Each residue's distance is printed for every structure as it is computed. The working directory gets residue_list.txt, the residues analyzed, and chi_squared_avg.txt, each residue's mean and standard deviation of the distance over all structures, lowest first. One topology is computed per residue per structure, so this is slow for large systems; as for ``topo``, set ``OMP_NUM_THREADS=1``. The following usage is recommended, from the repository folder:
 
