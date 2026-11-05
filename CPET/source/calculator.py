@@ -230,10 +230,16 @@ class calculator:
         if hasattr(self, "chains"):
             self.chains_copy = deepcopy(self.chains)
 
+        # Original position of every charge that is still kept, trimmed by each filter
+        self.kept = np.arange(len(self.x))
+        n_atoms = len(self.kept)
+
         # Any sort of filtering related to atom identity information
         if "filter" in options:
-            self.x, self.Q, self.ID = filter_atomspec(
-                self.x, self.Q, self.ID, options["filter"], options["filter_intersect"]
+            self._filter_charges(
+                filter_atomspec,
+                filter_dict=options["filter"],
+                intersect=options["filter_intersect"],
             )
             # If chains is a list of nones, delete it as an attribute
             if all(c is None for c in self.chains):
@@ -257,10 +263,8 @@ class calculator:
             self.log.info(f"Filtering by radius: {options['filter_radius']} Angstrom")
             r = np.linalg.norm(self.x, axis=1)  # Distance from origin
             self.log.debug(f"Distances from origin before radius filter: {r}")
-            self.x, self.Q, self.ID = filter_radius_whole_residue(
-                x=self.x,
-                Q=self.Q,
-                ID=self.ID,
+            self._filter_charges(
+                filter_radius_whole_residue,
                 center=self.center,
                 radius=float(options["filter_radius"]),
             )
@@ -362,13 +366,18 @@ class calculator:
         # are already centered on the box, so the box is centered on the origin.
         if options["filter_in_box"]:
             self.log.info("Filtering charges in sampling box")
-            self.x, self.Q, self.ID = filter_in_box(
-                x=self.x,
-                Q=self.Q,
-                ID=self.ID,
+            self._filter_charges(
+                filter_in_box,
                 center=np.zeros(3),
                 dimensions=self.dimensions,
             )
+
+        # Original positions of the charges that were filtered out, empty without filters
+        self.filter_idxs = (
+            [np.setdiff1d(np.arange(n_atoms), self.kept)]
+            if len(self.kept) < n_atoms
+            else []
+        )
 
         """
         #Debug version
@@ -430,6 +439,16 @@ class calculator:
                 self.dimensions = self.dimensions.astype(np.float32)
 
         self.log.info("Initialized calculator")
+
+    def _filter_charges(self, filter_function, **kwargs):
+        """Run a filter on x, Q and ID, and trim ``self.kept`` along with them."""
+        # The filters only drop rows, so the index rides along as an extra column of Q
+        Q_and_index = np.column_stack([np.reshape(self.Q, (-1, 1)), self.kept])
+        self.x, Q_and_index, self.ID = filter_function(
+            x=self.x, Q=Q_and_index, ID=self.ID, **kwargs
+        )
+        self.Q = Q_and_index[:, :1].astype(self.Q.dtype)
+        self.kept = Q_and_index[:, 1].astype(int)
 
     def compute_point_mag(self):
         """

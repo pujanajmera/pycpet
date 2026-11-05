@@ -178,10 +178,11 @@ def parse_rotation_matrix(analyze_tinker_outfile, n_atoms, filter_idxs):
                 values = line.split()[6:15]
                 rot_mat = np.array(values, dtype=float).reshape(3, 3)
                 rot_mats.append(rot_mat)
-    if filter_idxs == None:
+    if filter_idxs is None or len(filter_idxs) == 0:
         rot_mats_filter = rot_mats
     elif len(filter_idxs) == 1:
-        rot_mats_filter = [v for i, v in enumerate(rot_mats) if i not in filter_idxs[0]]
+        removed = set(filter_idxs[0].tolist())
+        rot_mats_filter = [v for i, v in enumerate(rot_mats) if i not in removed]
     else:
         raise ValueError(f"Filtering indices not supported this way (e.g. radius and atom-based). Please edit options file")
     if len(rot_mats_filter) != n_atoms:
@@ -318,7 +319,7 @@ def main():
     x, d, t = rotate_and_translate_to_box_reference(x, d, t, center, global2local_rotmat)
     
     # Flatten t so that each t only has Qxx Qxy Qxz Qyy Qyz Qzz (right now it has shape Nx3x3)
-    t_flat = np.zeros((t.shape[0], 6), dtype=np.float32)
+    t_flat = np.zeros((t.shape[0], 6), dtype=np.float64)
     t_flat[:, 0] = t[:, 0, 0] #Qxx
     t_flat[:, 1] = t[:, 0, 1] #Qxy
     t_flat[:, 2] = t[:, 0, 2] #Qxz
