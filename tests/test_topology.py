@@ -1,117 +1,139 @@
 import numpy as np
+import pytest
+
 from CPET.source.calculator import calculator
-import warnings
+from CPET.utils.calculator import Inside_Box, compute_curv_and_dist
 
-warnings.filterwarnings(action="ignore")
-from scipy.stats import chisquare
-from scipy.stats import entropy
-import matplotlib.pyplot as plt
-import matplotlib
+K = 14.3996451  # V * Angstrom / e
 
-# from pyinstrument import Profiler
+OPTIONS = {
+    "CPET_method": "topo",
+    "center": {"method": "first", "atoms": [{"CD": 2}]},
+    "x": {"method": "mean", "atoms": [{"CG": 1}, {"CB": 1}]},
+    "y": {"method": "mean", "atoms": [{"CA": 3}, {"CB": 3}]},
+    # Remove the residue at the center, so no charge sits on a start point
+    "filter": {"resid": ["GLN"], "resnum": [2]},
+    "filter_intersect": True,
+    "filter_radius": 15.0,
+    "n_samples": 27,
+    "dimensions": [1.0, 1.0, 1.0],
+    "step_size": 0.05,
+    "concur_slip": 2,
+    "initializer": "uniform",
+    "max_streamline_init": "fixed_rand",
+    "dtype": "float32",
+}
 
 
-def mean_and_curve_to_hist(mean_dist, curve):
-    # Calculate reasonable maximum distances and curvatures
-    # curvatures, distances = [],[]
-    max_distance = max(mean_dist)
-    max_curvature = max(curve)
+@pytest.fixture(scope="module")
+def topo(test_files):
+    return calculator(OPTIONS, path_to_pdb=str(test_files / "test_large.pdb"))
 
-    # bins is number of histograms bins in x and y direction (so below is 200x200 bins)
-    # range gives xrange, yrange for the histogram
-    a, b, c, q = plt.hist2d(
-        mean_dist,
-        curve,
-        bins=50,
-        range=[[0, max_distance], [0, max_curvature]],
-        norm=matplotlib.colors.LogNorm(),
-        density=True,
-        cmap="jet",
+
+def reference_topology(topo):
+    """Follow each streamline with plain NumPy in double precision.
+
+    Takes the same steps as the C code: move step_size along the field direction,
+    stop on leaving the box or after the streamline's random maximum number of steps,
+    then take the distance and curvature from the first and last three points.
+    """
+    x = topo.x.astype(np.float64)
+    Q = topo.Q.astype(np.float64)
+
+    def step(p):
+        R = p - x
+        E = K * (Q * R / np.linalg.norm(R, axis=1, keepdims=True) ** 3).sum(axis=0)
+        return p + topo.step_size * E / np.linalg.norm(E)
+
+    rows = []
+    for start, n_steps in zip(topo.random_start_points, topo.random_max_samples):
+        end = start.astype(np.float64)
+        for _ in range(n_steps):
+            end = step(end)
+            if not Inside_Box(end, topo.dimensions):
+                break
+        start_1 = step(start)
+        start_2 = step(start_1)
+        end_1 = step(end)
+        end_2 = step(end_1)
+        rows.append(compute_curv_and_dist(start, start_1, start_2, end, end_1, end_2)[:2])
+    return np.array(rows)
+
+
+def test_start_points_fill_the_box(topo):
+    """27 samples make a 3 x 3 x 3 grid of start points inside the box."""
+    assert topo.n_samples == 27
+    assert topo.random_start_points.shape == (27, 3)
+    assert (np.abs(topo.random_start_points) < topo.dimensions).all()
+    assert topo.random_max_samples.shape == (27,)
+    assert (topo.random_max_samples >= 1).all()
+
+
+def test_n_samples_rounds_up_to_a_cube(test_files):
+    options = dict(OPTIONS, n_samples=30)
+
+    t = calculator(options, path_to_pdb=str(test_files / "test_large.pdb"))
+
+    assert t.n_samples == 64
+    assert t.random_start_points.shape == (64, 3)
+
+
+def test_c_topology_matches_reference(topo):
+    """Distance and curvature of every streamline agree with the NumPy reference."""
+    hist = topo.compute_topo_complete_c_shared()
+
+    assert hist.shape == (27, 2)
+    assert np.isfinite(hist).all()
+    np.testing.assert_allclose(hist, reference_topology(topo), rtol=1e-3, atol=1e-3)
+
+
+def test_single_process_topology_matches_c(topo):
+    """compute_topo_single, the plain Python version, agrees with the C extension."""
+    hist = topo.compute_topo_single()
+
+    assert hist.shape == (27, 2)
+    assert np.isfinite(hist).all()
+    np.testing.assert_allclose(
+        hist, topo.compute_topo_complete_c_shared(), rtol=1e-3, atol=1e-3
+    )
+    np.testing.assert_allclose(hist, reference_topology(topo), rtol=1e-3, atol=1e-3)
+
+
+def test_c_topology_is_reproducible(topo):
+    """With fixed_rand, two runs give the same result."""
+    np.testing.assert_array_equal(
+        topo.compute_topo_complete_c_shared(), topo.compute_topo_complete_c_shared()
     )
 
-    NormConstant = 0
-    for j in a:
-        for m in j:
-            NormConstant += m
 
-    actual = []
-    for j in a:
-        actual.append([m / NormConstant for m in j])
+@pytest.mark.gpu
+def test_gpu_topology_matches_c(topo):
+    torch = pytest.importorskip("torch")
+    if not torch.cuda.is_available():
+        pytest.skip("needs a CUDA GPU")
 
-    actual = np.array(actual)
-    histogram = actual.flatten()
-    return np.array(histogram)
+    gpu = topo.compute_topo_GPU_batch_filter()
+    cpu = topo.compute_topo_complete_c_shared()
 
+    def by_distance(h):
+        return h[np.lexsort((np.round(h[:, 1], 3), np.round(h[:, 0], 3)))]
 
-def distance_numpy(hist1, hist2):
-    a = (hist1 - hist2) ** 2
-    b = hist1 + hist2
-    return np.sum(np.divide(a, b, out=np.zeros_like(a), where=b != 0)) / 2.0
+    np.testing.assert_allclose(by_distance(gpu), by_distance(cpu), rtol=1e-2, atol=1e-2)
 
 
-def gather_reference_simplest_implementation_topo(topo):
-    hist = topo.compute_topo_single()
-    return hist
+def test_filter_in_box_removes_charges_in_the_box(test_files):
+    """filter_in_box removes the charges inside the box, here just the center atom."""
+    options = dict(OPTIONS)
+    del options["filter"], options["filter_intersect"]
+    pdb = str(test_files / "test_large.pdb")
 
+    unfiltered = calculator(dict(options, filter_in_box=False), path_to_pdb=pdb)
+    filtered = calculator(dict(options, filter_in_box=True), path_to_pdb=pdb)
 
-class Test_topos:
-    options = {
-        "center": {"method": "first", "atoms": {"CD": 2}},
-        "x": {"method": "mean", "atoms": {"CG": 1, "CB": 1}},
-        "y": {"method": "inverse", "atoms": {"CA": 3, "CB": 3}},
-        "n_samples": 1000,
-        "dimensions": [1.5, 1.5, 1.5],
-        "step_size": 0.01,
-        "batch_size": 10,
-        "concur_slip": 12,
-        "filter_radius": 40.0,
-        "filter_in_box": True,
-        "initializer": "uniform",
-        "CPET_method": "topology",
-        "max_streamline_init": "fixed_rand",
-        "dtype": "float32",
-        "GPU_batch_freq": 100,
-        # "filter_resids": ["HEM"]
-    }
-    topo = calculator(options, path_to_pdb="./test_files/test_large.pdb")
-    # change max_array to int
-    reference_hist = gather_reference_simplest_implementation_topo(topo)
+    def n_inside(t):
+        return (np.abs(t.x) < np.array(t.dimensions)).all(axis=1).sum()
 
-    def topo_equality(self, test_topos, topo_function):
-        sorted_reference_hist = np.array(
-            sorted(self.reference_hist, key=lambda x: (round(x[0], 3), round(x[1], 3)))
-        )
-        sorted_test_topos = np.array(
-            sorted(test_topos, key=lambda x: (round(x[0], 3), round(x[1], 3)))
-        )
-        # print(sorted_reference_hist)
-        # print(sorted_test_topos)
-        np.testing.assert_allclose(
-            sorted_reference_hist,
-            sorted_test_topos,
-            rtol=1e-2,
-            atol=1e-2,
-            err_msg=f"Topo histograms are not equal for {topo_function.__name__}",
-        )
-
-    def test_topo_methods(self):
-        topo_function_list = [
-            # self.topo.compute_topo,
-            # self.topo.compute_topo_complete_c_shared,
-            # self.topo.compute_topo_base,  - what are we doing with this one?
-            self.topo.compute_topo_GPU_batch_filter
-        ]
-
-        for topo_function in topo_function_list:
-            print("----" * 15)
-            hist = topo_function()
-            self.topo_equality(hist, topo_function)
-
-        # TODO: pujan add the topo for gpu - will need to batch the start points
-
-
-# test = Test_topos()
-# test.test_topo_methods()
-# test.test_topo_batch()
-# test.test_topo_cshared()
-# test.test_topo_batch_base()
+    assert n_inside(unfiltered) == 1
+    assert n_inside(filtered) == 0
+    assert len(filtered.x) == len(unfiltered.x) - 1
+    assert len(filtered.Q) == len(filtered.ID) == len(filtered.x)

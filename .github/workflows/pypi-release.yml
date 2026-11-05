@@ -1,0 +1,196 @@
+name: PyPI + GitHub Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  check_version:
+    name: Check tag matches version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Stop before building anything if the tag and pyproject.toml disagree
+      - name: Compare tag with pyproject.toml version
+        run: |
+          version=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match pyproject.toml version ${version} (expected tag v${version})"
+            exit 1
+          fi
+          echo "Tag ${GITHUB_REF_NAME} matches pyproject.toml version ${version}"
+
+  build_wheels:
+    name: Build wheels (${{ matrix.os }})
+    needs: check_version
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install OpenMP (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install libomp
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.20.0
+        env:
+          CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
+
+          # Optimization and CPU target flags come from setup.py
+
+          # macOS (OpenMP through Homebrew libomp)
+          CIBW_ENVIRONMENT_MACOS: >
+            MACOSX_DEPLOYMENT_TARGET=14.0
+            CC=clang
+            CXX=clang++
+            CPPFLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include"
+            CFLAGS="-Xpreprocessor -fopenmp"
+            LDFLAGS="-L$(brew --prefix libomp)/lib -lomp"
+
+          # Skip unsupported builds
+          CIBW_SKIP: "pp* *-win32 *-manylinux_i686"
+
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
+  build_sdist:
+    name: Build source distribution
+    needs: check_version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build
+        run: python -m pip install build
+
+      - name: Build sdist
+        run: python -m build --sdist
+
+      - name: Upload sdist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish:
+    if: |
+        startsWith(github.ref_name, 'v') &&
+        !contains(github.ref_name, 'a') &&
+        !contains(github.ref_name, 'b') &&
+        !contains(github.ref_name, 'rc')
+    name: Publish to PyPI
+    needs: [build_wheels, build_sdist]
+
+    # ONLY publish stable versions like v0.0.8
+    # DO NOT publish prereleases like v0.0.8a
+
+
+    runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p final_dist
+          find dist -name "*.whl" -exec cp {} final_dist/ \;
+          find dist -name "*.tar.gz" -exec cp {} final_dist/ \;
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: final_dist
+
+  github_release:
+    name: GitHub Release
+    needs: [build_wheels, build_sdist]
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Changes are merged locally rather than through PRs, so list the commit
+      # subjects since the previous tag; GitHub appends its compare link below
+      - name: Write release notes from commit messages
+        run: |
+          previous=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          if [ -n "${previous}" ]; then
+            range="${previous}..${GITHUB_REF_NAME}"
+            echo "## Changes since ${previous}" > release_notes.md
+          else
+            range="${GITHUB_REF_NAME}"
+            echo "## Changes" > release_notes.md
+          fi
+          echo "" >> release_notes.md
+          git log --no-merges --reverse --format='- %s' "${range}" >> release_notes.md
+          cat release_notes.md
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p final_dist
+          find dist -name "*.whl" -exec cp {} final_dist/ \;
+          find dist -name "*.tar.gz" -exec cp {} final_dist/ \;
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: final_dist/*
+          body_path: release_notes.md
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, 'a') || contains(github.ref_name, 'b') || contains(github.ref_name, 'rc') }}

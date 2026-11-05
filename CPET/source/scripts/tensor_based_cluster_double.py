@@ -1,6 +1,5 @@
 from CPET.utils.calculator import (
     make_5d_tensor,
-    construct_distance_matrix_tensor,
     determine_rank,
     reduce_tensor,
 )
@@ -27,7 +26,7 @@ def kmeds(distance_matrix, defined_n_clusters=None):
     """
     cluster_results = {}
     distance_matrix = distance_matrix
-    distance_matrix = distance_matrix**2
+    distance_matrix = distance_matrix ** 2
     inertia_list = []
     if not defined_n_clusters:
         for i in range(50):
@@ -185,7 +184,7 @@ def cluster_analyze(distance_matrix, cluster_results, file_list):
     )
     # print percentage of each cluster
     print("Percentage of each cluster: ")
-    for key in compressed_dictionary.keys():
+    for key in compressed_dictionary:
         if type(key) == int:
             print(
                 f"Cluster {key}: {compressed_dictionary[key]['percentage']}% of total"
@@ -222,7 +221,7 @@ def main():
     args = parser.parse_args()
     options = args.o
     if not os.path.exists(options):
-        ValueError("Error: Options file not found")
+        raise ValueError("Error: Options file not found")
     else:
         with open(options, "r") as f:
             options = json.load(f)
@@ -242,15 +241,15 @@ def main():
         os.makedirs(outputpath)
 
     # Make sure file names in both directories are identical
-    dir1_files = os.listdir(args.dir1).sort()
-    dir2_files = os.listdir(args.dir2).sort()
+    dir1_files = sorted(os.listdir(args.dir1))
+    dir2_files = sorted(os.listdir(args.dir2))
     if dir1_files != dir2_files:
-        ValueError("Error: Files in directories are not identical")
+        raise ValueError("Error: Files in directories are not identical")
 
     # Parse first directory:
     inputpath = args.dir1
     file_list1 = []
-    for file in glob(inputpath + f"/*_esp.dat"):
+    for file in glob(inputpath + "/*_esp.dat"):
         file_list1.append(file)
     file_list1.sort()
     list_file = "esp_file_list1.txt"
@@ -273,7 +272,7 @@ def main():
     # Parse second directory, using first directory file names as reference:
     inputpath = args.dir2
     file_list2 = []
-    for file in glob(inputpath + f"/*_esp.dat"):
+    for file in glob(inputpath + "/*_esp.dat"):
         file_list2.append(file)
     file_list2.sort()
     list_file = "esp_file_list2.txt"

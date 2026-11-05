@@ -1,38 +1,46 @@
 import numpy as np
 import pickle as pkl
-import os
-import json
 from glob import glob
 import warnings
+import logging
 import matplotlib.pyplot as plt
 
 from sklearn.decomposition import PCA
 
-from CPET.utils.io import save_numpy_as_dat, read_mat
+from CPET.utils.io import save_numpy_as_dat, read_mat, default_options_initializer
+
+log = logging.getLogger(__name__)
 
 
 class pca_pycpet:
+    """
+    Principal component analysis of a set of electric field volumes.
+
+    Creating the object reads the field files (every ``.dat`` file in
+    ``inputpath``, or ``field_file_list`` if given) and, with ``pca_reload``,
+    loads a fitted PCA from ``outputpath/pca.pkl``. The file list is written to
+    ``outputpath/field_file_list.txt``. Call :meth:`fit_and_transform` to run the
+    PCA.
+
+    Parameters
+    ----------
+    options : dict
+        Options. Reads ``inputpath``, ``outputpath`` and the PCA options
+        (``n_pca_components``, ``field_file_list``, ``pca_reload``, ``save_pca``,
+        ``whitening``, ``verbose``); see the Options Reference.
+    """
     def __init__(self, options):
         """
-        Initialize the PCA object with the following options:
-        - pca_reload: boolean to reload a previously trained PCA object
-        - save_pca: boolean to save the PCA object
-        - inputpath: path to the input data
-        - outputpath: path to save the PCA object and metadata json
-        - verbose: boolean to print out the PCA explained variance
-
-        Notes:
-        - Default mode is to take an arbitrary file list and obtain principal components. To
-        compare datasets and produce both individual and total PCs, change method from pca to
-        pca_compare
-
+        Read the field files and, with ``pca_reload``, load a fitted PCA.
         """
+        # Fill defaults in case pca_pycpet is used outside of CPET.py
+        options = default_options_initializer(options)
 
         # Note: need to figure out what this means:
-        self.pca_reload = options["pca_reload"] if "pca_reload" in options else False
-        self.save_pca_tf = options["save_pca"] if "save_pca" in options else False
-        self.whitening = options["whitening"] if "whitening" in options else False
-        self.verbose = options["verbose"] if "verbose" in options else True
+        self.pca_reload = options["pca_reload"]
+        self.save_pca_tf = options["save_pca"]
+        self.whitening = options["whitening"]
+        self.verbose = options["verbose"]
 
         self.inputpath = options["inputpath"]
         self.outputpath = options["outputpath"]
@@ -59,7 +67,7 @@ class pca_pycpet:
                 raise ValueError("No data found in the input path!")
             field_file_name = self.outputpath + "/field_file_list.txt"
             with open(field_file_name, "w") as file_list:
-                for i in self.file_list:
+                for i in self.field_file_list:
                     file_list.write(f"{i} \n")
         else:
             self.field_file_list = options["field_file_list"]
@@ -70,6 +78,9 @@ class pca_pycpet:
         # go through the input path and load the data, read every .dat
         # file and store it in a numpy array
 
+        """
+        Read every file in ``field_file_list`` into ``data``, and the last file's header into ``meta_data``.
+        """
         self.data = []
         for file in self.field_file_list:
             self.data.append(read_mat(file))
@@ -77,9 +88,22 @@ class pca_pycpet:
         self.data = np.array(self.data)
         self.meta_data = read_mat(file, meta_data=True)
 
-    def fit_and_transform(
-        self,
-    ):
+    def fit_and_transform(self,):
+        """
+        Fit the PCA, or use the loaded one, and project the fields onto the principal components.
+
+        With ``verbose``, logs the explained variance ratios. With ``save_pca``,
+        saves the PCA to ``outputpath/pca.pkl``. The projections are returned, not
+        written to a file.
+
+        Returns
+        -------
+        mat_transform : np.ndarray
+            Projection of each field onto the components, shape
+            (n_files, n_pca_components).
+        pca_obj : sklearn.decomposition.PCA
+            The fitted PCA.
+        """
         mat_transform = self.data.reshape(
             self.data.shape[0],
             self.data.shape[1]
@@ -96,7 +120,7 @@ class pca_pycpet:
             mat_transform = self.pca_obj.transform(mat_transform)
 
         cum_explained_var = []
-        for i in range(0, len(self.pca_obj.explained_variance_ratio_)):
+        for i in range(len(self.pca_obj.explained_variance_ratio_)):
             if i == 0:
                 cum_explained_var.append(self.pca_obj.explained_variance_ratio_[0])
             else:
@@ -107,11 +131,10 @@ class pca_pycpet:
         self.cum_explained_var = cum_explained_var
 
         if self.verbose:
-            print(
-                "individual explained vars: \n"
-                + str(self.pca_obj.explained_variance_ratio_)
+            log.info(
+                f"Individual explained variance ratios: {self.pca_obj.explained_variance_ratio_}"
             )
-            print("cumulative explained vars ratio: \n" + str(cum_explained_var))
+            log.info(f"Cumulative explained variance ratios: {cum_explained_var}")
 
         if self.save_pca_tf:
             self.save_pca()
@@ -121,6 +144,19 @@ class pca_pycpet:
     # TODO: export PCA component to a .dat file
 
     def transform(self, data):
+        """
+        Project field volumes onto the fitted principal components.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            Field volumes, shape (n_fields, nx, ny, nz, 3).
+
+        Returns
+        -------
+        np.ndarray
+            Projections, shape (n_fields, n_pca_components).
+        """
         mat_transform = data.reshape(
             data.shape[0], data.shape[1] * data.shape[2] * data.shape[3] * data.shape[4]
         )
@@ -130,17 +166,29 @@ class pca_pycpet:
         return mat_transform
 
     def save_pca(self):
-        with open(self.outputpath + "pca.pkl", "wb") as f:
+        """
+        Save the fitted PCA to ``outputpath/pca.pkl``.
+        """
+        with open(self.outputpath + "/pca.pkl", "wb") as f:
             pkl.dump(self.pca_obj, f)
 
     def load_pca(self):
-        with open(self.outputpath + "pca.pkl", "rb") as f:
+        # meta_data is set from the input files by load(), which runs after this
+        """
+        Load a fitted PCA from ``outputpath/pca.pkl``.
+        """
+        with open(self.outputpath + "/pca.pkl", "rb") as f:
             self.pca_obj = pkl.load(f)
 
-        with open(self.outputpath + "meta_data.pkl", "rb") as f:
-            self.meta_data = json.load(f)
-
     def save_component(self, component=0, filename="pca_comp", shape=[21, 21, 21, 21]):
+        """
+        Save principal components as field files.
+
+        Notes
+        -----
+        Not working: it reads a ``"shape"`` key that ``meta_data`` doesn't have and
+        calls ``save_numpy_as_dat`` with the wrong arguments.
+        """
         if type(component) == list:
             for i, comp in enumerate(component):
                 component_field = self.pca_obj.components_[component].reshape(
@@ -164,7 +212,20 @@ class pca_pycpet:
 
     def unwrap_pca(self, mat, shape):
         """
-        Take as input a matrix that has been transformed by PCA and return the original matrix
+        Map PCA projections back to field volumes.
+
+        Parameters
+        ----------
+        mat : np.ndarray
+            Projections, shape (n_fields, n_pca_components).
+        shape : sequence of int
+            Shape of the original data, (n_fields, nx, ny, nz, 3); only the last four
+            entries are used.
+
+        Returns
+        -------
+        np.ndarray
+            Reconstructed field volumes, shape (n_fields, nx, ny, nz, 3).
         """
         mat = self.pca_obj.inverse_transform(mat)
         mat = mat.reshape(len(mat), shape[1], shape[2], shape[3], shape[4])
@@ -173,9 +234,18 @@ class pca_pycpet:
     def plot_hist_along_component(
         x_list, pca_obj, label_list, components, loc, plot, type="png"
     ):
+        """
+        Plot the distribution of each dataset along chosen principal components.
+
+        Notes
+        -----
+        Not working: it has no ``self`` argument, its ``type`` argument hides the
+        built-in ``type()`` it calls, it uses functions that aren't defined, and it
+        saves to a hard-coded folder.
+        """
         if type(components) is list:
             fig, axs = plt.subplots(len(components), 1)
-            names = ["PC {}".format(str(temp)) for temp in components]
+            names = [f"PC {str(temp)}" for temp in components]
 
             for ind, comp in enumerate(components):
                 list_data = []
@@ -214,15 +284,11 @@ class pca_pycpet:
                 fig.show()
             if type == "png":
                 fig.savefig(
-                    "./pca_comps_alcdehydro/{}/pca_{}-{}.png".format(
-                        loc, components[0], components[-1]
-                    )
+                    f"./pca_comps_alcdehydro/{loc}/pca_{components[0]}-{components[-1]}.png"
                 )
             elif type == "svg":
                 fig.savefig(
-                    "./pca_comps_alcdehydro/{}/pca_{}-{}.svg".format(
-                        loc, components[0], components[-1]
-                    )
+                    f"./pca_comps_alcdehydro/{loc}/pca_{components[0]}-{components[-1]}.svg"
                 )
             else:
                 raise ValueError("Invalid plot format")

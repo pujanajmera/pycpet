@@ -1,12 +1,14 @@
 API Reference
 =================
 
-.. autoclass:: CPET.source.calculator.calculator
-   :members:
-   :undoc-members:
-   :show-inheritance:
+The classes and functions behind ``cpet.py``, for scripting with *PyCPET* directly.
 
-.. autoclass:: CPET.source.CPET.CPET
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. toctree::
+   :maxdepth: 1
+
+   api/CPET
+   api/calculator
+   api/cluster
+   api/pca
+   api/io
+   api/visualize

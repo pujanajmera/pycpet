@@ -4,8 +4,7 @@ import argparse
 import json
 import numpy as np
 from tqdm import tqdm
-from pyscf import gto, tools
-from pathlib import Path
+from pyscf import tools
 
 
 def E_elec_qmmm(mol, x, q, dm, verbose, track=False):
@@ -107,12 +106,12 @@ def main():
     res = args.res
     verbose = args.verbose
     options = json.load(open(args.options, "r"))
-    options["dtype"] = (
-        "float64"  # Ensure that the dtype is set to float64 for consistency
-    )
-    options["CPET_method"] = (
-        "point_field"  # Preventative to ensure that time isn't wasted on creating other attributes
-    )
+    options[
+        "dtype"
+    ] = "float64"  # Ensure that the dtype is set to float64 for consistency
+    options[
+        "CPET_method"
+    ] = "point_field"  # Preventative to ensure that time isn't wasted on creating other attributes
     options["center"] = [0, 0, 0]
     calculator_object = calculator(
         options, args.pdb
@@ -131,7 +130,7 @@ def main():
     x_qm = mol.atom_coords()  # Get coordinates of atoms in Bohr
     q_qm = mol.atom_charges()  # Get atomic numbers to get nuclear charges
     dm = density_matrix(mo_coeff, mo_occ)  # Density matrix in AO basis
-    print(f"Molden file parsed successfully. MO coefficients shape (AOxMO):")
+    print("Molden file parsed successfully. MO coefficients shape (AOxMO):")
 
     print(x[0:5], q[0:5])  # Print first 5 coordinates and charges for debugging
     print(
@@ -153,15 +152,24 @@ def main():
 
         # Loop to build dictionary of residues
         print("Building residue breakdown dictionary...")
+        previous_resn = None
+        current_key = None
+        duplicate_count = {}
         for i in tqdm(range(len(x))):
             resn = residue_number[i]
-            if resn not in res_breakdown_dict:
+            if i == 0 or resn != previous_resn:
+                if resn not in duplicate_count:
+                    duplicate_count[resn] = 0
+                    current_key = resn
+                else:
+                    duplicate_count[resn] += 1
+                    current_key = f"{resn}_{duplicate_count[resn]}"
                 """
                 x captures the coordinates of atoms in the residue.
                 count keeps track of the number of atoms in the residue.
                 E_elec and E_nuc are initialized to 0.0, they will be calculated later.
                 """
-                res_breakdown_dict[resn] = {
+                res_breakdown_dict[current_key] = {
                     "E_elec": 0.0,
                     "E_nuc": 0.0,
                     "V_qmmm": 0.0,
@@ -169,33 +177,13 @@ def main():
                     "x": [],
                     "q": [],
                 }
-                res_breakdown_dict[resn]["x"].append(x[i])
-                res_breakdown_dict[resn]["q"].append(
-                    q[i]
-                )  # Store charge for the residue
-                res_breakdown_dict[resn]["count"] += 1
-            else:
-                # First case, make sure that the previous residue is the same as the current, if it is present in the breakdown. If not, this indicates duplicate residue numbering...
-                if resn == residue_number[i - 1].split("_")[0]:  # Continuing the residue
-                    res_breakdown_dict[resn]["x"].append(x[i])
-                    res_breakdown_dict[resn]["q"].append(q[i])
-                    res_breakdown_dict[resn]["count"] += 1
-                # Second case, if residue number is the same as a previous residue but not the immediate previous one, this indicates duplicate residue numbering in the PDB file
-                else:
-                    # Duplicate residue, modify the dictionary key to include a suffix that depends on number of previous instances
-                    suffix_to_add = len([key for key in res_breakdown_dict.keys() if key.split("_")[0] == resn])
-                    new_resn = f"{resn}_{suffix_to_add}"
-                    res_breakdown_dict[new_resn] = {
-                        "E_elec": 0.0,
-                        "E_nuc": 0.0,
-                        "V_qmmm": 0.0,
-                        "count": 0,
-                        "x": [],
-                        "q": [],
-                    }
-                    res_breakdown_dict[new_resn]["x"].append(x[i])
-                    res_breakdown_dict[new_resn]["q"].append(q[i])
-                    res_breakdown_dict[new_resn]["count"] += 1
+            res_breakdown_dict[current_key]["x"].append(x[i])
+            res_breakdown_dict[current_key]["q"].append(
+                q[i]
+            )  # Store charge for the residue
+            res_breakdown_dict[current_key]["count"] += 1
+
+            previous_resn = resn
 
         # Loop to calculate interaction energies for each residue
         for resn, data in tqdm(res_breakdown_dict.items()):
@@ -225,7 +213,7 @@ def main():
         print("Writing residue breakdown to file residue_breakdown.txt")
         with open("residue_breakdown.txt", "w") as f:
             f.write("Residue\tE_elec\tE_nuc\tV_qmmm\tCount\n")
-            for resn in sorted(res_breakdown_dict.keys(), key=lambda x: int(x)):
+            for resn in sorted(res_breakdown_dict, key=lambda x: tuple(map(int, str(x).split('_')))):
                 data = res_breakdown_dict[resn]
                 f.write(
                     f"{resn}\t{float(data['E_elec']):.8f}\t{float(data['E_nuc']):.8f}\t{float(data['V_qmmm']):.8f}\t{data['count']}\n"

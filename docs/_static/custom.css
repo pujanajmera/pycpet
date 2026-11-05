@@ -1,0 +1,23 @@
+/* Landing page: center the logo's tagline and give it more room */
+.hero-tagline {
+    text-align: center;
+    font-size: 1.1em;
+    max-width: 42em;
+    margin: 0.5em auto 1.5em;
+}
+
+/* Card icons in the logo's coral */
+.sd-card-title .sd-octicon {
+    color: var(--color-brand-primary);
+    margin-right: 0.3em;
+}
+
+/* Status badges (beta, not working yet): small and outlined, so they read as
+   labels rather than buttons */
+.sd-badge {
+    font-size: 0.72em;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    padding: 0.15em 0.55em;
+    vertical-align: 0.12em;
+}

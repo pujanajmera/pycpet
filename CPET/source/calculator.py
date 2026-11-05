@@ -1,10 +1,8 @@
 import numpy as np
 import time
 from multiprocessing import Pool
-import torch
 import logging
 from copy import deepcopy
-
 
 from CPET.utils.parallel import (
     task,
@@ -31,50 +29,67 @@ from CPET.utils.io import (
     calculate_center,
     default_options_initializer,
 )
-from CPET.utils.gpu import (
-    propagate_topo_matrix_gpu,
-    compute_curv_and_dist_mat_gpu,
-    batched_filter_gpu,
-    generate_path_filter_gpu,
-)
 
 log = logging.getLogger(__name__)
 
 
 class calculator:
-    """Initialize the calculator object with the following parameters
+    """
+    Load one structure and compute fields, potentials or topologies for it.
+
+    Creating the object reads the PDB or PQR file, applies the ``filter``,
+    ``filter_radius`` and ``filter_in_box`` options, and moves the charges into
+    the frame set by ``center``, ``x`` and ``y``. For volume methods it builds
+    the grid, and for topology methods it chooses the streamline start points.
 
     Parameters
     ----------
     options : dict
-        Dictionary from input options.json file
-    path_to_pdb : str, optional
-        Path to the PDB file, by default None
+        Options for the calculation; defaults are filled in. See the Options
+        Reference.
+    path_to_pdb : str
+        Path to the PDB or PQR file. Required, despite the None default.
 
     Attributes
     ----------
-    self.profile : Bool
-        If True, the calculator will profile the code (development, intended for GPU)
-    self.path_to_pdb : str
-        Path to the PDB file
-    self.step_size : float
-        Step size for the electric field calculation, relevant for the topology calculation or volume field calcs
-    self.dimensions : list
-        Dimensions of the box for the electric field/topology calculations
-    self.n_samples : int
-        Number of streamlines used for the topology calculation
-    self.max_streamline_init : str
-        Method for determining when streamlines end
-    self.concur_slip : int
-        Number of concurrent processes for the CPU-accelerated topology calculation
-    self.GPU_batch_freq : int
-        Number of batches for the GPU-accelerated topology calculation
-    self.dtype : str
-        Data type for the calculations (float32 or float64)
+    x : np.ndarray
+        Coordinates of the charges after filtering, in the oriented frame, shape (N, 3).
+    Q : np.ndarray
+        Charges after filtering, shape (N, 1).
+    ID : list or np.ndarray
+        Identity of each charge, as (atom_number, atom_type, resid, resnum, chain).
+    center : np.ndarray
+        The ``center`` point in the input file's frame, shape (3,).
+    transformation_matrix : np.ndarray
+        Rotation into the oriented frame, shape (3, 3). Only set when ``x`` and
+        ``y`` are given.
+    mesh : np.ndarray
+        Grid points for ``volume`` and ``volume_ESP``.
+    random_start_points : np.ndarray
+        Streamline start points for ``topo`` and ``topo_GPU``.
+    step_size : float
+        Grid spacing for volumes, or streamline step length for topologies.
+    dimensions : np.ndarray
+        Box half widths, shape (3,).
+    n_samples : int
+        Number of streamlines.
+    max_streamline_init : str
+        ``"true_rand"`` or ``"fixed_rand"``; how streamline lengths are drawn.
+    concur_slip : int
+        Number of worker processes for CPU topologies.
+    GPU_batch_freq : int
+        Streamline steps computed per GPU batch.
+    dtype : str
+        ``"float32"`` or ``"float64"``.
+    profile : bool
+        Developer option for profiling.
     """
 
     def __init__(self, options, path_to_pdb=None):
         # self.efield_calc = calculator(math_loc=math_loc)
+        """
+        Load the structure, filter and orient it, and prepare the grid or streamline start points.
+        """
         options = default_options_initializer(
             options
         )  # Double in case calculator is called outside of CPET.py
@@ -85,29 +100,23 @@ class calculator:
         # Electric field grid parameters
         self.step_size = options["step_size"]
         self.dimensions = (
-            np.array(options["dimensions"]) if "dimensions" in options.keys() else None
+            np.array(options["dimensions"])
+            if options["dimensions"] is not None
+            else None
         )
 
         # Topology calculation parameters
-        self.n_samples = options["n_samples"] if "n_samples" in options.keys() else None
+        self.n_samples = options["n_samples"]
         self.concur_slip = options["concur_slip"]
         self.GPU_batch_freq = options["GPU_batch_freq"]
         self.dtype = options["dtype"]
-        self.max_streamline_init = (
-            options["max_streamline_init"]
-            if "max_streamline_init" in options.keys()
-            else "true_rand"
-        )
+        self.max_streamline_init = options["max_streamline_init"]
 
         self.write_transformed_pdb = options["write_transformed_pdb"]
-        self.strip_filter = (
-            options["strip_filter"] if "strip_filter" in options.keys() else False
-        )
+        self.strip_filter = options["strip_filter"]
 
         # Be very careful with the box_shift option. The box needs to be centered at the origin and therefore, the code will shift protein in the opposite direction of the provided box vector
-        self.box_shift = (
-            options["box_shift"] if "box_shift" in options.keys() else [0, 0, 0]
-        )
+        self.box_shift = options["box_shift"]
 
         # Parse pdb/pqr file
         if ".pqr" in self.path_to_pdb:
@@ -155,7 +164,7 @@ class calculator:
         if not hasattr(self, "chains"):
             self.chains = [None] * len(self.x)
         if hasattr(self, "chains"):
-            self.log.debug(self.chains)
+            self.log.debug(f"Chains: {self.chains}")
 
         # Define center, x, and y axes
         if type(options["center"]) == list:
@@ -173,9 +182,9 @@ class calculator:
             self.center = calculate_center(pos_considered, method=method)
         else:
             raise ValueError("center must be a list or dict")
-        if "x" not in options.keys():
+        if "x" not in options:
             self.log.info(
-                "No x specified, calculating in input file reference frame. Ignoring y..."
+                "No x vector specified, using the input file reference frame and ignoring y"
             )
             compute_y = False
         elif type(options["x"]) == list:
@@ -196,7 +205,7 @@ class calculator:
         else:
             raise ValueError("x must be a list or dict")
         if compute_y == False:
-            self.log.info("Not computing y since x is not specified")
+            self.log.debug("Not computing y vector since no x vector is specified")
         elif type(options["y"]) == list:
             self.y_vec_pt = np.array(options["y"])
         elif type(options["y"]) == dict:
@@ -221,14 +230,11 @@ class calculator:
         if hasattr(self, "chains"):
             self.chains_copy = deepcopy(self.chains)
 
-        self.filter_idxs = []
-
         # Any sort of filtering related to atom identity information
-        if "filter" in options.keys():
-            self.x, self.Q, self.ID, filter_idxs = filter_atomspec(
+        if "filter" in options:
+            self.x, self.Q, self.ID = filter_atomspec(
                 self.x, self.Q, self.ID, options["filter"], options["filter_intersect"]
             )
-            self.filter_idxs.append(filter_idxs)
             # If chains is a list of nones, delete it as an attribute
             if all(c is None for c in self.chains):
                 del self.chains
@@ -247,29 +253,28 @@ class calculator:
             self.log.info("No atom spec filtering specified, using all atoms")
 
         # Radius-based filtering, added from previous, residue-inclusive filtering
-        if "filter_radius" in options.keys():
-            self.log.info(f"filtering by radius: {options['filter_radius']} Ang")
+        if "filter_radius" in options:
+            self.log.info(f"Filtering by radius: {options['filter_radius']} Angstrom")
             r = np.linalg.norm(self.x, axis=1)  # Distance from origin
-            self.log.debug(f"r {r}")
-            self.x, self.Q, self.ID, filter_idxs = filter_radius_whole_residue(
+            self.log.debug(f"Distances from origin before radius filter: {r}")
+            self.x, self.Q, self.ID = filter_radius_whole_residue(
                 x=self.x,
                 Q=self.Q,
                 ID=self.ID,
                 center=self.center,
                 radius=float(options["filter_radius"]),
             )
-            self.filter_idxs.append(filter_idxs)
             r = np.linalg.norm(self.x, axis=1)
-            self.log.debug(f"New r {r}")
+            self.log.debug(f"Distances from origin after radius filter: {r}")
 
-        assert "CPET_method" in options.keys(), "CPET_method must be specified"
+        assert "CPET_method" in options, "CPET_method must be specified"
 
         if (
             options["CPET_method"] == "volume" or options["CPET_method"] == "volume_ESP"
         ) and hasattr(self, "y_vec_pt"):
             N_cr = 2 * self.dimensions / self.step_size
             N_cr = [int(N_cr[0]), int(N_cr[1]), int(N_cr[2])]
-            (self.mesh, self.transformation_matrix) = initialize_box_points_uniform(
+            self.mesh, self.transformation_matrix = initialize_box_points_uniform(
                 center=self.center,
                 x=self.x_vec_pt,
                 y=self.y_vec_pt,
@@ -299,12 +304,12 @@ class calculator:
                 )
             elif options["initializer"] == "uniform":
                 num_per_dim = round(self.n_samples ** (1 / 3))
-                if num_per_dim**3 < self.n_samples:
+                if num_per_dim ** 3 < self.n_samples:
                     num_per_dim += 1
-                self.n_samples = num_per_dim**3
-                # print("num_per_dim: ", num_per_dim)
+                self.n_samples = num_per_dim ** 3
+                self.log.debug(f"Grid points per dimension: {num_per_dim}")
                 grid_density = 2 * self.dimensions / (num_per_dim + 1)
-                self.log.info(f"Grid_density: {grid_density}")
+                self.log.info(f"Grid density: {grid_density}")
                 seed = None
                 if self.max_streamline_init == "fixed_rand":
                     seed = 42
@@ -350,20 +355,20 @@ class calculator:
             self.log.info("Rotating coordinates")
             self.x = (self.x - self.center) @ np.linalg.inv(self.transformation_matrix)
         else:
-            self.log.info("Not rotating coordinates since no y-vector is provided")
+            self.log.info("Not rotating coordinates since no y vector is provided")
             self.x = self.x - self.center
 
-        # Box filtering, must be done after coordinates are rotated
-        if "filter_in_box" in options.keys():
-            if bool(options["filter_in_box"]):
-                self.log.info("Filtering charges in sampling box")
-                self.x, self.Q, self.ID = filter_in_box(
-                    x=self.x,
-                    Q=self.Q,
-                    ID=self.ID,
-                    center=self.center,
-                    dimensions=self.dimensions,
-                )
+        # Box filtering, must be done after coordinates are rotated. The coordinates
+        # are already centered on the box, so the box is centered on the origin.
+        if options["filter_in_box"]:
+            self.log.info("Filtering charges in sampling box")
+            self.x, self.Q, self.ID = filter_in_box(
+                x=self.x,
+                Q=self.Q,
+                ID=self.ID,
+                center=np.zeros(3),
+                dimensions=self.dimensions,
+            )
 
         """
         #Debug version
@@ -379,19 +384,23 @@ class calculator:
             self.x = self.x - np.array(self.box_shift)
 
         if self.write_transformed_pdb == True:
-            self.log.info("Writing transformed pdb file, ignoring chains")
+            self.log.info("Writing transformed PDB file, ignoring chains")
             if self.strip_filter == True:
-                self.log.info("Stripping filtered residues for transformed pdb file")
+                self.log.info("Stripping filtered residues for transformed PDB file")
                 self.x_copy = deepcopy(self.x)
-                self.residue_number_copy = deepcopy(self.residue_number)
-                self.resids_copy = deepcopy(self.resids)
-                self.atom_number_copy = deepcopy(self.atom_number)
-                self.atom_type_copy = deepcopy(self.atom_type)
+                # Identities come from ID, which every filter trims along with x. The
+                # atom_number, atom_type, resids and residue_number attributes are not
+                # trimmed by filter_radius or filter_in_box, so they don't line up with x.
+                self.atom_number_copy = [atom[0] for atom in self.ID]
+                self.atom_type_copy = [atom[1] for atom in self.ID]
+                self.resids_copy = [atom[2] for atom in self.ID]
+                self.residue_number_copy = [atom[3] for atom in self.ID]
             else:
-                self.x_copy = (self.x_copy - self.center) @ np.linalg.inv(
-                    self.transformation_matrix
-                )
-                self.x_copy = self.x_copy + np.array(self.box_shift)
+                # Same steps as for x above: center, rotate if there are axes, shift the protein
+                self.x_copy = self.x_copy - self.center
+                if hasattr(self, "y_vec_pt"):
+                    self.x_copy = self.x_copy @ np.linalg.inv(self.transformation_matrix)
+                self.x_copy = self.x_copy - np.array(self.box_shift)
             chain_id = "A"
             with open(f"transform_{path_to_pdb.split('/')[-1][:-4]}.pdb", "w") as f:
                 for i in range(len(self.x_copy)):
@@ -410,8 +419,8 @@ class calculator:
 
         self.log.info(f"Center: {self.center}")
         if hasattr(self, "y_vec_pt"):
-            self.log.info(f"x vector point: {self.x_vec_pt}")
-            self.log.info(f"y vector point: {self.y_vec_pt}")
+            self.log.info(f"X vector point: {self.x_vec_pt}")
+            self.log.info(f"Y vector point: {self.y_vec_pt}")
 
         if self.dtype == "float32":
             self.x = self.x.astype(np.float32)
@@ -420,163 +429,185 @@ class calculator:
             if self.dimensions is not None:
                 self.dimensions = self.dimensions.astype(np.float32)
 
-        print("... > Initialized Calculator!")
+        self.log.info("Initialized calculator")
 
     def compute_point_mag(self):
-        """Compute the electric field magnitude at a point defined by the center and the charges Q at positions x.
+        """
+        Compute the magnitude of the electric field at ``center``.
 
         Returns
         -------
-        point_mag : np.ndarray
-            The computed electric field magnitude at the point
+        point_mag : float
+            Magnitude of the field.
         """
-        print("... > Computing Point Field (Magnitude)!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("point: {}".format(self.center))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
-        print("First few lines of x: {}".format(self.x[:5]))
+        self.log.info("Computing point field (magnitude)")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
         start_time = time.time()
         # Since x and Q are already rotated and translated, need to supply 0 vector as center
-        point_mag = np.norm(
+        point_mag = np.linalg.norm(
             calculate_electric_field_c_shared_full_alt(
                 np.array([0, 0, 0]), self.x, self.Q
             )
         )
         end_time = time.time()
-        print(f"{end_time - start_time:.2f}")
+        self.log.debug(f"Time taken: {end_time - start_time:.2f} seconds")
         return point_mag
 
     def compute_point_field(self):
-        """Compute the electric field at a point defined by the center and the charges Q at positions x.
+        """
+        Compute the electric field vector at ``center``.
 
         Returns
         -------
         point_field : np.ndarray
-            The computed electric field at the point
+            Field vector in the oriented frame, shape (1, 3).
         """
-        print("... > Computing Point Field (Vector)!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("point: {}".format(self.center))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
-        print("First few lines of x: {}".format(self.x[:5]))
+        self.log.info("Computing point field (vector)")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
         start_time = time.time()
         # Since x and Q are already rotated and translated, need to supply 0 vector as center
         point_field = calculate_electric_field_c_shared_full_alt(
             np.array([0, 0, 0]), self.x, self.Q
         )
         end_time = time.time()
-        print(f"{end_time - start_time}")
+        self.log.debug(f"Time taken: {end_time - start_time:.2f} seconds")
         return point_field
 
-#WIP
+    # WIP
     def compute_point_field_polarizable(self):
-        """Compute the electric field at a point defined by the center and multipole moments T at positions x.
+        """
+        Compute the electric field at ``center`` from multipole moments.
+
+        In development. Needs a ``T`` attribute of multipole moments, set by the
+        caller; the calculator does not set it.
 
         Returns
         -------
         point_field : np.ndarray
-            The computed electric field at the point
+            Field vector in the oriented frame.
         """
-        print("... > Computing Point Field (Vector)!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("point: {}".format(self.center))
-        print("x shape: {}".format(self.x.shape))
-        print("T shape: {}".format(self.T.shape))
-        print("First few lines of x: {}".format(self.x[:5]))
+        self.log.info("Computing point field (vector)")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Multipole array shape: {self.T.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
         start_time = time.time()
         # Since x and T are already rotated and translated, need to supply 0 vector as center
         point_field = calculate_electric_field_c_shared_full_alt_polarizable(
             np.array([0, 0, 0]), self.x, self.T
         )
         end_time = time.time()
-        print(f"{end_time - start_time}")
+        self.log.debug(f"Time taken: {end_time - start_time:.2f} seconds")
         return point_field
 
     def compute_box(self):
-        """Compute the electric field on a grid defined by the mesh and the charges Q at positions x.
+        """
+        Compute the electric field at every grid point.
 
         Returns
         -------
         field_box : np.ndarray
-            The computed electric field on the grid
-        mesh.shape : tuple
-            The shape of the mesh grid
+            One ``x y z Ex Ey Ez`` row per grid point, in the oriented frame, shape
+            (n_points, 6).
+        mesh_shape : tuple
+            Shape of the grid, (nx, ny, nz, 3).
         """
-        print("... > Computing Box Field!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("mesh shape: {}".format(self.mesh.shape))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
-        print("First few lines of x: {}".format(self.x[:5]))
-        print("Transformation matrix: {}".format(self.transformation_matrix))
+        self.log.info("Computing box field")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.info(f"Mesh shape: {self.mesh.shape}")
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         field_box = compute_field_on_grid(self.mesh, self.x, self.Q)
         return field_box, self.mesh.shape
 
     def compute_box_ESP(self):
-        """Compute the electrostatic potential on a grid defined by the mesh and the charges Q at positions x.
+        """
+        Compute the electrostatic potential at every grid point.
 
         Returns
         -------
         esp_box : np.ndarray
-            The computed electrostatic potential on the grid
-        mesh.shape : tuple
-            The shape of the mesh grid
+            One ``x y z V`` row per grid point, in the oriented frame, shape
+            (n_points, 4), stored as float16.
+        mesh_shape : tuple
+            Shape of the grid, (nx, ny, nz, 3).
         """
-        print("... > Computing Box ESP!")
+        self.log.info("Computing box ESP")
         self.log.info(f"Number of charges: {len(self.Q)}")
-        self.log.info("mesh shape: {}".format(self.mesh.shape))
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.info(f"Mesh shape: {self.mesh.shape}")
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         esp_box = compute_ESP_on_grid(self.mesh, self.x, self.Q)
         return esp_box, self.mesh.shape
 
     # WIP
     def compute_box_QM(self):
-        """Compute the electric field on a grid, generated from QM calculations with optional MM embedding. Defined by mesh, density, and charges Q at position x.
+        """
+        Compute the electric field on the grid from a QM density, optionally adding MM charges.
+
+        In development. Needs ``moldenpath`` and ``qmmm`` attributes set by the
+        caller; the calculator does not set them.
 
         Returns
         -------
         field_box : np.ndarray
-            The computed electric field on the grid
-        mesh.shape : tuple
-            The shape of the mesh grid
+            One ``x y z Ex Ey Ez`` row per grid point, shape (n_points, 6).
+        mesh_shape : tuple
+            Shape of the grid, (nx, ny, nz, 3).
         """
-        print("... > Computing Box Field!")
-        print(f"Number of charges: {len(self.Q)}")
-        print("mesh shape: {}".format(self.mesh.shape))
-        print("x shape: {}".format(self.x.shape))
-        print("Q shape: {}".format(self.Q.shape))
-        print("First few lines of x: {}".format(self.x[:5]))
-        print("Transformation matrix: {}".format(self.transformation_matrix))
+        self.log.info("Computing box field")
+        self.log.info(f"Number of charges: {len(self.Q)}")
+        self.log.info(f"Mesh shape: {self.mesh.shape}")
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         field_box = compute_field_on_grid_qm(self.mesh, self.x, self.Q, self.moldenpath)
         if self.qmmm == True:  # Add qmmm charges
             field_box += compute_field_on_grid(self.mesh, self.x, self.Q)
         return field_box, self.mesh.shape
 
     def compute_topo_base(self):
-        print("... > Computing Topo!")
+        """
+        Compute streamlines on CPU worker processes with the pure Python propagator.
+
+        Notes
+        -----
+        Not working: it calls ``.get()`` on the list returned by ``Pool.starmap``,
+        which raises an error.
+
+        Returns
+        -------
+        hist : list
+            Results for each streamline.
+        """
+        self.log.info("Computing topology")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         start_time = time.time()
-        self.log.debug("Starting pooling")
+        self.log.debug("Starting worker pool")
         with Pool(self.concur_slip) as pool:
             args = [
                 (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
                 for i, n_iter in zip(self.random_start_points, self.random_max_samples)
             ]
             result = pool.starmap(task_base, args)
-            # print(raw)
+            self.log.debug("Raw pool results: %s", result)
             hist = []
             for result in result.get():
                 hist.append(result)
@@ -584,22 +615,29 @@ class calculator:
         self.hist = hist
 
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.Q)} charges: {end_time - start_time:.2f} seconds"
         )
         return hist
 
     def compute_topo(self):
-        print("... > Computing Topo!")
+        """
+        Compute the streamline distribution on CPU worker processes.
+
+        Returns
+        -------
+        hist : np.ndarray
+            Distance and curvature of each streamline, shape (n_samples, 2).
+        """
+        self.log.info("Computing topology")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         start_time = time.time()
-        self.log.debug("Starting pooling")
+        self.log.debug("Starting worker pool")
         with Pool(self.concur_slip) as pool:
             args = [
                 (i, n_iter, self.x, self.Q, self.step_size, self.dimensions)
@@ -619,20 +657,31 @@ class calculator:
         self.hist = hist
 
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.Q)} charges: {end_time - start_time:.2f} seconds"
         )
         return hist
 
     def compute_topo_single(self):
-        print("... > Computing Topo(baseline)!")
+        """
+        Compute the streamline distribution in a single process, as a reference.
+
+        With debug logging on, also writes the distribution, streamline start and
+        end points, and how each streamline ended to text files in the current
+        working directory.
+
+        Returns
+        -------
+        hist : np.ndarray
+            Distance and curvature of each streamline, shape (n_samples, 2).
+        """
+        self.log.info("Computing topology (baseline)")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         start_time = time.time()
         dist_list, curve_list, init_points_list, final_points_list = [], [], [], []
         endtype_list = []
@@ -646,22 +695,20 @@ class calculator:
             init_points_list.append(init_points)
             final_points_list.append(final_points)
             endtype_list.append(endtype)
-            # print(dist, curve)
+            self.log.debug("Streamline distance: %s, curvature: %s", dist, curve)
         hist = np.column_stack((dist_list, curve_list))
         end_time = time.time()
         self.hist = hist
         init_points_list = np.array(init_points_list)  # Shape (N, 3, 3)
         final_points_list = np.array(final_points_list)  # Shape (N, 3, 3)
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.Q)} charges: {end_time - start_time:.2f} seconds"
         )
         # If debug mode, save more information:
-        if self.log.logger.isEnabledFor(logging.DEBUG):
-            self.log.debug("Dumping topology information in debug mode")
+        if self.log.isEnabledFor(logging.DEBUG):
+            self.log.debug("Writing streamline data to text files (debug mode)")
             np.savetxt(
-                "topology_base.txt",
-                hist,
-                fmt="%.6f",
+                "topology_base.txt", hist, fmt="%.6f",
             )
             np.savetxt(
                 "dumped_values_init_base.txt",
@@ -674,25 +721,32 @@ class calculator:
                 fmt="%.6f",
             )
             np.savetxt(
-                "endtype_base.txt",
-                endtype_list,
-                fmt="%s",
+                "endtype_base.txt", endtype_list, fmt="%s",
             )
         return hist
 
     def compute_topo_complete_c_shared(self):
-        print("... > Computing Topo!")
+        """
+        Compute the streamline distribution on CPU worker processes, using the C extension.
+
+        This is the method ``topo`` uses. Runs ``concur_slip`` processes.
+
+        Returns
+        -------
+        hist : np.ndarray
+            Distance and curvature of each streamline, shape (n_samples, 2).
+        """
+        self.log.info("Computing topology")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
         self.log.info(f"Start point shape: {self.random_start_points.shape}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         start_time = time.time()
-        self.log.debug("Starting pooling")
+        self.log.debug("Starting worker pool")
         self.log.debug(f"Random start points: {self.random_start_points}")
         self.log.debug(f"Random max samples: {self.random_max_samples}")
         with Pool(self.concur_slip) as pool:
@@ -715,24 +769,31 @@ class calculator:
         self.hist = hist
 
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.Q)} charges: {end_time - start_time:.2f} seconds"
         )
         return hist
 
     def compute_topo_complete_c_shared_dipole(self):
         """
-        IN DEVELOPMENT, FOR TESTING ONLY
+        Compute the streamline distribution from point dipoles instead of charges.
+
+        In development, for testing only. Needs a ``mu`` attribute of dipole moments,
+        set by the caller as ``field_topology_dipole.py`` does.
+
+        Returns
+        -------
+        hist : np.ndarray
+            Distance and curvature of each streamline, shape (n_samples, 2).
         """
-        print("... > Computing Topo from Dipoles!")
+        self.log.info("Computing topology from dipoles")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of dipoles: {len(self.mu)}")
         self.log.info(f"Step size: {self.step_size}")
         self.log.info(f"Start point shape: {self.random_start_points.shape}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("mu shape: {}".format(self.mu.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Dipole array shape: {self.mu.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         start_time = time.time()
         with Pool(self.concur_slip) as pool:
             args = [
@@ -752,22 +813,32 @@ class calculator:
         self.hist = hist
 
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N_dipoles = {len(self.mu)}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.mu)} dipoles: {end_time - start_time:.2f} seconds"
         )
         return hist
 
     def compute_topo_batched(self):
-        print("... > Computing Topo in Batches!")
+        """
+        Compute the streamline distribution on CPU worker processes, a batch of streamlines per task.
+
+        Needs ``random_start_points_batched`` and ``random_max_samples_batched``
+        attributes set by the caller; the calculator does not set them.
+
+        Returns
+        -------
+        hist : np.ndarray
+            Distance and curvature of each streamline, shape (n_samples, 2).
+        """
+        self.log.info("Computing topology in batches")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
         start_time = time.time()
-        self.log.info(f"num batches: {len(self.random_start_points_batched)}")
+        self.log.info(f"Number of batches: {len(self.random_start_points_batched)}")
         self.log.debug(
             f"Random start points (batched): {self.random_start_points_batched}"
         )
@@ -794,28 +865,39 @@ class calculator:
         # self.hist = hist
 
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N_charges = {len(self.Q)}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.Q)} charges: {end_time - start_time:.2f} seconds"
         )
         return hist
 
     def compute_topo_GPU_batch_filter(self):
-        """Compute the topology using GPU with batch-filtering
+        """
+        Compute the streamline distribution on the GPU.
+
+        This is the method ``topo_GPU`` uses. Streamlines are propagated in batches
+        of ``GPU_batch_freq`` steps, and finished streamlines are dropped between
+        batches.
 
         Returns
         -------
-        hist : np.ndarray
-            The computed topology data
+        topology : np.ndarray
+            Distance and curvature of each streamline, shape (n_samples, 2).
         """
+        import torch
+        from CPET.utils.gpu import (
+            propagate_topo_matrix_gpu,
+            compute_curv_and_dist_mat_gpu,
+            batched_filter_gpu,
+            generate_path_filter_gpu,
+        )
 
-        print("... > Computing Topo in Batches on a GPU!")
+        self.log.info("Computing topology in batches on a GPU")
         self.log.info(f"Number of samples: {self.n_samples}")
         self.log.info(f"Number of charges: {len(self.Q)}")
         self.log.info(f"Step size: {self.step_size}")
-        self.log.debug("x shape: {}".format(self.x.shape))
-        self.log.debug("Q shape: {}".format(self.Q.shape))
-        self.log.debug("First few lines of x: {}".format(self.x[:5]))
-        self.log.debug("Transformation matrix: {}".format(self.transformation_matrix))
-        self.log.debug("Center: {}".format(self.center))
+        self.log.debug(f"Coordinate array shape: {self.x.shape}")
+        self.log.debug(f"Charge array shape: {self.Q.shape}")
+        self.log.debug(f"First 5 coordinates: {self.x[:5]}")
+        self.log.debug(f"Transformation matrix: {self.transformation_matrix}")
 
         Q_gpu = torch.tensor(self.Q, dtype=torch.float32).cuda()
         Q_gpu = Q_gpu.unsqueeze(0)
@@ -836,11 +918,7 @@ class calculator:
         ).cuda()
         path_matrix_torch[0] = torch.tensor(self.random_start_points)
         path_matrix_torch = propagate_topo_matrix_gpu(
-            path_matrix_torch,
-            torch.tensor([0]).cuda(),
-            x_gpu,
-            Q_gpu,
-            step_size_gpu,
+            path_matrix_torch, torch.tensor([0]).cuda(), x_gpu, Q_gpu, step_size_gpu,
         )
         # Using random_max_samples-1 to convert from max samples to indices
         path_filter = generate_path_filter_gpu(
@@ -856,8 +934,8 @@ class calculator:
             path_filter = path_filter_temp
 
         path_filter = torch.tensor(path_filter, dtype=torch.bool).cuda()
-        self.log.debug(f"path_matrix_torch.shape: {path_matrix_torch.shape}")
-        self.log.debug(f"path_filter.shape: {path_filter.shape}")
+        self.log.debug(f"Path matrix shape: {path_matrix_torch.shape}")
+        self.log.debug(f"Path filter shape: {path_filter.shape}")
         self.log.debug(f"Number of steps (M + 2): {M + 2}")
 
         dumped_values = torch.tensor(np.empty((6, 0, 3)), dtype=torch.float32).cuda()
@@ -877,7 +955,7 @@ class calculator:
                 if i == 0 and j == 0:
                     init_points = path_matrix_torch[0:3, ...]
 
-            self.log.debug("Filtering!")
+            self.log.debug("Filtering streamlines")
             (
                 path_matrix_torch,
                 dumped_values,
@@ -893,22 +971,21 @@ class calculator:
                 GPU_batch_freq=self.GPU_batch_freq,
                 dtype_str=self.dtype,
             )
-            print(dumped_values.shape[1])
+            self.log.debug(f"Dumped streamlines so far: {dumped_values.shape[1]}")
             if dumped_values.shape[1] >= self.n_samples:
-                print("Finished streamlines early, breaking!")
+                self.log.info("All streamlines finished early, stopping propagation")
                 break
         self.log.info(
-            f"Checking dumped values ({dumped_values.shape[1]}) vs number of samples ({self.n_samples})"
+            f"Dumped {dumped_values.shape[1]} of {self.n_samples} streamlines"
         )
         if (
             dumped_values.shape[1] < self.n_samples
         ):  # Still some samples remaining in the remainder
-            self.log.info("Streamlines remaining")
-            self.log.debug(f" Remainder: {remainder}")
+            self.log.info("Some streamlines remain, propagating the remainder")
+            self.log.debug(f"Remainder steps: {remainder}")
             self.log.debug(f"Path matrix shape: {path_matrix_torch.shape}")
             path_matrix_torch_new = torch.zeros(
-                (remainder + 2, path_matrix_torch.shape[1], 3),
-                dtype=torch.float32,
+                (remainder + 2, path_matrix_torch.shape[1], 3), dtype=torch.float32,
             ).cuda()
             path_matrix_torch_new[0:2, ...] = path_matrix_torch[-2:, ...]
             del path_matrix_torch
@@ -936,14 +1013,19 @@ class calculator:
                 GPU_batch_freq=remainder,
                 dtype_str=self.dtype,
             )
-            # print(path_matrix_torch_new, dumped_values, path_filter)
+            self.log.debug(
+                "Remainder path matrix: %s, dumped values: %s, path filter: %s",
+                path_matrix_torch_new,
+                dumped_values,
+                path_filter,
+            )
         else:
             del path_matrix_torch
 
         self.log.debug(f"Dumped values shape: {dumped_values.shape}")
 
-        if self.log.logger.isEnabledFor(logging.DEBUG):
-            self.log.debug("Dumping topology information in debug mode")
+        if self.log.isEnabledFor(logging.DEBUG):
+            self.log.debug("Writing streamline data to text files (debug mode)")
             np.savetxt(
                 "dumped_values_init.txt",
                 dumped_values[0:3]
@@ -962,6 +1044,10 @@ class calculator:
                 .reshape(dumped_values.shape[1], -1),
                 fmt="%.6f",
             )
+        # Logged here because TorchScript functions cannot call the logger
+        self.log.debug(
+            "Curvature inputs: x_init %s, x_0 %s", dumped_values[0], dumped_values[3]
+        )
         distances, curvatures = compute_curv_and_dist_mat_gpu(
             dumped_values[0, :, :],
             dumped_values[1, :, :],
@@ -972,7 +1058,7 @@ class calculator:
         )
         end_time = time.time()
         self.log.debug(
-            f"Time taken for {self.n_samples} calculations with N~{self.Q.shape}: {end_time - start_time:.2f} seconds"
+            f"Time taken for {self.n_samples} streamlines with {len(self.Q)} charges: {end_time - start_time:.2f} seconds"
         )
         topology = np.column_stack((distances.cpu().numpy(), curvatures.cpu().numpy()))
         self.log.info(f"Topology shape: {topology.shape}")

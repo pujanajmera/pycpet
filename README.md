@@ -1,82 +1,95 @@
-<div align="center">   
-<img title="logo" alt="" src="pycpet-logo.png"  width="600" height="300" align="center">      
+<div align="center">
+<img title="logo" alt="PyCPET logo" src="docs/_static/pycpet-logo.png" width="300">
 
 <br/><br/>
-[![DOI:10.1021/acs.jctc.5c00138](https://img.shields.io/badge/DOI-10.1021%2Facs.jctc.5c00138%5D-blue
-)](https://doi.org/10.1021/acs.jctc.5c00138) 
+[![DOI:10.1021/acs.jctc.5c00138](https://img.shields.io/badge/DOI-10.1021%2Facs.jctc.5c00138-blue
+)](https://doi.org/10.1021/acs.jctc.5c00138)
+[![PyPI version](https://img.shields.io/pypi/v/pycpet.svg)](https://pypi.org/project/pycpet/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/pycpet.svg)](https://pypi.org/project/pycpet/)
+[![Documentation Status](https://readthedocs.org/projects/pycpet/badge/?version=latest)](https://pycpet.readthedocs.io/en/latest/)
+
 </div>
 
 # *PyCPET*
 
-Python-based Computation of Protein Electric Field Topology, built for high-throughput accelerated calculations of several electrostatic properties of enzyme active sites from simulations. This program is incredibly flexible and scriptable for virtually any analysis of classical electric fields and electrostatic potentials.
+Python-based Computation of Protein Electric Field Topology: high-throughput calculation of electric fields, electrostatic potentials and field topologies at enzyme active sites, from single structures or whole simulations. Most analyses run from one options file, and the library can be scripted for others.
 
-## Cite
-To cite your use of *PyCPET*, please use the following:
-Ajmera, P., Vargas, S., Chaturvedi, S., Hennefarth, M. & Alexandrova, A. *PyCPET* - Computing Heterogeneous 3D Protein Electric Fields and Their Dynamics. Journal of Chemical Theory and Computation (2025). doi:10.1021/acs.jctc.5c00138
+**Documentation:** [pycpet.readthedocs.io](https://pycpet.readthedocs.io/en/latest/)
 
-## Requirements and Installation
-System requirements:
-- gcc (to compile C-shared libraries)
-- anaconda (preferred, not required)
+## Installation
 
-Follow these steps to install PyCPET. I recommend installing the latest version from GitHub by cloning and "pip install -e .", but these are simpler steps:
+*PyCPET* supports Python 3.9–3.12, and we recommend 3.11. Python 3.13 is not supported yet (see [#19](https://github.com/pujanajmera/pycpet/issues/19)).
 
-1. Make a clean conda environment (recommended, not required)
-
-conda create -n pycpet-env python=3.12 pip -c conda-forge -y
-conda activate pycpet-env
-
-2. Run pip install in the conda environment
-
+```bash
 pip install pycpet
+```
 
-3. When running, we advise you set the following:
+To modify the code, install from the repository instead:
 
-CPU multithreading (available for topologies): 
-    export OMP_NUM_THREADS=1
-GPU-accelerated code (available for topologies, fields in dev):
-    export CUDA_VISIBILE_DEVICES=N (where N is the GPU number, only needed for non-HPC setups)
+```bash
+git clone https://github.com/pujanajmera/pycpet.git
+cd pycpet
+pip install -e .
+```
 
-## Documentation
-Almost all use of *PyCPET* is either scripting with the objects provided (requires in-depth knowledge of the code) or using the cpet.py script with an options file. We are developing in-depth documentation of how to format and use the options file, examples, and cookbooks at (), but key features and explanation of example files are noted below.
+Before running, limit OpenMP to one thread. With more than one thread, CPU topology calculations give incorrect results:
+
+```bash
+export OMP_NUM_THREADS=1
+```
+
+The [installation guide](https://pycpet.readthedocs.io/en/latest/Installation.html) covers conda setup, which platforms get prebuilt packages, compilers, source builds and GPU setup.
+
+## Quick start
+
+Write an options file, `options.json`:
+
+```json
+{
+    "CPET_method": "point_field",
+    "inputpath": "./pdb",
+    "outputpath": "./out",
+    "center": {"method": "mean", "atoms": [{"C7": 378}, {"O9": 378}]}
+}
+```
+
+Then run:
+
+```bash
+cpet.py -o options.json
+```
+
+This computes the electric field at the midpoint of atoms C7 and O9 in residue 378, for every PDB file in `./pdb`, and writes one line per structure to `./out/point_field.dat`. The [`examples`](examples) folder has ready-to-run examples of this and other methods, and the [options reference](https://pycpet.readthedocs.io/en/latest/Options.html) lists every setting.
 
 ## Features
 
-These are the following available features, and their corresponding options file 'method' keywords:
+| `CPET_method` | Computes |
+|---|---|
+| `point_field`, `point_mag` | Electric field vector or magnitude at a point |
+| `volume`, `volume_ESP` | Electric field or electrostatic potential on a 3D grid |
+| `topo`, `topo_GPU` | Distribution of field streamlines (topology), on CPU or GPU |
+| `cluster` | Clusters of topologies |
+| `cluster_volume`, `cluster_volume_tensor` | Clusters of 3D fields, by direct distances or tensor decomposition |
+| `cluster_volume_esp_tensor` | Clusters of 3D electrostatic potentials (beta) |
+| `pca`, `pca_compare` | PCA of 3D fields, for one set or to compare sets such as variants (beta) |
+| `visualize_field`, `visualize_esp` | BILD files to view fields or potentials in ChimeraX |
+| `box_check` | Atoms intruding into the calculation box |
 
-- Computing point electric fields: 'point_field'
-- Computing point electric field magnitudes: 'point_mag'
-- Computing 3-D electric fields: 'volume'
-- Computing 3-D electrostatic potentials: 'volume_ESP'
-- Computing 3-D distribution of streamlines: 'topo' (CPU, default) and 'topo_GPU' (GPU)
-- Clustering by distribution of streamlines: 'cluster'
-- Clustering by 3-D electric field (tensor decomp): 'cluster_volume_tensor'
-- Clustering by 3-D electrostatic potential: 'cluster_volume_ESP_tensor' **IN BETA**
-- Visualizing 3-D fields: 'visualize_fields'
-- PCA on 3-D fields, for a single set of data: 'pca' **IN BETA**
-- PCA on 3-D fields, for a full comparative analysis between multiple sets of field data (e.g. variants): 'pca_compare' **IN BETA**
-- Finding if any atoms are intruding the field volume: 'box_check'
+## Scripts
 
-## Examples
+Scripts in `CPET/source/scripts` cover analyses outside `cpet.py`. Only `cpet.py` is installed as a command, so run these by their path. They are less thoroughly tested; see [Special Scripts](https://pycpet.readthedocs.io/en/latest/SpecialScripts.html).
 
-Several examples are in the ```examples``` directory. Most of these are designed for single calculations, but can be extended to high-throughput with almost no changes.
+- `electrostatic_interaction_QM.py`: electrostatic interaction energies, with a residue breakdown, for QM/MM calculations
+- `residue_breakdown_analysis.py`: ranked residue contributions to field topology over a trajectory (beta)
+- `tensor_based_cluster_double.py`: joint clustering of two sets of fields or potentials (beta)
+- `field_topology_dipole.py`: streamline distributions from point dipoles (beta)
 
-## Specialized Scripts
+## Input files
 
-For features unavailable from the cpet.py script mentioned above, we offer scripts in ```source/scripts``` for the following. Please note that these are not rigorously tested for all cases, but showcase the scripting ability of the pycpet library:
+Structures must be PDB or PQR files with charges. In PDB files, charges go in columns 56–64. See [Input Files](https://pycpet.readthedocs.io/en/latest/InputFiles.html) for the full rules.
 
-- electrostatic_interaction_QM.py: Electrostatic interaction energy and residue-breakdown for QM/MM calculations
-- residue_breakdown_analysis.py: Residue contribution to topology over dynamics, ranked. Requires completed topology calculations for an MD **IN BETA**
-- tensor_based_cluster_double.py: Electrostatic potential/electric field-based clustering for two sets of electric fields/electrostatic potentials. Assumes that all field calculations have been completed for both sets of directories. **IN BETA**
-- field_topology_dipoel.py: Electric field streamline distributions from a given set of dipoles **IN BETA**
+## Citation
 
-## Note: Formatting of PDB/PQR files
+If you use *PyCPET*, please cite:
 
-Most of the code here requires well-formated PDB or PQR files. The formatting is as follows (see io.py for more details):
-
-PDB:
-- Up to and including charge information, follow standard formatting: https://www.cgl.ucsf.edu/chimerax/docs/user/formats/pdbintro.html
-- For charge information, charges must be in columns 55-64 of each line, inclusive
-
-PQR:
-- 
+> Ajmera, P.; Vargas, S.; Chaturvedi, S. S.; Hennefarth, M.; Alexandrova, A. N. PyCPET─Computing Heterogeneous 3D Protein Electric Fields and Their Dynamics. *J. Chem. Theory Comput.* **2025**, *21* (8), 4299–4308. [doi:10.1021/acs.jctc.5c00138](https://doi.org/10.1021/acs.jctc.5c00138)

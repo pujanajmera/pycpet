@@ -3,12 +3,14 @@ import warnings
 import math
 import logging
 
+from CPET.utils.io import default_options_initializer
+
 """
 Overall script for all visualization functions and visualization-affiliates.
 
 Current functions:
-- visualize_fields: Visualize electric fields in proteins by creating a bild file
-for Chimera/ChimeraX input
+- visualize_field / visualize_esp: Visualize electric fields or electrostatic
+potentials in proteins by creating a bild file for Chimera/ChimeraX input
 
 To-add:
 - Time-dependent animations
@@ -21,38 +23,40 @@ log = logging.getLogger(__name__)
 
 def visualize_esp(path_to_esp, outputpath, options):
     """
-    Visualize electrostatic potential in proteins by creating a bild file
-    for Chimera/ChimeraX input
-    Takes:
-        path_to_pdb: Path to the PDB file of the protein
-        path_to_esp: Path to the corresponding ESP file
-        options: Options dictionary
+    Write a BILD file showing an electrostatic potential as colored spheres, for Chimera/ChimeraX.
+
+    Positive potentials are drawn from white to red and negative potentials from
+    white to blue, with sphere size growing with magnitude.
+
+    Parameters
+    ----------
+    path_to_esp : str
+        Path to the electrostatic potential file.
+    outputpath : str
+        Folder to write ``<name>.bild`` to.
+    options : dict
+        Options; reads ``visualization["cutoff"]`` and the ``max_p_esp``,
+        ``min_p_esp``, ``max_n_esp`` and ``min_n_esp`` color limits.
+
+    Returns
+    -------
+    str
+        A message naming the file that was saved.
     """
+    # Fill defaults in case this is called outside of CPET.py
+    options = default_options_initializer(options)
 
-    if "visualization" in options.keys():
-        cutoff = (
-            options["visualization"]["cutoff"]
-            if "cutoff" in options["visualization"]
-            else 0
-        )
-        sparsify_factor = (
-            options["visualization"]["sparsify_factor"]
-            if "sparsify_factor" in options["visualization"]
-            else 1
-        )
+    cutoff = options["visualization"]["cutoff"]
+    sparsify_factor = options["visualization"]["sparsify_factor"]
 
-    else:
-        cutoff = 0
-        sparsify_factor = 1
-
-    max_p_esp = options["max_p_esp"] if "max_p_esp" in options else None
-    min_p_esp = options["min_p_esp"] if "min_p_esp" in options else None
-    max_n_esp = options["max_n_esp"] if "max_n_esp" in options else None
-    min_n_esp = options["min_n_esp"] if "min_n_esp" in options else None
+    max_p_esp = options["max_p_esp"]
+    min_p_esp = options["min_p_esp"]
+    max_n_esp = options["max_n_esp"]
+    min_n_esp = options["min_n_esp"]
 
     name = path_to_esp.split("/")[-1].split(".")[0]
 
-    log.info(f"Generating bild file for field: {name}")
+    log.info(f"Generating BILD file for {name}")
 
     bild_path = outputpath + "/" + name
 
@@ -80,39 +84,38 @@ def visualize_esp(path_to_esp, outputpath, options):
         min_n_esp,
         bild_path,
     )
-    return "Bild file saved for {}".format(name)
+    return f"Bild file saved for {name}"
 
 
 def visualize_field(path_to_efield, outputpath, options):
     """
-    Visualize electric fields in proteins by creating a bild file
-    for Chimera/ChimeraX input, with optional display in ChimeraX
-    Takes:
-        path_to_field: Path to the corresponding field/esp file
-        options: Options dictionary
-        display: Boolean to display the fields in ChimeraX
+    Write a BILD file showing an electric field as arrows, for Chimera/ChimeraX.
+
+    Parameters
+    ----------
+    path_to_efield : str
+        Path to the electric field file.
+    outputpath : str
+        Folder to write ``<name>.bild`` to.
+    options : dict
+        Options; reads ``visualization["cutoff"]`` and
+        ``visualization["sparsify_factor"]``.
+
+    Returns
+    -------
+    str
+        A message naming the file that was saved.
     """
 
-    # Extract key options
+    # Extract key options, filling defaults in case this is called outside of CPET.py
+    options = default_options_initializer(options)
 
-    if "visualization" in options.keys():
-        cutoff = (
-            options["visualization"]["cutoff"]
-            if "cutoff" in options["visualization"]
-            else 0
-        )
-        sparsify_factor = (
-            options["visualization"]["sparsify_factor"]
-            if "sparsify_factor" in options["visualization"]
-            else 1
-        )
-    else:
-        cutoff = 0
-        sparsify_factor = 1
+    cutoff = options["visualization"]["cutoff"]
+    sparsify_factor = options["visualization"]["sparsify_factor"]
 
     name = path_to_efield.split("/")[-1].split(".")[0]
 
-    log.info(f"Generating bild file for field: {name}")
+    log.info(f"Generating BILD file for {name}")
 
     bild_path = outputpath + "/" + name
 
@@ -138,20 +141,40 @@ def visualize_field(path_to_efield, outputpath, options):
         bild_path,
         path_to_efield,
     )
-    return "Bild file saved for {}".format(name)
+    return f"Bild file saved for {name}"
 
 
 def process_field_file(file_path, type="field"):
     """
-    This function processes all data from the field/esp file
-    Inputs:
-        file_path: Path to the field file
-    Outputs:
-        sample_density: Sample density
-        volume_box: Volume of the box in Angstroms
-        center: Center of the box in Angstroms
-        basis_matrix: Basis matrix used for rotation
-        field: Electric field values
+    Read the header and data of a field or electrostatic potential file.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the file.
+    type : str, optional
+        ``"field"`` for electric field files (``x y z Ex Ey Ez`` rows) or
+        ``"esp"`` for electrostatic potential files (``x y z V`` rows). Default
+        is ``"field"``.
+
+    Returns
+    -------
+    sample_density : np.ndarray
+        Number of grid points along each axis, shape (3,).
+    volume_box : np.ndarray
+        Box half widths in Angstroms, shape (3,).
+    center : np.ndarray
+        Box center in Angstroms, shape (3,).
+    basis_matrix : np.ndarray
+        Basis matrix of the box frame, shape (3, 3).
+    data : np.ndarray
+        The data rows, shape (N, 6) for fields or (N, 4) for potentials.
+
+    Raises
+    ------
+    ValueError
+        If a header or data line is malformed, there is no data, or the number
+        of rows doesn't match the sample density.
     """
     # Initialize variables
     sample_density = []
@@ -216,7 +239,7 @@ def process_field_file(file_path, type="field"):
             check_field(np.array(field), np.array(sample_density), type)
         elif type == "esp":
             check_field(np.array(esp), np.array(sample_density), type)
-    # print(np.array(basis_matrix))
+    log.debug("Basis matrix: %s", np.array(basis_matrix))
     if type == "field":
         return (
             np.array(sample_density),
@@ -237,37 +260,61 @@ def process_field_file(file_path, type="field"):
 
 def check_field(elec_array, sample_density_array, type="field"):
     """
-    This function checks if the field provided matches the sample density
-    Inputs:
-        elec_array: Field/esp array
-        sample_density_array: Sample density array
-        type: Type of field, either 'field' or 'esp'
-    Outputs:
-        None
+    Check that the number of data rows matches the sample density.
+
+    Parameters
+    ----------
+    elec_array : np.ndarray
+        Field or potential rows, shape (N, 6) or (N, 4).
+    sample_density_array : np.ndarray
+        Number of grid points along each axis, shape (3,).
+    type : str, optional
+        ``"field"`` or ``"esp"``, used in the error message. Default is ``"field"``.
+
+    Raises
+    ------
+    ValueError
+        If N is not the product of the sample density.
     """
-    # print(sample_density_array)
-    # print(field_array.shape)
+    log.debug("Sample density: %s", sample_density_array)
+    log.debug("Shape of %s array: %s", type, elec_array.shape)
     if elec_array.shape[0] != np.product(sample_density_array, axis=0):
         raise ValueError(
             f"{type} provided does not match sample density, {type} of shape {elec_array.shape[0]} does not match expected sample amount of {np.product(sample_density_array, axis=0)}"
         )
     else:
-        print(f"{type} matches sample density, check passed, continuing...")
+        log.debug(f"Sample density check passed for {type} array")
 
 
 def transform_field(field_array, center_array, basis_matrix_array):
     """
-    This function transforms the field to the new basis and new center
-    Inputs:
-        field_array: Field array
-        center_array: Center array
-        basis_matrix_array: Basis matrix array
-    Outputs:
-        transformed_field_array: Transformed field array
+    Move field points from the box frame into the structure's frame.
+
+    Coordinates are rotated by the basis matrix and shifted by the center;
+    field vectors are only rotated.
+
+    Parameters
+    ----------
+    field_array : np.ndarray
+        Field rows ``x y z Ex Ey Ez`` in the box frame, shape (N, 6).
+    center_array : np.ndarray
+        Box center, shape (3,).
+    basis_matrix_array : np.ndarray
+        Basis matrix of the box frame, shape (3, 3).
+
+    Returns
+    -------
+    transformed_field_array : np.ndarray
+        Field rows in the structure's frame, shape (N, 6).
     """
     field_coords = field_array[:, 0:3]
     field_vecs = field_array[:, 3:6]
-    # print(field_coords, field_vecs, basis_matrix_array)
+    log.debug(
+        "Field coordinates: %s, field vectors: %s, basis matrix: %s",
+        field_coords,
+        field_vecs,
+        basis_matrix_array,
+    )
     # Need to transform and recenter field coords, but only transform field vecs
     transformed_field_coords = field_coords @ basis_matrix_array.T
     transformed_field_coords = transformed_field_coords + center_array
@@ -280,13 +327,21 @@ def transform_field(field_array, center_array, basis_matrix_array):
 
 def transform_esp(esp_array, center_array, basis_matrix_array):
     """
-    This function transforms the ESP array to the new basis and new center
-    Inputs:
-        esp_array: ESP array
-        center_array: Center array
-        basis_matrix_array: Basis matrix array
-    Outputs:
-        transformed_esp_array: Transformed ESP array
+    Move potential points from the box frame into the structure's frame.
+
+    Parameters
+    ----------
+    esp_array : np.ndarray
+        Potential rows ``x y z V`` in the box frame, shape (N, 4).
+    center_array : np.ndarray
+        Box center, shape (3,).
+    basis_matrix_array : np.ndarray
+        Basis matrix of the box frame, shape (3, 3).
+
+    Returns
+    -------
+    transformed_esp_array : np.ndarray
+        Potential rows in the structure's frame, shape (N, 4).
     """
     esp_coords = esp_array[:, 0:3]
     # Need to transform and recenter field coords, but only transform field vecs
@@ -300,13 +355,25 @@ def transform_esp(esp_array, center_array, basis_matrix_array):
 
 def generate_tip_tail_vectors(field_array, sample_density_array, volume_box_array):
     """
-    This function generates the tip and tail vectors for the field
-    Inputs:
-        field_array: Field array (transformed or not) Shape (N, 6)
-        sample_density_array: Sample density array Shape (3,)
-        volume_box_array: Volume box array
-    Outputs:
-        tip_to_tail_vectors: Tip to tail vectors
+    Turn field vectors into arrow start and end points of equal length.
+
+    Each arrow is centered on its grid point, points along the field, and is
+    0.9 times the smallest grid spacing long. The vector columns of
+    ``field_array`` are overwritten.
+
+    Parameters
+    ----------
+    field_array : np.ndarray
+        Field rows ``x y z Ex Ey Ez``, shape (N, 6).
+    sample_density_array : np.ndarray
+        Number of grid points along each axis, shape (3,).
+    volume_box_array : np.ndarray
+        Box half widths, shape (3,).
+
+    Returns
+    -------
+    tip_to_tail_vectors : np.ndarray
+        Tail and tip coordinates of each arrow, shape (N, 6).
     """
 
     max_vector_length = 0.9 * np.min(2 * volume_box_array / sample_density_array)
@@ -334,15 +401,28 @@ def generate_tip_tail_vectors(field_array, sample_density_array, volume_box_arra
 
 def generate_radii(esp_array, sample_density_array, volume_box_array):
     """
-    This function generates the radii for the ESP field
-    Inputs:
-        esp_array: ESP array of shape (N,4) (x,y,z,esp)
-        sample_density_array: Sample density array
-        volume_box_array: Volume box array
-    Outputs:
-        radii: Radii for each point of the ESP field
+    Compute a sphere radius for each potential point.
+
+    Radii grow with the magnitude of the potential, up to half the smallest
+    grid spacing.
+
+    Parameters
+    ----------
+    esp_array : np.ndarray
+        Potential rows ``x y z V``, shape (N, 4).
+    sample_density_array : np.ndarray
+        Number of grid points along each axis, shape (3,).
+    volume_box_array : np.ndarray
+        Box half widths, shape (3,).
+
+    Returns
+    -------
+    radii : np.ndarray
+        Sphere radius for each point, shape (N,).
     """
-    print(sample_density_array, volume_box_array)
+    log.debug(
+        "Sample density: %s, volume box: %s", sample_density_array, volume_box_array
+    )
 
     # Normalize esp_array (only esp values)
     zero_min_esps = np.abs(esp_array[:, 3]) - np.min(esp_array[:, 3])
@@ -358,10 +438,19 @@ def generate_radii(esp_array, sample_density_array, volume_box_array):
 
 def fac(num, f):
     """
-    This function returns the factor of num which is closest to f
-    Inputs:
-        num
-        f
+    Find the factor of an integer closest to a target value.
+
+    Parameters
+    ----------
+    num : int
+        The integer to factor.
+    f : float
+        The target value.
+
+    Returns
+    -------
+    int
+        The factor of ``num`` closest to ``f``; the larger one on a tie.
     """
     fac_list = []
     for i in range(1, num + 1):
@@ -381,19 +470,31 @@ def sparsify_vec_field(
     vectors, sparsify_factor, nx, ny, nz, dim1, dim2, dim3, printflag=0
 ):
     """
-    This function generates the sparsified 3D field vectors and corresponding colors
-    Inputs:
-        vectors: vectors in the vector field
-        sparsify_factor
-        nx: number of vectors in x direction
-        ny: number of vectors in y direction
-        nz: number of vectors in z direction
-        printflag: flag to print number of points
+    Keep a regular subset of the grid points, to draw fewer arrows.
+
+    The step along each axis is the factor of that axis's point count closest
+    to ``sparsify_factor``, adjusted for the box's aspect ratio.
+
+    Parameters
+    ----------
+    vectors : array_like
+        One value or row per grid point, in grid order, length nx * ny * nz.
+    sparsify_factor : int
+        Approximate step between kept points.
+    nx, ny, nz : int
+        Number of grid points along x, y and z.
+    dim1, dim2, dim3 : float
+        Box half widths along x, y and z.
+    printflag : int, optional
+        If 1, log the grid size before and after. Default is 0.
+
+    Returns
+    -------
+    np.ndarray
+        The values or rows at the kept grid points.
     """
     # sparsify_factor=3
-    # print(nx)
-    # print(ny)
-    # print(nz)
+    log.debug("Grid points (nx, ny, nz): %s, %s, %s", nx, ny, nz)
 
     max_dim = max(dim1, dim2, dim3)
 
@@ -409,7 +510,7 @@ def sparsify_vec_field(
     sy = fac(ny, d2 * sparsify_factor)  # =3
     sz = fac(nz, d3 * sparsify_factor)  # =3
 
-    # print("S", sx, sy, sz)
+    log.debug("Sparsification steps (sx, sy, sz): %s, %s, %s", sx, sy, sz)
     indices = [i for i in range(len(vectors))]
 
     # sparsify along x direction
@@ -422,8 +523,8 @@ def sparsify_vec_field(
             indices_yzs.append(indices_zs[i])
     new_ny = ny / sy  # =3
     # new_ny = ny/7
-    # print(indices_xys)
-    # print("new ny", new_ny)
+    log.debug("Indices kept after y/z sparsification: %s", indices_yzs)
+    log.debug("Grid points in y after sparsification: %s", new_ny)
     indices_xyzs = []
     for i in range(len(indices_yzs)):
         if (i // (new_ny * new_nz)) % sx == 0:  # if (i // 7*7) % 3 == 0
@@ -431,22 +532,16 @@ def sparsify_vec_field(
     new_nx = nx / sx
 
     if printflag == 1:
-        print("Original field has ", nx, " X ", ny, " X ", nz, " points.")
-        print(
-            "Sparsified field has ",
-            int(new_nx),
-            " X ",
-            int(new_ny),
-            " X ",
-            int(new_nz),
-            " points before filtering.",
+        log.info(f"Original field has {nx} x {ny} x {nz} points")
+        log.info(
+            f"Sparsified field has {int(new_nx)} x {int(new_ny)} x {int(new_nz)} points before filtering"
         )
 
     vectors_s = []
     for i in indices_xyzs:
         vectors_s.append(vectors[i])
     vectors_s_np = np.array(vectors_s)
-    # print(len(vectors_s_np) )
+    log.debug("Number of sparsified vectors: %s", len(vectors_s_np))
     return vectors_s_np
 
 
@@ -454,19 +549,29 @@ def scale_tip_to_tail_vectors(
     tip_to_tail_vectors, field_mags, sparsify_factor, min_dim
 ):
     """
-    This function scales the tip to tail vectors based on their field magnitude
-    Inputs:
-        tip_to_tail_vectors: Tip to tail vectors
-        field_mags: Field magnitudes to scale vectors
-        sparsify_factor: for overall scale-up
-        min_dim: the minimum of the three dimensions of the box, used for scaling
+    Scale each arrow about its midpoint by its field magnitude.
+
+    Parameters
+    ----------
+    tip_to_tail_vectors : np.ndarray
+        Tail and tip coordinates of each arrow, shape (N, 6).
+    field_mags : np.ndarray
+        Normalized field magnitudes, shape (N,).
+    sparsify_factor : int
+        Overall scale factor, so sparser grids get longer arrows.
+    min_dim : float
+        Smallest box half width, used for scaling.
+
+    Returns
+    -------
+    np.ndarray
+        Scaled tail and tip coordinates, shape (N, 6).
     """
     scaled_tip_to_tail_vectors = []
     for i in range(len(tip_to_tail_vectors)):
 
         # use field mag as scaling factor
-        m = sparsify_factor * (field_mags[i] ** 0.05) * min_dim # Temp version for soft scaling
-        # m = sparsify_factor * field_mags[i] * min_dim Original version
+        m = sparsify_factor * field_mags[i] * min_dim
 
         xA = tip_to_tail_vectors[i][0]
         yA = tip_to_tail_vectors[i][1]
@@ -505,14 +610,25 @@ def generate_bild_file(
     file_path,
 ):
     """
-    This function generates the BILD file for the 3D vector field
-    Inputs:
-        tip_to_tail_vectors: Tip to tail vectors
-        transformed_field_array: Field array
-        percentile: Percentile cutoff for sparsifying the field
-        sparsify_factor: Sparsification factor for the field
-    Outputs:
-        None
+    Write the BILD file of arrows for an electric field.
+
+    Arrows are colored from white (weak) to blue (strong) and only drawn above
+    the percentile cutoff of normalized field magnitude.
+
+    Parameters
+    ----------
+    tip_to_tail_vectors : np.ndarray
+        Tail and tip coordinates of each arrow, shape (N, 6).
+    transformed_field_array : np.ndarray
+        Field rows ``x y z Ex Ey Ez``, shape (N, 6).
+    percentile : float
+        Percentile (0-100) of field magnitude below which arrows are not drawn.
+    sparsify_factor : int
+        Approximate step between drawn grid points.
+    output : str
+        Output path without the ``.bild`` extension.
+    file_path : str
+        Path to the field file, whose header gives the grid size.
     """
 
     with open(file_path, "r") as file:
@@ -528,14 +644,12 @@ def generate_bild_file(
 
     nx, ny, nz = density1, density2, density3
 
-    # Added code to deal with non-ideal sparsification values: take s and convert it to hcf(closest(factors(nx),s),closest(factors(ny),s),closest(factors(ny),s))i
+    # Added code to deal with non-ideal sparsification values: take s and convert it to hcf(closest(factors(nx),s),closest(factors(ny),s),closest(factors(nz),s))
     sparsify_factor = math.gcd(
-        fac(nx, sparsify_factor), fac(nx, sparsify_factor), fac(nx, sparsify_factor)
+        fac(nx, sparsify_factor), fac(ny, sparsify_factor), fac(nz, sparsify_factor)
     )
-    print(
-        "Sparsification factor modified to: ",
-        sparsify_factor,
-        " to give grid-like visualization.",
+    log.info(
+        f"Sparsification factor set to {sparsify_factor} for a grid-like visualization"
     )
 
     transformed_field_vecs = transformed_field_array[:, 3:6]
@@ -546,11 +660,14 @@ def generate_bild_file(
     # field_mags_min = 0.001
     field_mags_min = np.min(field_mags)
 
-    print("Max field magnitude: ", field_mags_max)
-    print("Min field magnitude: ", field_mags_min)
+    log.info(f"Max field magnitude: {field_mags_max}")
+    log.info(f"Min field magnitude: {field_mags_min}")
 
     field_mags = (field_mags - field_mags_min) / (field_mags_max - field_mags_min)
-    # print(max(field_mags), min(field_mags)) #Debug, make sure min and max are 0 and 1
+    # Make sure min and max are 0 and 1
+    log.debug(
+        "Normalized field magnitude max and min: %s, %s", max(field_mags), min(field_mags)
+    )
     percentile_cutoff = np.percentile(field_mags, percentile)
     r = sparsify_vec_field(
         (1 - field_mags), sparsify_factor, nx, ny, nz, dim1, dim2, dim3
@@ -597,14 +714,26 @@ def generate_bild_file_esp(
     radii, esp_array, percentile, max_p_esp, min_p_esp, max_n_esp, min_n_esp, output
 ):
     """
-    This function generates the BILD file for the ESP field
-    Inputs:
-        radii: Radii for the ESP field
-        esp_array: ESP array
-        percentile: Percentile cutoff for sparsifying the field
-        sparsify_factor: Sparsification factor for the field
-    Outputs:
-        None
+    Write the BILD file of spheres for an electrostatic potential.
+
+    Positive potentials are colored from white to red and negative potentials
+    from white to blue. Spheres are only drawn above the percentile cutoff of
+    absolute potential.
+
+    Parameters
+    ----------
+    radii : np.ndarray
+        Sphere radius for each point, shape (N,).
+    esp_array : np.ndarray
+        Potential rows ``x y z V``, shape (N, 4).
+    percentile : float
+        Percentile (0-100) of absolute potential below which spheres are not drawn.
+    max_p_esp, min_p_esp : float or None
+        Color limits for positive potentials. None uses the data's range.
+    max_n_esp, min_n_esp : float or None
+        Color limits for negative potentials. None uses the data's range.
+    output : str
+        Output path without the ``.bild`` extension.
     """
 
     esp_array_mags = np.abs(esp_array[:, 3])
@@ -646,8 +775,8 @@ def generate_bild_file_esp(
             np.min(esp_temp_negative[:, 3]) if len(esp_temp_negative) > 0 else None
         )
 
-    print(f"Max P ESP: {max_p_esp}, Min P ESP: {min_p_esp}")
-    print(f"Max N ESP: {max_n_esp}, Min N ESP: {min_n_esp}")
+    log.info(f"Positive ESP max: {max_p_esp}, min: {min_p_esp}")
+    log.info(f"Negative ESP max: {max_n_esp}, min: {min_n_esp}")
 
     r = np.ones((len(esp_array), 1))
     g = np.ones((len(esp_array), 1))

@@ -40,9 +40,9 @@ def gen_param_dist_mat(dist_mat, topo_file_list):
     averaged_distances = (averaged_distances + averaged_distances.T) / 2
 
     # (Optional) Plot the distance matrix
-    plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(15, 12), layout="constrained")
     sns.heatmap(averaged_distances, cmap="Greens_r", annot=True, linewidths=0.1)
     plt.title("Averaged Distance Matrix")
-    plt.show()
-
+    plt.savefig(f"dist-mat-{name}.png")
+    plt.close()
     return averaged_distances

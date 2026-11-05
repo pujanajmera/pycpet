@@ -2,7 +2,7 @@ from CPET.source.calculator import calculator
 from CPET.source.cluster import cluster
 from CPET.source.pca import pca_pycpet
 
-import CPET.utils.visualize as visualize
+from CPET.utils import visualize
 from CPET.utils.io import (
     save_numpy_as_dat,
     default_options_initializer,
@@ -15,54 +15,69 @@ from glob import glob
 from random import choice
 import os
 import numpy as np
-import warnings
 import logging
 
 log = logging.getLogger(__name__)
 
 
 class CPET:
-    """The main class for the CPET package. This class is responsible for running almost any calculation, either through cpet.py or other scripts.
+    """
+    Run any PyCPET method from an options dictionary.
+
+    ``cpet.py`` loads the options file into a dictionary and calls
+    ``CPET(options).run()``. Defaults are filled in and the options are checked
+    when the object is created, and ``outputpath`` is created if needed.
 
     Parameters
     ----------
     options : dict
-        A dictionary containing the options for the CPET package. An empty dictionary can be passed, in which the default options initializer will fully override the options with the default options. The options can also be passed as a JSON file, which will be loaded and used to initialize the CPET package.
+        Options for the calculation; must include ``CPET_method``. See the Options
+        Reference.
 
     Attributes
     ----------
-    self.options : dict
-        A dictionary containing the options for the CPET package.
-    self.logger : logging.Logger
-        A logger for the CPET package, inheriting from the logger in cpet.py. Logging is not guaranteed when using an auxiliary script
-    self.m : str
-        The method to be used for the CPET package, set from the options.
-    self.inputpath : str
-        The input path for CPET, set from the options.
-    self.outputpath : str
-        The output path for CPET, set from the options.
+    options : dict
+        The options, with defaults filled in.
+    m : str
+        The method to run, from ``CPET_method``.
+    inputpath : str
+        Folder of input files.
+    outputpath : str
+        Folder for results.
+    inputfiletype : str
+        ``"pdb"`` or ``"pqr"``.
+    log : logging.Logger
+        Logger for this module.
     """
 
     def __init__(self, options):
         # Logistics
+        """
+        Fill in defaults, check the options and create ``outputpath``.
+        """
         self.options = default_options_initializer(options)
         check_valid_options(self.options)
         self.log = log
         self.m = self.options["CPET_method"]
-        print("Instantiating CPET, method: {}".format(self.m))
+        self.log.info(f"Instantiating CPET, method: {self.m}")
         self.inputpath = self.options["inputpath"]
         self.outputpath = self.options["outputpath"]
         self.inputfiletype = self.options["inputfiletype"]
         if not os.path.exists(self.outputpath):
             self.log.warning(
-                "Output directory does not exist in current directory, creating: \n{}".format(
-                    self.outputpath
-                )
+                f"Output directory does not exist, creating: {self.outputpath}"
             )
             os.makedirs(self.outputpath)
 
     def run(self):
-        """Run the CPET package based on the method specified in the options. This method will call the appropriate method based on the value of self.m."""
+        """
+        Run the method named in ``CPET_method``.
+
+        Raises
+        ------
+        ValueError
+            If the method is not recognized.
+        """
         if self.m == "topo":
             self.run_topo()
         elif self.m == "topo_GPU":
@@ -87,20 +102,23 @@ class CPET:
         elif self.m == "pca" or self.m == "pca_compare":
             self.run_pca()
         else:
-            ValueError(
-                "Method {} not recognized. Please check the options file or the command line arguments.".format(
-                    self.m
-                )
+            raise ValueError(
+                f"Method {self.m} not recognized. Please check the options file or the command line arguments."
             )
 
     def run_topo(self, gpu=False):
-        """Run the electric field topology calculation for a number of proteins in the input directory.
-        Picks a pdb file at random from the input directory and runs the topology calculation on it, allowing for dirty parallel runs of this function.
+        """
+        Compute the field topology of each structure in ``inputpath``.
+
+        Structures are processed in random order and any with an existing
+        ``<name>.top`` in ``outputpath`` are skipped, so several copies can run on
+        the same folder at once. Each result is saved as ``<name>.top``.
 
         Parameters
         ----------
         gpu : bool, optional
-            If True, runs the topology calculation on the GPU. Default is False, which runs the calculation on the CPU.
+            If True, use the GPU (``topo_GPU``); otherwise use CPU worker processes.
+            Default is False.
         """
         if gpu:
             runtype = "compute_topo_GPU_batch_filter"
@@ -111,23 +129,29 @@ class CPET:
             if len(files_input) != 0:
                 file = choice(files_input)
             else:
-                print("No more files to process!")
+                self.log.info("No more files to process")
                 break
             files_input.remove(file)
             protein = file.split("/")[-1].split(".")[0]
-            self.log.info("Protein file: {}".format(protein))
+            self.log.info(f"Protein file: {protein}")
             files_done = [x for x in os.listdir(self.outputpath) if x.endswith("top")]
             if protein + ".top" not in files_done:
                 self.calculator = calculator(self.options, path_to_pdb=file)
                 hist = getattr(self.calculator, runtype)()
-                np.savetxt(self.outputpath + "/{}.top".format(protein), hist)
+                np.savetxt(self.outputpath + f"/{protein}.top", hist)
             else:
                 self.log.info(
-                    "Already done for protein: {}, skipping...".format(protein)
+                    f"Output already exists for protein {protein}, skipping"
                 )
 
     def run_volume(self):
-        """Get the electric fields along a grid of points in the box"""
+        """
+        Compute the electric field on the grid for each structure in ``inputpath``.
+
+        Structures are processed in random order and any with an existing
+        ``<name>_efield.dat`` in ``outputpath`` are skipped, so several copies can run
+        on the same folder at once. Each result is saved as ``<name>_efield.dat``.
+        """
 
         files_input = get_input_files(self.inputpath, filetype=self.inputfiletype)
 
@@ -135,15 +159,15 @@ class CPET:
             if len(files_input) != 0:
                 file = choice(files_input)
             else:
-                print("No more files to process!")
+                self.log.info("No more files to process")
                 break
             protein = file.split("/")[-1].split(".")[0]
             files_input.remove(file)
-            self.log.info("protein file: {}".format(protein))
+            self.log.info(f"Protein file: {protein}")
             files_done = [
                 x for x in os.listdir(self.outputpath) if x.endswith("_efield.dat")
             ]
-            self.log.debug("Files done: {}".format(files_done))
+            self.log.debug(f"Files done: {files_done}")
             if protein + "_efield.dat" not in files_done:
                 self.calculator = calculator(self.options, path_to_pdb=file)
                 field_box, mesh_shape = self.calculator.compute_box()
@@ -160,17 +184,22 @@ class CPET:
                 }
 
                 save_numpy_as_dat(
-                    name=self.outputpath + "/{}_efield.dat".format(protein),
+                    name=self.outputpath + f"/{protein}_efield.dat",
                     volume=field_box,
                     meta_data=meta_data,
                 )
             else:
                 self.log.info(
-                    "Already done for protein: {}, skipping...".format(protein)
+                    f"Output already exists for protein {protein}, skipping"
                 )
 
     def run_point(self):
-        """Get the electric field/magnitude at the center of the box"""
+        """
+        Compute the electric field, or its magnitude, at ``center`` for each structure.
+
+        Writes one ``<name>:<value>`` line per structure to ``point_field.dat`` or
+        ``point_mag.dat`` in ``outputpath``.
+        """
         files_input = get_input_files(self.inputpath, filetype=self.inputfiletype)
         if self.m == "point_field":
             outfile = self.outputpath + "/point_field.dat"
@@ -182,31 +211,37 @@ class CPET:
             for file in files_input:
                 self.calculator = calculator(self.options, path_to_pdb=file)
                 protein = file.split("/")[-1].split(".")[0]
-                self.log.info("protein file: {}".format(protein))
+                self.log.info(f"Protein file: {protein}")
                 point_field_or_mag = getattr(self.calculator, runtype)()
                 # Save the point field or magnitude to the output file
-                f.write("{}:{}\n".format(protein, point_field_or_mag))
+                f.write(f"{protein}:{point_field_or_mag}\n")
 
     def run_volume_ESP(self):
-        """Get the electrostatic potential along a grid of points in the box"""
+        """
+        Compute the electrostatic potential on the grid for each structure in ``inputpath``.
+
+        Structures are processed in random order and any with an existing
+        ``<name>_esp.dat`` in ``outputpath`` are skipped, so several copies can run on
+        the same folder at once. Each result is saved as ``<name>_esp.dat``.
+        """
         files_input = get_input_files(self.inputpath, filetype=self.inputfiletype)
         for i in range(len(files_input) * 100):
             if len(files_input) != 0:
                 file = choice(files_input)
             else:
-                print("No more files to process!")
+                self.log.info("No more files to process")
                 break
             protein = file.split("/")[-1].split(".")[0]
             files_input.remove(file)
-            self.log.info("protein file: {}".format(protein))
+            self.log.info(f"Protein file: {protein}")
             files_done = [
                 x for x in os.listdir(self.outputpath) if x.endswith("_esp.dat")
             ]
-            self.log.debug("Files done: {}".format(files_done))
+            self.log.debug(f"Files done: {files_done}")
             if protein + "_esp.dat" not in files_done:
                 self.calculator = calculator(self.options, path_to_pdb=file)
                 esp_box, mesh_shape = self.calculator.compute_box_ESP()
-                self.log.info(esp_box.shape)
+                self.log.debug(f"ESP box shape: {esp_box.shape}")
                 meta_data = {
                     "dimensions": self.calculator.dimensions,
                     "step_size": [
@@ -219,17 +254,25 @@ class CPET:
                     "center": self.calculator.center,
                 }
                 save_numpy_as_dat(
-                    name=self.outputpath + "/{}_esp.dat".format(protein),
+                    name=self.outputpath + f"/{protein}_esp.dat",
                     volume=esp_box,
                     meta_data=meta_data,
                 )
             else:
                 self.log.info(
-                    "Already done for protein: {}, skipping...".format(protein)
+                    f"Output already exists for protein {protein}, skipping"
                 )
 
     def run_box_check(self):
-        """Reports atoms that are inside the user-defined box, to check for potential e-field conflicts"""
+        """
+        Log the atoms inside the box for each structure, to find clashes with the volume.
+
+        Raises
+        ------
+        ValueError
+            If ``filter_radius`` or ``filter_resnum`` is set, since they can't be used
+            with this method.
+        """
         files_input = get_input_files(self.inputpath, filetype=self.inputfiletype)
         for file in files_input:
             if "filter_radius" in self.options or "filter_resnum" in self.options:
@@ -241,20 +284,24 @@ class CPET:
             self.options["filter_in_box"] = False
             self.calculator = calculator(self.options, path_to_pdb=file)
             protein = self.calculator.path_to_pdb.split("/")[-1].split(".")[0]
-            self.log.info("protein file: {}".format(protein))
+            self.log.info(f"Protein file: {protein}")
             report_inside_box(self.calculator)
-        print("No more files to process!")
+        self.log.info("No more files to process")
 
     def run_cluster(self):
-        """Run clustering (for a variety of types of field/esp data)"""
-        self.log.info("Running the cluster analysis. Method type: {}".format(self.m))
+        """
+        Cluster the topologies, fields or potentials in ``inputpath``. See :class:`CPET.source.cluster.cluster`.
+        """
+        self.log.info(f"Running cluster analysis, method: {self.m}")
         self.cluster = cluster(self.options)
         self.cluster.Cluster()
 
     def run_visualize_efield(self):
-        """Visualize the electric field/electrostatic potential file for Chimera/ChimeraX"""
-        print(
-            "... > Visualizing the electric field or electrostatic potential for use in Chimera/ChimeraX"
+        """
+        Write a BILD file for each field (``*_efield.dat``) or potential (``*_esp.dat``) file in ``inputpath``.
+        """
+        self.log.info(
+            "Visualizing the electric field or electrostatic potential for use in Chimera/ChimeraX"
         )
         if self.m == "visualize_field":
             files_input = glob(self.inputpath + "/*_efield.dat")
@@ -271,13 +318,18 @@ class CPET:
                 )
             elif self.m == "visualize_esp":
                 visualize.visualize_esp(
-                    path_to_esp=file,
-                    outputpath=self.outputpath,
-                    options=self.options,
+                    path_to_esp=file, outputpath=self.outputpath, options=self.options,
                 )
 
     def run_pca(self):
-        """Run PCA on a set of electric fields or groups of electric fields (good for mutation comparison)"""
+        """
+        Run PCA on the fields in ``inputpath`` (``pca``), or on each folder in ``inputpath_list`` (``pca_compare``).
+
+        Raises
+        ------
+        ValueError
+            If ``pca_compare`` is used without ``inputpath_list``.
+        """
         if self.m == "pca":
             self.pca = pca_pycpet(self.options)
             self.pca.fit_and_transform()
@@ -289,7 +341,7 @@ class CPET:
                 )
             if "outputpath_list" not in self.options:
                 self.log.warning(
-                    "No outputpath_list provided. Using default outputpath_list based on inputpath_list"
+                    "No outputpath_list provided, using defaults based on inputpath_list"
                 )
                 # Add 'pca_out' to the end of each input path
                 self.options["outputpath_list"] = [

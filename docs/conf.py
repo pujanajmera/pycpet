@@ -11,14 +11,17 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import re
 import sys
+
+from sphinx.util import logging
 
 sys.path.insert(0, os.path.abspath(".."))
 
 
 # -- Project information -----------------------------------------------------
 
-project = "pycpet"
+project = "PyCPET"
 copyright = "2025, Pujan Ajmera, Santiago Vargas, Matthew Hennefarth, Alexandrova Group"
 author = "Pujan Ajmera, Santiago Vargas, Matthew Hennefarth, Alexandrova Group"
 
@@ -29,10 +32,11 @@ author = "Pujan Ajmera, Santiago Vargas, Matthew Hennefarth, Alexandrova Group"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinx_book_theme",
     "sphinx.ext.autodoc",  # To generate autodocs
     "sphinx.ext.mathjax",  # autodoc with maths
     "sphinx.ext.napoleon",  # For auto-doc configuration
+    "sphinx_design",  # Cards and grids on the landing page
+    "sphinx_copybutton",  # Copy buttons on code blocks
 ]
 
 napoleon_google_docstring = False  # Turn off googledoc strings
@@ -47,6 +51,12 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
+# Show short names on the API pages (compute_box, not CPET.source.calculator.calculator.compute_box),
+# listed in the order they appear in the source
+add_module_names = False
+toc_object_entries_show_parents = "hide"
+autodoc_member_order = "bysource"
+
 autodoc_default_options = {
     "members": True,
     "undoc-members": True,
@@ -54,10 +64,18 @@ autodoc_default_options = {
 }
 
 autodoc_mock_imports = [
-    "CPET.utils.parallel",
+    # Needs the compiled math_module C extension, which the docs build doesn't compile
     "CPET.utils.calculator",
-    "CPET.utils.io",
-    "CPET.utils.gpu",
+    # Heavy or compiled dependencies the docs build doesn't install
+    "kneed",
+    "matplotlib",
+    "numba",
+    "scipy",
+    "sklearn",
+    "sklearn_extra",
+    "tensorly",
+    "torch",
+    "tqdm",
 ]
 
 # -- Options for HTML output -------------------------------------------------
@@ -67,8 +85,41 @@ autodoc_mock_imports = [
 # Use readthedocs theme
 #
 html_theme = "furo"
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
+html_title = "PyCPET"
+html_logo = "_static/pycpet-logo.png"
+html_favicon = "_static/favicon.png"
 html_static_path = ["_static"]
+html_css_files = ["custom.css"]
+
+# Brand colors from the logo: coral (protein ribbon) and cyan (negative charges),
+# darkened in light mode so links stay readable on white
+html_theme_options = {
+    "light_css_variables": {
+        "color-brand-primary": "#c2503b",
+        "color-brand-content": "#0b78a8",
+    },
+    "dark_css_variables": {
+        "color-brand-primary": "#f2917f",
+        "color-brand-content": "#38bdf8",
+    },
+}
+
+# -- Reference order check ---------------------------------------------------
+
+# Fail the build if the References list in citation.rst isn't alphabetical,
+# so new references have to be added in their sorted place
+def check_reference_order(app):
+    with open(os.path.join(app.confdir, "citation.rst")) as f:
+        keys = re.findall(r"^\.\. \[([^\]]+)\]", f.read(), flags=re.MULTILINE)
+    for previous, current in zip(keys, keys[1:]):
+        if current.lower() < previous.lower():
+            logging.getLogger(__name__).error(
+                "References in citation.rst are out of order: put [%s] before [%s]",
+                current,
+                previous,
+            )
+            app.statuscode = 1
+
+
+def setup(app):
+    app.connect("builder-inited", check_reference_order)

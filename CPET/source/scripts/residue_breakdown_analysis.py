@@ -5,9 +5,6 @@ import argparse
 import os
 import json
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib
-import matplotlib.colors
 
 
 def load_hist(pdb, tops_dir):
@@ -19,7 +16,7 @@ def load_hist(pdb, tops_dir):
         lines = f.readlines()
     hist = []
     for line in lines:
-        distcurv = line.split(" ")
+        distcurv = line.split()
         hist.append([float(distcurv[0]), float(distcurv[1])])
     hist = np.array(hist)
     return hist
@@ -35,6 +32,42 @@ def get_hist_grid(hist, distbound, distance_nbins, curvbound, curvature_nbins):
     NormConstant = np.sum(a)
     hist_grid = a / NormConstant
     return hist_grid.flatten()
+
+
+def get_residues(resnames, resids):
+    """
+    List the residues of a structure in order, skipping water (WAT).
+
+    Parameters
+    ----------
+    resnames, resids : sequence
+        Residue name and residue number of every atom, in order.
+
+    Returns
+    -------
+    list of dict
+        One ``{"resname": ..., "resid": ...}`` per residue.
+
+    Raises
+    ------
+    ValueError
+        If a residue shows up again after a different residue.
+    """
+    residues = []
+    residue_prev = {}
+    for resname, resid in zip(resnames, resids):
+        residue = {"resname": resname, "resid": resid}
+
+        # Atoms of the same residue are next to each other, so only the first one counts.
+        # A residue that was already listed but isn't the previous one is an error.
+        if residue == residue_prev or resname == "WAT":
+            continue
+        elif residue in residues:
+            raise ValueError("Error: Residue " + str(residue) + " is repeated in the list")
+        else:
+            residues.append(residue)
+            residue_prev = residue
+    return residues
 
 
 def main():
@@ -64,7 +97,7 @@ def main():
     args = parser.parse_args()
     options = args.o
     if not os.path.exists(options):
-        ValueError("Error: Options file not found")
+        raise ValueError("Error: Options file not found")
     else:
         with open(options, "r") as f:
             options = json.load(f)
@@ -81,48 +114,35 @@ def main():
         (float(curvbound[1]) - float(curvbound[0])) / float(args.curvres)
     )
     if len(curvbound) != 2 or len(distbound) != 2:
-        ValueError("Error: Curvature and distance bounds must be lists of 2 numbers")
+        raise ValueError("Error: Curvature and distance bounds must be lists of 2 numbers")
     if float(curvbound[1]) <= float(curvbound[0]) or float(distbound[1]) <= float(
         distbound[0]
     ):
-        ValueError("Error: Upper bound (right) must be greater than lower bound (left)")
+        raise ValueError("Error: Upper bound (right) must be greater than lower bound (left)")
 
     # Get list of full input topologies and pdbs, sorted
-    tops = os.listdir(args.tops)
-    tops = sorted(tops)
-    pdbs = os.listdir(args.pdbs)
-    pdbs = sorted(pdbs)
+    tops = sorted(f for f in os.listdir(args.tops) if f.endswith(".top"))
+    pdbs = sorted(f for f in os.listdir(args.pdbs) if f.endswith(".pdb"))
 
-    # Check to make sure all topologies have a corresponding pdb (topologies end in .top, pdbs end in .pdb)
+    # Check to make sure all topologies have a corresponding pdb and the other way around
     for t in tops:
         if t[:-4] + ".pdb" not in pdbs:
-            ValueError("Error: Topology " + t + " does not have a corresponding pdb")
+            raise ValueError("Error: Topology " + t + " does not have a corresponding pdb")
+    for p in pdbs:
+        if p[:-4] + ".top" not in tops:
+            raise ValueError("Error: Pdb " + p + " does not have a corresponding topology")
 
     # Get resid list from first pdb
     first_pdb = pdbs[0]
     calc_temp = calculator(options, path_to_pdb=os.path.join(args.pdbs, first_pdb))
-    resname_list = calc_temp.resids  # List of residue names
-    resid_list = (
-        calc_temp.residue_number
-    )  # List of numbers, only has non-zeroed resids from the options file (e.g. zeroing active site)
+    # Residue name and number of every charge. These come from ID, which every filter
+    # trims along with x and Q (calc_temp.resids and .residue_number are not trimmed
+    # by filter_radius or filter_in_box, so they don't line up with the charges)
+    resname_list = [atom[2] for atom in calc_temp.ID]
+    resid_list = [atom[3] for atom in calc_temp.ID]
 
-    # Turn resname and resid into a list of dictionaries, by looping over each pdb line
-    residues_list = []
-    residue_dict_prev = {}
-    for i in range(len(resname_list)):
-        residue_dict = {}
-        residue_dict["resname"] = resname_list[i]
-        residue_dict["resid"] = resid_list[i]
-
-        # Check if residue dict is the same as the previous. If not, check if it was previously in the list. Throw an error if it was previously in the list, but append if not the same as previous and not in the list
-        if residue_dict == residue_dict_prev or residue_dict["resname"] == "WAT":
-            continue
-        elif residue_dict in residues_list:
-            ValueError(
-                "Error: Residue " + str(residue_dict) + " is repeated in the list"
-            )
-        else:
-            residues_list.append(residue_dict)
+    # Turn resname and resid into a list of dictionaries, one per residue
+    residues_list = get_residues(resname_list, resid_list)
 
     # Save residue list to a file
     with open("residue_list.txt", "w") as f:
@@ -135,22 +155,9 @@ def main():
         calc_temp = calculator(options, path_to_pdb=os.path.join(args.pdbs, pdb))
         x_temp = calc_temp.x
         Q_temp = calc_temp.Q
-        resname_temp = calc_temp.resids
-        resid_temp = calc_temp.residue_number
-        residues_list_temp = []
-        residue_dict_prev = {}
-        for i in range(len(resname_list)):
-            residue_dict = {}
-            residue_dict["resname"] = resname_list[i]
-            residue_dict["resid"] = resid_list[i]
-            if residue_dict == residue_dict_prev or residue_dict["resname"] == "WAT":
-                continue
-            elif residue_dict in residues_list_temp:
-                ValueError(
-                    "Error: Residue " + str(residue_dict) + " is repeated in the list"
-                )
-            else:
-                residues_list_temp.append(residue_dict)
+        resname_temp = [atom[2] for atom in calc_temp.ID]
+        resid_temp = [atom[3] for atom in calc_temp.ID]
+        residues_list_temp = get_residues(resname_temp, resid_temp)
 
         hist_original = load_hist(pdb, args.tops)
         hist_grid_original = get_hist_grid(

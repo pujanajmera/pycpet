@@ -547,7 +547,7 @@ void calc_esp_base(float ESP[1], float x_init[3], int n_charges, float x[n_charg
     float ESP_temp[n_charges][3];
 
     //# pragma omp parallel for shared(E, x_init, n_charges, x, Q) private(r_mag_cube, r_norm, R)
-    # pragma omp parallel for
+    # pragma omp parallel for private(R, r_norm, r_mag_inv)
     for (int i = 0; i < n_charges; i++)
     {
         //get difference of x and x_init
